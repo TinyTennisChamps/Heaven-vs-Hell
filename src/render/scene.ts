@@ -1,4 +1,6 @@
-import { Container, Graphics } from 'pixi.js';
+import { Container, Graphics, Sprite as PixiSprite } from 'pixi.js';
+import { loopFrame, type Atlas } from './atlas';
+import { pickPlayerAnim, type AnimConfig } from './animSync';
 import { VIEW_H, VIEW_W } from '../core/constants';
 import { GROUND_TILE, groundToScreen } from '../core/iso';
 import { DEG, angleOf, lerp, type Vec2 } from '../core/math';
@@ -8,7 +10,7 @@ import { pointInPolygon } from '../sim/physics/collide';
 import type { Enemy, World } from '../sim/world';
 import { ANGEL, HEAVEN, SATAN } from './palette';
 import { Particles } from './particles';
-import { drawDummy, drawSatan } from './sprites/placeholders';
+import { drawDummy } from './sprites/placeholders';
 
 interface Sprite {
   root: Container;
@@ -67,15 +69,21 @@ export class Scene {
   private hud = new Graphics();
   private cursorG = new Graphics();
   readonly particles = new Particles();
-  private player: Sprite;
+  private player: PixiSprite;
   private enemySprites = new Map<number, Sprite>();
 
-  constructor(world: World) {
+  constructor(
+    world: World,
+    private satan: Atlas,
+    private anim: AnimConfig,
+  ) {
     this.entities.sortableChildren = true;
     this.worldLayer.addChild(this.floor, this.shadows, this.telegraphs, this.entities, this.fx, this.particles.g, this.debugG);
     this.root.addChild(this.worldLayer, this.hud, this.cursorG);
     this.drawRoom(world);
-    this.player = this.makeSprite();
+    this.player = new PixiSprite();
+    this.player.anchor.set(satan.pivot.x / satan.frameW, satan.pivot.y / satan.frameH);
+    this.entities.addChild(this.player);
     this.drawCursor();
   }
 
@@ -170,33 +178,38 @@ export class Scene {
     // --- Player ---
     const p = world.player;
     const pp = { x: lerp(p.prevPos.x, p.pos.x, alpha), y: lerp(p.prevPos.y, p.pos.y, alpha) };
-    this.place(this.player, pp, groundToScreen(p.facing.x, p.facing.y).x < 0);
-    const pFlash = p.hitFlash > 0;
-    // Dash: brief squash for read.
-    this.player.root.scale.y = p.dash ? 0.8 : 1;
-    this.redraw(this.player, `${pFlash}`, () => drawSatan(this.player.body, pFlash));
-    this.shadow(pp, 7);
+    const pick = pickPlayerAnim(p, cfg, this.anim);
+    const dirTag = pick.facing === 'left' ? 'right' : pick.facing;
+    const tag = this.satan.tags.get(`${pick.tag}_${dirTag}`) ?? this.satan.tags.get(`idle_${dirTag}`)!;
+    const fi = pick.frame >= 0 ? Math.min(pick.frame, tag.frames.length - 1) : loopFrame(tag, (world.tick * 1000) / 60);
+    this.player.texture = p.hitFlash > 0 ? tag.flash[fi]! : tag.frames[fi]!;
+    const ps = groundToScreen(pp.x, pp.y);
+    this.player.position.set(Math.round(ps.x), Math.round(ps.y));
+    this.player.scale.x = pick.facing === 'left' ? -1 : 1;
+    this.player.zIndex = pp.x + pp.y;
+    this.shadow(pp, 8);
     if (p.dash) {
       // Ember smear behind a dash.
       const back = { x: pp.x - p.dash.dir.x * 10, y: pp.y - p.dash.dir.y * 10 };
       this.fx.poly(proj([...groundCircle(back, 4, 8)])).fill({ color: SATAN.ember, alpha: 0.35 });
     }
 
-    // Slash arc.
+    // Ground wake of the slash: the true hitbox shape on the floor (the sprite
+    // carries the main smear), then breaking into streaks like the reference.
     if (p.action) {
       const d = attackDef(cfg, p.action.step);
       const age = p.action.frame - d.startup;
-      if (age >= 1 && age <= d.active + 3) {
+      if (age >= 1 && age <= d.active) {
         const prog = Math.min(1, age / d.active);
-        const rev = p.action.step === 2;
-        const [from, to] = rev ? [1 - prog, 1] : [0, prog];
-        const fade = age <= d.active ? 1 : 1 - (age - d.active) / 4;
-        // Lifted to blade height. Opaque layers so it reads as a cut, not a stain on the floor.
-        const lift = 12;
-        this.fx.poly(proj(arcPoly(p.pos, p.action.dir, d.hitbox, from, to, 0.55), lift)).fill({ color: SATAN.blood, alpha: 0.85 * fade });
-        this.fx.poly(proj(arcPoly(p.pos, p.action.dir, d.hitbox, from, to, 0.72), lift)).fill({ color: SATAN.crimson, alpha: fade });
-        this.fx.poly(proj(arcPoly(p.pos, p.action.dir, d.hitbox, from, to, 0.86), lift)).fill({ color: SATAN.hellfire, alpha: fade });
-        this.fx.poly(proj(arcPoly(p.pos, p.action.dir, { ...d.hitbox, radius: d.hitbox.radius + 1 }, from, to, 0.95), lift)).fill({ color: SATAN.eyeGlow, alpha: fade });
+        const [from, to] = p.action.step === 2 ? [1 - prog, 1] : [0, prog];
+        this.fx.poly(proj(arcPoly(p.pos, p.action.dir, d.hitbox, from, to, 0.8), 2)).fill({ color: SATAN.hellfire, alpha: 0.55 });
+        this.fx.poly(proj(arcPoly(p.pos, p.action.dir, { ...d.hitbox, radius: d.hitbox.radius + 1 }, from, to, 0.94), 2)).fill({ color: SATAN.eyeGlow, alpha: 0.8 });
+      } else if (age > d.active && age <= d.active + 5) {
+        const k = (age - d.active) / 5;
+        const box = { ...d.hitbox, radius: d.hitbox.radius + 3 * k };
+        for (const [a, b] of [[0.1, 0.22], [0.42, 0.55], [0.75, 0.86]] as const) {
+          this.fx.poly(proj(arcPoly(p.pos, p.action.dir, box, a + k * 0.05, b, 0.93), 2 + 4 * k)).fill({ color: SATAN.ember, alpha: 0.8 * (1 - k) });
+        }
       }
     }
 

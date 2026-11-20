@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check": "npm run typecheck && npm test"
+    "check": "npm run typecheck && npm test",
+    "sprites": "vite-node tools/sprites/genSatan.ts"
   },
   "dependencies": {
     "pixi.js": "8.6.6"

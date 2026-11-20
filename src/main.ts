@@ -8,6 +8,8 @@ import { KeyboardMouseInput } from './input/keyboardMouse';
 import { ANGEL, HEAVEN, SATAN } from './render/palette';
 import { createPixiApp, VIEW_H, VIEW_W } from './render/pixiApp';
 import { Scene } from './render/scene';
+import { loadAtlas } from './render/atlas';
+import type { AnimConfig } from './render/animSync';
 import { attackDef, attackPhase } from './sim/actors/player';
 import type { SimConfig, RoomDef } from './sim/config';
 import { step } from './sim/step';
@@ -37,8 +39,10 @@ async function boot() {
   };
 
   const room = getData<RoomDef>('rooms/training');
+  const satanAtlas = await loadAtlas(`${import.meta.env.BASE_URL}sprites/satan.json`);
+  const anim = getData<AnimConfig>('anim/satan');
   let world = createWorld(room, cfg, 1);
-  let scene = new Scene(world);
+  let scene = new Scene(world, satanAtlas, anim);
   app.stage.addChild(scene.root);
   updateLegend(world);
 
@@ -48,7 +52,7 @@ async function boot() {
     scene.root.destroy({ children: true });
     world = createWorld(room, cfg, 1);
     world.flags = flags;
-    scene = new Scene(world);
+    scene = new Scene(world, satanAtlas, anim);
     app.stage.addChild(scene.root);
   };
 
