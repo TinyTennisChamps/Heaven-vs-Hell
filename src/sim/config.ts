@@ -68,6 +68,9 @@ export interface CombatTuning {
     shake: number;
     perfectShake: number;
     moveSpeedMul: number;
+    /** Knockback (px/s) applied to the attacker on a deflect / perfect deflect. */
+    recoil: number;
+    perfectRecoil: number;
   };
   block: { coneDeg: number; postureMul: number; stunFrames: number; dashAfter: number; moveSpeedMul: number; knockback: number; hitstop: number };
   deathblow: { range: number; hitstop: number; slowmoFrames: number; slowmoScale: number; shake: number };

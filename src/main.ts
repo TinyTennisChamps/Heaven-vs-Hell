@@ -121,6 +121,8 @@ async function boot() {
     spawnEffects(world, scene);
     scene.particles.update(Math.min(elapsed, 0.05));
     scene.particles.draw();
+    scene.sparks.update(Math.min(elapsed, 0.05));
+    scene.sparks.draw();
     scene.render(world, alpha, cursor, cfg, debug);
     app.render();
 
@@ -172,11 +174,11 @@ function spawnEffects(world: World, scene: Scene): void {
         break;
       }
       case 'deflect': {
-        // PDF: parry flash is white core, gold ring, red rays.
-        const n = ev.perfect ? 2 : 1;
-        P.burst(s.x, s.y - 14, { count: 6 * n, colors: [0xffffff], speed: 30, life: 0.18, size: 2 });
-        P.burst(s.x, s.y - 14, { count: 16 * n, colors: [HEAVEN.gold1, HEAVEN.gold2], speed: 90 * n, life: 0.22, drag: 0.8 });
-        P.burst(s.x, s.y - 14, { count: 8 * n, colors: [SATAN.hellfire, SATAN.ember], speed: 170 * n, life: 0.2, drag: 0.92 });
+        // PDF: parry flash is white core, gold ring, red rays. Perfect = bigger + screen flash.
+        const d = groundToScreen(ev.dir.x, ev.dir.y);
+        scene.sparks.spawn(s.x, s.y - 14, ev.perfect, Math.atan2(d.y, d.x));
+        P.burst(s.x, s.y - 14, { count: ev.perfect ? 18 : 8, colors: [HEAVEN.gold1, 0xffffff, SATAN.ember], speed: ev.perfect ? 160 : 90, life: 0.3, drag: 0.88 });
+        if (ev.perfect) sfx('perfectDeflect');
         break;
       }
       case 'block':

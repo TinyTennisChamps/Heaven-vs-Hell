@@ -10,6 +10,7 @@ import { pointInPolygon } from '../sim/physics/collide';
 import type { Enemy, World } from '../sim/world';
 import { ANGEL, HEAVEN, JUDGEMENT, SATAN } from './palette';
 import { Particles } from './particles';
+import { Sparks } from './sparks';
 import { drawDominion, drawDummy, type DominionPose } from './sprites/placeholders';
 import { enemyAttack } from '../sim/actors/enemy';
 import { shieldUp } from '../sim/combat/damage';
@@ -71,6 +72,8 @@ export class Scene {
   private hud = new Graphics();
   private cursorG = new Graphics();
   readonly particles = new Particles();
+  readonly sparks = new Sparks();
+  private screenFlash = new Graphics();
   private player: PixiSprite;
   private enemySprites = new Map<number, Sprite>();
 
@@ -80,8 +83,10 @@ export class Scene {
     private anim: AnimConfig,
   ) {
     this.entities.sortableChildren = true;
-    this.worldLayer.addChild(this.floor, this.shadows, this.telegraphs, this.entities, this.fx, this.particles.g, this.debugG);
-    this.root.addChild(this.worldLayer, this.hud, this.cursorG);
+    this.worldLayer.addChild(this.floor, this.shadows, this.telegraphs, this.entities, this.fx, this.particles.g, this.sparks.g, this.debugG);
+    this.screenFlash.rect(0, 0, VIEW_W, VIEW_H).fill(0xffffff);
+    this.screenFlash.alpha = 0;
+    this.root.addChild(this.worldLayer, this.screenFlash, this.hud, this.cursorG);
     this.drawRoom(world);
     this.player = new PixiSprite();
     this.player.anchor.set(satan.pivot.x / satan.frameW, satan.pivot.y / satan.frameH);
@@ -172,6 +177,7 @@ export class Scene {
     const cy = lerp(cam.prevPos.y, cam.pos.y, alpha) + cam.shakeOffset.y;
     this.worldLayer.position.set(Math.round(VIEW_W / 2 - cx), Math.round(VIEW_H / 2 - cy));
     this.cursorG.position.set(Math.round(cursor.x), Math.round(cursor.y));
+    this.screenFlash.alpha = this.sparks.flash > 0 ? 0.35 : 0;
 
     this.shadows.clear();
     this.telegraphs.clear();

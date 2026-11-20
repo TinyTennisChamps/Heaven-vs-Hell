@@ -130,6 +130,9 @@ export function resolveOnPlayer(world: World, attacker: Enemy, atk: EnemyAttackD
     startHitstop(world, perfect ? c.parry.perfectHitstop : c.parry.hitstop, perfect ? c.parry.perfectShake : c.parry.shake, cfg);
     emit(world, { type: 'deflect', pos: { x: (p.pos.x + attacker.pos.x) / 2, y: (p.pos.y + attacker.pos.y) / 2 }, dir, perfect });
     addPlayerPosture(world, atk.postureDamage * (perfect ? c.parry.perfectSelfPostureMul : c.parry.selfPostureMul), cfg);
+    // The attacker is knocked back by the deflect — harder on a perfect one.
+    const kb = perfect ? c.parry.perfectRecoil : c.parry.recoil;
+    attacker.knock = { x: -dir.x * kb, y: -dir.y * kb };
     addEnemyPosture(world, attacker, atk.postureDamage * (perfect ? c.parry.perfectAttackerPostureMul : c.parry.attackerPostureMul), cfg);
     return perfect ? 'perfect' : 'deflect';
   }

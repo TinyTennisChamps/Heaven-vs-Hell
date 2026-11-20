@@ -24,7 +24,9 @@
     "perfectHitstop": 8,
     "shake": 1.5,
     "perfectShake": 2.5,
-    "moveSpeedMul": 0.5
+    "moveSpeedMul": 0.5,
+    "recoil": 90,
+    "perfectRecoil": 170
   },
   "block": {
     "coneDeg": 120,
