@@ -87,6 +87,30 @@ function deathblowTarget(world: World, cfg: SimConfig): Enemy | null {
   return best;
 }
 
+/**
+ * The enemy whose attack will land soonest, within range: anything already
+ * active first, then the windup closest to completion; ties go to the nearer one.
+ */
+export function imminentThreat(world: World, cfg: SimConfig): Enemy | null {
+  const p = world.player;
+  let best: Enemy | null = null;
+  let bestScore = Infinity;
+  for (const e of world.enemies) {
+    if (e.phase !== 'windup' && e.phase !== 'active') continue;
+    const atk = e.attack ? cfg.enemies[e.type]!.attacks[e.attack] : undefined;
+    if (!atk) continue;
+    const d = Math.hypot(e.pos.x - p.pos.x, e.pos.y - p.pos.y);
+    if (d > cfg.combat.autoFace.range) continue;
+    const ticksLeft = e.phase === 'active' ? 0 : atk.windup - e.phaseFrame;
+    const score = ticksLeft * 1000 + d;
+    if (score < bestScore) {
+      best = e;
+      bestScore = score;
+    }
+  }
+  return best;
+}
+
 export interface PlayerInput {
   move: Vec2;
   /** Right mouse held (guard). */
@@ -168,7 +192,12 @@ export function updatePlayer(world: World, inp: PlayerInput, aim: Vec2 | null, c
     }
   }
   p.guarding = inp.guardHeld && !p.parry && !p.dash && !p.action && !locked(p);
-  if ((p.parry || p.guarding) && aim) p.facing = { ...aim };
+  if (p.parry || p.guarding) {
+    // Guard faces the incoming attack, not the cursor: parrying is about timing.
+    const threat = c.autoFace.enabled ? imminentThreat(world, cfg) : null;
+    if (threat) p.facing = normalize({ x: threat.pos.x - p.pos.x, y: threat.pos.y - p.pos.y });
+    else if (aim) p.facing = { ...aim };
+  }
 
   let dx = 0;
   let dy = 0;

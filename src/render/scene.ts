@@ -220,6 +220,10 @@ export class Scene {
         }
       }
     }
+    // Facing marker: a small hellfire arc on the floor where Satan points.
+    if (!p.dash && !p.parry && !p.guarding && p.broken === 0) {
+      this.fx.poly(proj(arcPoly(pp, p.facing, { radius: 14, angleDeg: 50, offset: 0 }, 0, 1, 0.7))).fill({ color: SATAN.hellfire, alpha: 0.75 });
+    }
     // Guard read: a thin hellfire arc while parry window is open, dim while blocking.
     if (p.parry || p.guarding) {
       const box = { radius: 12, angleDeg: p.parry ? cfg.combat.parry.coneDeg : cfg.combat.block.coneDeg, offset: 0 };

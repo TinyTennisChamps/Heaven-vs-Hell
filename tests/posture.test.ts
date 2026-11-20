@@ -136,12 +136,35 @@ describe('block', () => {
     expect(w.player.posture).toBeGreaterThan(atk.postureDamage * cfg.combat.block.postureMul * 0.5);
   });
 
-  it('guarding with your back to the attacker fails', () => {
+  it('auto-face: guarding turns Satan toward the incoming attack even if the cursor points away', () => {
     const { w, e } = duel('dummy');
     startEnemyAttack(w, e, 'swing', cfg);
     const away = { x: w.player.pos.x - 50, y: w.player.pos.y };
     for (let t = 0; t < 80; t++) step(w, input({ hold: ['parry'], aim: away }), cfg);
+    expect(w.stats.hitsTaken).toBe(0);
+  });
+
+  it('with auto-face off, guarding with your back to the attacker fails', () => {
+    const c: SimConfig = { ...cfg, combat: { ...cfg.combat, autoFace: { ...cfg.combat.autoFace, enabled: false } } };
+    const { w, e } = duel('dummy', c);
+    startEnemyAttack(w, e, 'swing', c);
+    const away = { x: w.player.pos.x - 50, y: w.player.pos.y };
+    for (let t = 0; t < 80; t++) step(w, input({ hold: ['parry'], aim: away }), c);
     expect(w.stats.hitsTaken).toBe(1);
+  });
+
+  it('auto-face picks the attack that lands soonest, not just the nearest enemy', () => {
+    const w = testWorld(cfg, { only: ['dummy', 'dominion'] });
+    const [dummy, dom] = [w.enemies.find((x) => x.type === 'dummy')!, w.enemies.find((x) => x.type === 'dominion')!];
+    w.player.pos = { x: 120, y: 120 };
+    dummy.pos = { x: 140, y: 120 }; // nearer, but only just started winding up
+    dom.pos = { x: 120, y: 150 }; // farther, about to strike
+    dummy.cooldown = dom.cooldown = 9999;
+    startEnemyAttack(w, dummy, 'swing', cfg);
+    startEnemyAttack(w, dom, 'thrust', cfg);
+    dom.phaseFrame = cfg.enemies.dominion!.attacks.thrust!.windup - 3;
+    step(w, input({ hold: ['parry'] }), cfg);
+    expect(w.player.facing.y).toBeGreaterThan(0.9); // facing the Dominion (+y)
   });
 });
 

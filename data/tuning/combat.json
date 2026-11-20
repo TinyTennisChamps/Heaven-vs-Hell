@@ -44,5 +44,9 @@
     "slowmoScale": 0.4,
     "shake": 4
   },
-  "breakHitstop": 6
+  "breakHitstop": 6,
+  "autoFace": {
+    "enabled": true,
+    "range": 90
+  }
 }

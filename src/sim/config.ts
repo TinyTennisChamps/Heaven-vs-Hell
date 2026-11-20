@@ -74,6 +74,8 @@ export interface CombatTuning {
   };
   block: { coneDeg: number; postureMul: number; stunFrames: number; dashAfter: number; moveSpeedMul: number; knockback: number; hitstop: number };
   deathblow: { range: number; hitstop: number; slowmoFrames: number; slowmoScale: number; shake: number };
+  /** While parrying/blocking, turn to face the most imminent attacker within range. */
+  autoFace: { enabled: boolean; range: number };
   breakHitstop: number;
 }
 
