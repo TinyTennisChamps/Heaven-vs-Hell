@@ -2,7 +2,7 @@
  * Named input actions. Gameplay code only ever sees these, never raw keys,
  * so rebinding and gamepad support can be added later in one place.
  */
-export const BUTTON_ACTIONS = ['slash', 'throw', 'parry', 'dash', 'rage'] as const;
+export const BUTTON_ACTIONS = ['slash', 'throw', 'parry', 'dash', 'rage', 'lock'] as const;
 export type ButtonAction = (typeof BUTTON_ACTIONS)[number];
 
 /** One sim tick's worth of input. Plain data, safe to record for replays. */
@@ -20,7 +20,7 @@ export interface InputFrame {
 }
 
 export function emptyHeld(): Record<ButtonAction, boolean> {
-  return { slash: false, throw: false, parry: false, dash: false, rage: false };
+  return { slash: false, throw: false, parry: false, dash: false, rage: false, lock: false };
 }
 
 export function emptyInputFrame(): InputFrame {

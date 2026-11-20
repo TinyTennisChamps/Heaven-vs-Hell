@@ -9,6 +9,7 @@ const KEY_BINDINGS: Record<string, ButtonAction | 'up' | 'down' | 'left' | 'righ
   Space: 'dash',
   KeyE: 'throw',
   KeyR: 'rage',
+  KeyQ: 'lock',
 };
 const MOUSE_BINDINGS: Record<number, ButtonAction> = { 0: 'slash', 2: 'parry' };
 

@@ -63,6 +63,10 @@ export interface PlayerState {
   blockStun: number;
   /** Posture-broken stagger ticks remaining. */
   broken: number;
+  /** Locked-on enemy id (Q), or null. */
+  lockId: number | null;
+  /** Ticks Q has been held since a press while locked (-1 = not measuring). */
+  lockHold: number;
 }
 
 export type EnemyPhase = 'idle' | 'windup' | 'active' | 'recover' | 'recoil' | 'broken' | 'down';
@@ -93,6 +97,8 @@ export interface Enemy {
   blockedHits: number;
   /** Shield flash timer (render). */
   shieldFlash: number;
+  /** A non-focus enemy that has been given its turn to step in and attack. */
+  engage: boolean;
   spawn: Vec2;
 }
 
@@ -110,7 +116,9 @@ export type SimEvent =
   | { type: 'playerBroken'; pos: Vec2 }
   | { type: 'deathblow'; pos: Vec2; dir: Vec2 }
   | { type: 'parryWhiff'; pos: Vec2 }
-  | { type: 'riposteOpen'; pos: Vec2 };
+  | { type: 'riposteOpen'; pos: Vec2 }
+  | { type: 'lockOn'; pos: Vec2 }
+  | { type: 'lockOff'; pos: Vec2 };
 
 export interface CameraState {
   /** Camera centre in iso screen space. */
@@ -137,6 +145,8 @@ export interface World {
   player: PlayerState;
   enemies: Enemy[];
   nextId: number;
+  /** The enemy allowed to attack freely this tick (lock target, else nearest). */
+  focusId: number | null;
   camera: CameraState;
   events: SimEvent[];
   flags: { dummyAttacks: boolean; respawn: boolean };
@@ -188,9 +198,12 @@ export function createWorld(room: RoomDef, cfg: SimConfig, seed = 1): World {
       guarding: false,
       blockStun: 0,
       broken: 0,
+      lockId: null,
+      lockHold: -1,
     },
     enemies: [],
     nextId: 1,
+    focusId: null,
     camera: { pos: { ...camPos }, prevPos: { ...camPos }, shake: 0, shakeOffset: v2() },
     events: [],
     flags: { dummyAttacks: true, respawn: true },
@@ -225,6 +238,7 @@ export function spawnEnemy(world: World, cfg: SimConfig, type: string, at: Vec2)
     hitFlash: 0,
     blockedHits: 0,
     shieldFlash: 0,
+    engage: false,
     spawn: { ...at },
   };
   world.enemies.push(e);

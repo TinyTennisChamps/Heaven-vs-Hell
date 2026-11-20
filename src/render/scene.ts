@@ -258,6 +258,7 @@ export class Scene {
       this.shadow(ep, e.radius);
       this.enemyTelegraph(e, cfg, ep);
       this.enemyBars(e, ep, cfg);
+      if (world.player.lockId === e.id) this.lockMarker(ep, world.tick);
     }
     for (const [id, s] of this.enemySprites) {
       if (!alive.has(id)) {
@@ -310,6 +311,25 @@ export class Scene {
     }
     if (e.phase === 'active') {
       this.fx.poly(proj(arcPoly(e.pos, e.attackDir, atk.hitbox, 0, 1, 0.75), 12)).fill({ color: atk.judgement ? JUDGEMENT : 0xffffff, alpha: 0.9 });
+    }
+  }
+
+  /** Lock-on marker (Sekiro's dot): hellfire dot on the chest + closing brackets. */
+  private lockMarker(ground: Vec2, tick: number): void {
+    const sp = groundToScreen(ground.x, ground.y);
+    const x = Math.round(sp.x);
+    const y = Math.round(sp.y - 17);
+    const g = this.fx;
+    g.rect(x - 2, y - 2, 5, 5).fill(SATAN.cloak);
+    g.rect(x - 1, y - 1, 3, 3).fill(SATAN.hellfire);
+    g.rect(x, y, 1, 1).fill(SATAN.eyeGlow);
+    const b = 14 + (Math.floor(tick / 8) % 2); // brackets breathe 1px
+    const L = 4;
+    for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) {
+      const cx = x + sx * b;
+      const cy = y + sy * (b + 2);
+      g.rect(sx < 0 ? cx : cx - L + 1, cy, L, 1).fill(SATAN.hellfire);
+      g.rect(cx, sy < 0 ? cy : cy - L + 1, 1, L).fill(SATAN.hellfire);
     }
   }
 

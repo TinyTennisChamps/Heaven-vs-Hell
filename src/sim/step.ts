@@ -6,6 +6,7 @@ import type { SimConfig } from './config';
 import { updateEnemy } from './actors/enemy';
 import { updatePlayer } from './actors/player';
 import { ENEMY_THINK } from './registry';
+import { lockTarget, updateLock } from './lockon';
 import { updateCamera, updateShake } from './camera';
 import { moveAndSlide } from './physics/collide';
 import type { World } from './world';
@@ -21,7 +22,7 @@ export function step(world: World, input: InputFrame, cfg: SimConfig): void {
   world.camera.prevPos = { ...world.camera.pos };
 
   world.buffer.setWindowDefault(cfg.feel.inputBufferFrames);
-  for (const a of input.pressed) world.buffer.press(a);
+  for (const a of input.pressed) if (a !== 'lock') world.buffer.press(a);
 
   updateShake(world, cfg);
 
@@ -47,7 +48,8 @@ export function step(world: World, input: InputFrame, cfg: SimConfig): void {
     world.slowAcc = 0;
   }
 
-  updatePlayer(world, { move: input.move, guardHeld: input.held.parry }, resolveAim(world, input), cfg);
+  updateLock(world, input, cfg);
+  updatePlayer(world, { move: input.move, guardHeld: input.held.parry, locked: !!lockTarget(world) }, resolveAim(world, input), cfg);
   for (const e of world.enemies) {
     const think = ENEMY_THINK[e.type];
     if (think) updateEnemy(world, e, cfg, think);
@@ -63,7 +65,11 @@ export function step(world: World, input: InputFrame, cfg: SimConfig): void {
 function resolveAim(world: World, input: InputFrame): Vec2 | null {
   const p = world.player.pos;
   let target: Vec2;
-  if (input.aimGround) {
+  const lock = lockTarget(world);
+  if (lock) {
+    // Full focus: everything aims at the lock target, the cursor is ignored.
+    target = lock.pos;
+  } else if (input.aimGround) {
     target = input.aimGround;
   } else {
     const c = world.camera.pos;

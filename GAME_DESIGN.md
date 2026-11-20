@@ -24,6 +24,7 @@ Satan is trapped in Heaven and cuts his way down through its layers to get home.
 | RMB press | Parry (deflect window) |
 | RMB hold | Block (front 120° cone toward the cursor), moving at 0.5× speed |
 | Space | Dash |
+| Q | Lock-on. Tap to lock the nearest enemy, tap again to cycle (nearest first), hold to release. If the target dies, the lock jumps to the next nearest. |
 | R (tap) | Rage transform when the meter is full. Buffered, with an invulnerable transform of about 20 frames. |
 
 ## Feel targets (starting values, which live in /data)
@@ -71,6 +72,12 @@ Satan is trapped in Heaven and cuts his way down through its layers to get home.
 **Measured** (`tests/balance.test.ts`: scripted bots, 10 seeds, against a Dominion): parrying kills **2.14×** faster than dash-and-slash, at the "Balanced" target. The test fails if the ratio drifts outside 1.6–2.8×.
 
 **Still open:** the dash-and-slash bot takes almost no damage (about 3 HP), because the Dominion turns too slowly to punish flanking. The "enemies punish flanking" fix was offered but not chosen yet.
+
+## Second playtest pass
+- **Parry window widened** to 14 frames, with the first 7 perfect (it was 9 and 4). The user found perfects too hard to land.
+- **Lock-on (full focus):** Satan faces the target, and slashes and guard go at it (the cursor is ignored for aiming). The camera frames Satan and the target. The marker is a hellfire dot with brackets.
+- **Group fights:** the *focus* (the lock target, or the nearest enemy when unlocked) attacks freely. Every other enemy hangs back about 60 px away and circles. When its cooldown ends it has a 30% chance to get a turn, step in and attack. Then it falls back.
+- **No overlap:** no two enemies ever have attacks in flight at once, and this is tested. The focus waits for an in-flight supporter swing, and a supporter waits for the focus.
 
 ## Rage Vials (7, flat additive, every stat ≤ +20%)
 | L1 | L2 |

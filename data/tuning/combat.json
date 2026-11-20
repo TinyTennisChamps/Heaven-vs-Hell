@@ -11,8 +11,8 @@
     "maxRotateDeg": 15
   },
   "parry": {
-    "windowFrames": 9,
-    "perfectFrames": 4,
+    "windowFrames": 14,
+    "perfectFrames": 7,
     "whiffPenaltyFrames": 20,
     "penalizedWindowFrames": 5,
     "coneDeg": 150,
@@ -53,5 +53,17 @@
     "frames": 30,
     "healthMul": 2,
     "postureMul": 3
+  },
+  "lockOn": {
+    "range": 200,
+    "breakRange": 260,
+    "holdToReleaseFrames": 18,
+    "cameraBias": 0.35
+  },
+  "groups": {
+    "holdBackDistance": 60,
+    "holdBackSpeedMul": 0.6,
+    "supportAttackChance": 0.3,
+    "supportCooldownMul": 2.5
   }
 }

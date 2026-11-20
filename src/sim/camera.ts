@@ -16,7 +16,14 @@ export function updateShake(world: World, cfg: SimConfig): void {
 export function updateCamera(world: World, aimScreen: { x: number; y: number }, cfg: SimConfig): void {
   const c = world.camera;
   const t = cfg.camera;
-  const p = groundToScreen(world.player.pos.x, world.player.pos.y);
+  let p = groundToScreen(world.player.pos.x, world.player.pos.y);
+  // Locked on: frame Satan and the target together.
+  const lock = world.player.lockId !== null ? world.enemies.find((e) => e.id === world.player.lockId && e.phase !== 'down') : undefined;
+  if (lock) {
+    const q = groundToScreen(lock.pos.x, lock.pos.y);
+    const k = cfg.combat.lockOn.cameraBias;
+    p = { x: p.x + (q.x - p.x) * k, y: p.y + (q.y - p.y) * k };
+  }
 
   let lx = (aimScreen.x - VIEW_W / 2) * t.lookAheadFactor;
   let ly = (aimScreen.y - VIEW_H / 2) * t.lookAheadFactor;

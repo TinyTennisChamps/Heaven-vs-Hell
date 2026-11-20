@@ -115,6 +115,8 @@ export interface PlayerInput {
   move: Vec2;
   /** Right mouse held (guard). */
   guardHeld: boolean;
+  /** Locked on: slashes skip aim-assist (they already point at the target). */
+  locked?: boolean;
 }
 
 /**
@@ -178,7 +180,7 @@ export function updatePlayer(world: World, inp: PlayerInput, aim: Vec2 | null, c
       p.action = { key: 'deathblow', step: 0, frame: 0, dir, hitIds: [], targetId: target.id };
     } else {
       const step = p.action && p.action.step > 0 ? (p.action.step % 3) + 1 : p.comboTimer > 0 ? (p.lastStep % 3) + 1 : 1;
-      p.action = { key: `slash${step}`, step, frame: 0, dir: assistAim(p.pos, aimDir, targets, c.aimAssist), hitIds: [] };
+      p.action = { key: `slash${step}`, step, frame: 0, dir: inp.locked ? { ...aimDir } : assistAim(p.pos, aimDir, targets, c.aimAssist), hitIds: [] };
     }
     emit(world, { type: 'swing', pos: { ...p.pos }, dir: { ...p.action.dir }, step: p.action.step });
   }
@@ -226,7 +228,7 @@ export function updatePlayer(world: World, inp: PlayerInput, aim: Vec2 | null, c
     if (a) {
       const def = attackDef(cfg, a.key);
       a.frame++;
-      if (a.frame <= def.startup && a.key !== 'deathblow') a.dir = assistAim(p.pos, aimDir, targets, c.aimAssist);
+      if (a.frame <= def.startup && a.key !== 'deathblow') a.dir = inp.locked ? { ...aimDir } : assistAim(p.pos, aimDir, targets, c.aimAssist);
       p.facing = { ...a.dir };
       speedMul = def.moveSpeedMul;
 

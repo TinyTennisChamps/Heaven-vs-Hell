@@ -39,6 +39,7 @@ export function startEnemyAttack(world: World, e: Enemy, key: string, cfg: SimCo
   if (!atk) return;
   e.attack = key;
   e.swingHit = false;
+  e.engage = false;
   e.attackDir = { ...e.facing };
   setPhase(e, 'windup');
   emit(world, { type: 'telegraph', pos: { ...e.pos }, judgement: !!atk.judgement });
@@ -97,6 +98,24 @@ export function updateEnemy(world: World, e: Enemy, cfg: SimConfig, think: Think
       turnToward(e, toP, def.turnRateDeg);
       const plan = think(world, e, def, cfg);
       move = plan.move;
+      if (world.focusId !== null && world.focusId !== e.id) {
+        // Not the focus: hang back, and only now and then get a turn to step
+        // in and attack — never while anyone else's attack is in flight.
+        if (!e.engage) {
+          move = holdBackMove(world, e, def, cfg);
+          plan.attack = null;
+          if (e.cooldown <= 0) {
+            if (world.flags.dummyAttacks && nextFloat(world.rng) < cfg.combat.groups.supportAttackChance) e.engage = true;
+            else e.cooldown = Math.round(def.cooldownMin * cfg.combat.groups.supportCooldownMul);
+          }
+        } else if (plan.attack && !noAttackInFlight(world, e, plan.attack, cfg)) {
+          plan.attack = null; // wait for the opening, keep approaching
+        }
+      } else {
+        e.engage = false;
+        // The focus attacks freely, but never into a supporter's swing already in flight.
+        if (plan.attack && world.enemies.some((o) => o.id !== e.id && (o.phase === 'windup' || o.phase === 'active'))) plan.attack = null;
+      }
       if (plan.attack) startEnemyAttack(world, e, plan.attack, cfg);
       break;
     }
@@ -139,6 +158,32 @@ export function updateEnemy(world: World, e: Enemy, cfg: SimConfig, think: Think
   }
 
   moveBody(world, e, move, cfg, lungeDelta);
+}
+
+function holdBackMove(world: World, e: Enemy, def: EnemyDef, cfg: SimConfig): Vec2 {
+  const g = cfg.combat.groups;
+  const p = world.player.pos;
+  const to = { x: p.x - e.pos.x, y: p.y - e.pos.y };
+  const d = Math.hypot(to.x, to.y);
+  const dir = normalize(to);
+  const sp = def.speed * g.holdBackSpeedMul;
+  if (d < g.holdBackDistance - 8) return { x: -dir.x * sp, y: -dir.y * sp };
+  if (d > g.holdBackDistance + 12) return { x: dir.x * sp, y: dir.y * sp };
+  // Circle slowly at the edge, direction fixed per enemy so they spread out.
+  const side = e.id % 2 === 0 ? 1 : -1;
+  return { x: -dir.y * sp * 0.5 * side, y: dir.x * sp * 0.5 * side };
+}
+
+function noAttackInFlight(world: World, e: Enemy, key: string, cfg: SimConfig): boolean {
+  const atk = cfg.enemies[e.type]!.attacks[key];
+  if (!atk) return false;
+  for (const o of world.enemies) {
+    if (o.id === e.id) continue;
+    if (o.phase === 'windup' || o.phase === 'active') return false;
+    // Don't start if the focus could start its own swing before ours lands.
+    if (o.id === world.focusId && o.phase === 'idle' && o.cooldown < atk.windup + atk.active) return false;
+  }
+  return true;
 }
 
 function moveBody(world: World, e: Enemy, vel: Vec2, cfg: SimConfig, extra: Vec2 = { x: 0, y: 0 }): void {

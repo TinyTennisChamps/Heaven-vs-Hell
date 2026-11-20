@@ -36,7 +36,7 @@ async function boot() {
   legend.className = 'legend';
   root.appendChild(legend);
   const updateLegend = (w: World) => {
-    legend.textContent = `WASD move · LMB slash / deathblow · RMB tap parry, hold block · Space dash · F3 enemy attacks: ${w.flags.dummyAttacks ? 'ON' : 'OFF'} · F4 reset · F1 debug`;
+    legend.textContent = `WASD move · LMB slash / deathblow · RMB tap parry, hold block · Space dash · Q lock-on (tap: next, hold: release) · F3 enemy attacks: ${w.flags.dummyAttacks ? 'ON' : 'OFF'} · F4 reset · F1 debug`;
   };
 
   const room = getData<RoomDef>('rooms/training');
@@ -145,6 +145,7 @@ async function boot() {
       overlay.set('posture', `${p.posture.toFixed(1)} / ${cfg.player.posture.max}${p.broken ? `  BROKEN ${p.broken}` : ''}`);
       overlay.set('guard', p.parry ? `parry f${p.parry.frame}/${p.parry.window}${p.parry.deflected ? ' ✓' : ''}` : p.guarding ? 'block' : '—');
       overlay.set('anti-mash', p.parryPenalty);
+      overlay.set('lock / focus', `${p.lockId ?? '—'} / ${world.focusId ?? '—'}`);
       overlay.set('buffer', world.buffer.snapshot());
       for (const e of world.enemies) overlay.set(`${e.type}#${e.id}`, `${e.phase}${e.attack ? `:${e.attack}` : ''} f${e.phaseFrame} hp ${e.hp} pos ${e.posture.toFixed(0)}`);
       overlay.set('hits landed/taken', `${world.stats.hitsLanded} / ${world.stats.hitsTaken}`);
@@ -216,6 +217,8 @@ function spawnEffects(world: World, scene: Scene): void {
       case 'swing':
       case 'telegraph':
       case 'parryWhiff':
+      case 'lockOn':
+      case 'lockOff':
         break;
     }
   }

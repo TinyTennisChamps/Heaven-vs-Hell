@@ -78,6 +78,10 @@ export interface CombatTuning {
   deathblow: { range: number; hitstop: number; slowmoFrames: number; slowmoScale: number; shake: number };
   /** Perfect deflect staggers the attacker; Satan's hits on it are multiplied meanwhile. */
   riposte: { frames: number; healthMul: number; postureMul: number };
+  /** Sekiro-style lock-on (Q). */
+  lockOn: { range: number; breakRange: number; holdToReleaseFrames: number; cameraBias: number };
+  /** Group fights: only the focus enemy attacks freely; the rest hold back. */
+  groups: { holdBackDistance: number; holdBackSpeedMul: number; supportAttackChance: number; supportCooldownMul: number };
   /** While parrying/blocking, turn to face the most imminent attacker within range. */
   autoFace: { enabled: boolean; range: number };
   breakHitstop: number;

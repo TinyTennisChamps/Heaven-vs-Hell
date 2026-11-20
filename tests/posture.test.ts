@@ -306,7 +306,8 @@ describe('riposte (perfect-parry reward)', () => {
     const H = hitTickFor('swing');
     const perfect = scenarioFor('swing', H - 1);
     expect(perfect.e.phase === 'recoil' || perfect.sawRecoil).toBe(true);
-    const normal = scenarioFor('swing', H - 6);
+    const normal = scenarioFor('swing', H - P.perfectFrames); // first non-perfect frame
+    expect(normal.w.stats.deflects).toBe(1);
     expect(normal.sawRecoil).toBe(false);
   });
 
