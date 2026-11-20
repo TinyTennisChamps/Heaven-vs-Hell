@@ -96,6 +96,8 @@ export interface CombatTuning {
   /** While parrying/blocking, turn to face the most imminent attacker within range. */
   autoFace: { enabled: boolean; range: number };
   breakHitstop: number;
+  /** Render: how many ticks before an attack lands its "now!" flash starts. */
+  telegraph: { flashLeadFrames: number };
 }
 
 export interface CameraTuning {
@@ -176,6 +178,10 @@ export interface EnemyDef {
   preferredRange?: number;
   /** Posture multiplier for Satan's thrown bolts (archers, ophans take extra). */
   throwPostureMul?: number;
+  /** Shielded enemies turn faster when Satan is outside the shield arc. */
+  flankTurnRateDeg?: number;
+  /** Flanking punish: after Satan spends `afterFrames` behind the shield within `range`, spin (once per cooldown). */
+  flankSpin?: { afterFrames: number; range: number; cooldownFrames: number };
   posture: PostureTuning;
   attacks: Record<string, EnemyAttackDef>;
 }

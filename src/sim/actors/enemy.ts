@@ -3,7 +3,7 @@ import { angleDiff, angleOf, DEG, easeOutQuad, fromAngle, normalize, type Vec2 }
 import { nextFloat, nextRange } from '../../core/rng';
 import type { EnemyAttackDef, EnemyDef, SimConfig } from '../config';
 import { arcHitsCircle } from '../combat/hitbox';
-import { resolveOnPlayer } from '../combat/damage';
+import { inFrontCone, resolveOnPlayer } from '../combat/damage';
 import { regenPosture } from '../combat/posture';
 import { moveAndSlide } from '../physics/collide';
 import { enemyArrowInFlight, spawnProjectile } from '../projectiles';
@@ -52,6 +52,7 @@ export function updateEnemy(world: World, e: Enemy, cfg: SimConfig, think: Think
   if (e.hitFlash > 0) e.hitFlash--;
   if (e.shieldFlash > 0) e.shieldFlash--;
   if (e.cooldown > 0) e.cooldown--;
+  if (e.specialCooldown > 0) e.specialCooldown--;
   e.phaseFrame++;
 
   if (e.phase === 'down') {
@@ -96,7 +97,11 @@ export function updateEnemy(world: World, e: Enemy, cfg: SimConfig, think: Think
       }
       break;
     case 'idle': {
-      turnToward(e, toP, def.turnRateDeg);
+      // Shielded enemies pivot faster when Satan gets round the side or back.
+      const flanked = def.shieldArcDeg > 0 && !inFrontCone(e.pos, e.facing, p.pos, def.shieldArcDeg);
+      const near = Math.hypot(p.pos.x - e.pos.x, p.pos.y - e.pos.y) <= (def.flankSpin?.range ?? 0);
+      e.flankTicks = flanked && near ? e.flankTicks + 1 : 0;
+      turnToward(e, toP, flanked ? (def.flankTurnRateDeg ?? def.turnRateDeg) : def.turnRateDeg);
       const plan = think(world, e, def, cfg);
       move = plan.move;
       if (world.focusId !== null && world.focusId !== e.id) {
@@ -115,7 +120,7 @@ export function updateEnemy(world: World, e: Enemy, cfg: SimConfig, think: Think
       } else {
         e.engage = false;
         // The focus attacks freely, but never into a supporter's swing already in flight.
-        if (plan.attack && (enemyArrowInFlight(world) || world.enemies.some((o) => o.id !== e.id && (o.phase === 'windup' || o.phase === 'active')))) plan.attack = null;
+        if (plan.attack && (enemyArrowInFlight(world, e.id) || world.enemies.some((o) => o.id !== e.id && (o.phase === 'windup' || o.phase === 'active')))) plan.attack = null;
       }
       if (plan.attack) startEnemyAttack(world, e, plan.attack, cfg);
       break;
@@ -158,8 +163,10 @@ export function updateEnemy(world: World, e: Enemy, cfg: SimConfig, think: Think
         setPhase(e, 'idle');
         e.cooldown = Math.round(nextRange(world.rng, def.cooldownMin, def.cooldownMax));
       } else if (atk.chain && e.phaseFrame === Math.floor(atk.recovery / 3)) {
-        // Decide once, early in recovery, whether this becomes a 2-hit string.
-        if (nextFloat(world.rng) < atk.chain.chance) startEnemyAttack(world, e, atk.chain.next, cfg);
+        // Decide once, early in recovery, whether this becomes a 2-hit string —
+        // but never into another enemy's attack or arrow already in flight.
+        const othersBusy = enemyArrowInFlight(world, e.id) || world.enemies.some((o) => o.id !== e.id && (o.phase === 'windup' || o.phase === 'active'));
+        if (!othersBusy && nextFloat(world.rng) < atk.chain.chance) startEnemyAttack(world, e, atk.chain.next, cfg);
       }
       break;
     }
@@ -186,7 +193,7 @@ function holdBackMove(world: World, e: Enemy, def: EnemyDef, cfg: SimConfig): Ve
 function noAttackInFlight(world: World, e: Enemy, key: string, cfg: SimConfig): boolean {
   const atk = cfg.enemies[e.type]!.attacks[key];
   if (!atk) return false;
-  if (enemyArrowInFlight(world)) return false;
+  if (enemyArrowInFlight(world, e.id)) return false;
   for (const o of world.enemies) {
     if (o.id === e.id) continue;
     if (o.phase === 'windup' || o.phase === 'active') return false;

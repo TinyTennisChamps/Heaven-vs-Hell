@@ -11,10 +11,10 @@
     "maxRotateDeg": 15
   },
   "parry": {
-    "windowFrames": 14,
-    "perfectFrames": 7,
-    "whiffPenaltyFrames": 20,
-    "penalizedWindowFrames": 5,
+    "windowFrames": 18,
+    "perfectFrames": 9,
+    "whiffPenaltyFrames": 14,
+    "penalizedWindowFrames": 8,
     "coneDeg": 150,
     "selfPostureMul": 0.25,
     "perfectSelfPostureMul": 0,
@@ -73,5 +73,8 @@
     "postureDamage": 30,
     "perfectHealthDamage": 18,
     "perfectPostureDamage": 55
+  },
+  "telegraph": {
+    "flashLeadFrames": 18
   }
 }

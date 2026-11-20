@@ -93,3 +93,28 @@ canvas {
   border: 1px solid #483a48;
   font: inherit;
 }
+
+.spawn-panel {
+  position: fixed;
+  left: 8px;
+  bottom: 30px;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  padding: 4px 6px;
+  background: rgba(14, 10, 13, 0.75);
+  color: #e8c872;
+  font: 11px/1.2 ui-monospace, Menlo, monospace;
+  z-index: 9;
+}
+.spawn-panel button {
+  font: inherit;
+  color: #fffdf6;
+  background: #2e1c26;
+  border: 1px solid #483a48;
+  padding: 2px 6px;
+  cursor: pointer;
+}
+.spawn-panel button:hover {
+  border-color: #ff4a3d;
+}

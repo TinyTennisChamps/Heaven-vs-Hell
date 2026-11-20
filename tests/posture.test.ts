@@ -85,43 +85,48 @@ describe('deflect (parry)', () => {
 });
 
 describe('anti-mash', () => {
-  const H = hitTick('swing');
+  /** Idle `lead` ticks first so presses can happen well before the swing; presses are relative to the hit. */
+  function mashScenario(pressesBeforeHit: number[]) {
+    const H0 = hitTick('swing');
+    const lead = 60;
+    const { w, e } = duel('dummy');
+    const H = lead + H0;
+    for (let t = 0; t < lead + 80; t++) {
+      if (t === lead) startEnemyAttack(w, e, 'swing', cfg);
+      const press = pressesBeforeHit.some((k) => t === H - k + (t >= lead ? 0 : 0)) ? (['parry'] as const) : [];
+      step(w, input({ press: [...press], aim: aimAt(e) }), cfg);
+    }
+    return w;
+  }
+  const late = P.penalizedWindowFrames + 2; // inside the full window, outside the short one
+  const whiff = late + P.windowFrames + 4; // its window ends ~4 ticks before the real read
 
   it('after a whiffed parry, a re-press within whiffPenaltyFrames gets the short window', () => {
-    // Whiff early; its window ends at H-15; the 20-frame penalty covers the read at H-6.
-    expect(H).toBeGreaterThanOrEqual(24);
-    const control = scenario('swing', { [H - 6]: ['parry'] }).w;
-    expect(control.stats.deflects).toBe(1);
-    const mashed = scenario('swing', { [H - 24]: ['parry'], [H - 6]: ['parry'] }).w;
-    expect(mashed.stats.deflects).toBe(0); // 6 > penalized window of 5
+    expect(late).toBeLessThan(P.windowFrames);
+    expect(whiff - P.windowFrames - late).toBeLessThan(P.whiffPenaltyFrames);
+    expect(mashScenario([late]).stats.deflects).toBe(1); // control: no whiff -> deflects
+    const mashed = mashScenario([whiff, late]);
+    expect(mashed.stats.deflects).toBe(0);
     expect(mashed.stats.hitsTaken).toBe(1);
   });
 
   it('a penalised press still deflects if it is precise (inside the short window)', () => {
-    const { w } = scenario('swing', { [H - 24]: ['parry'], [H - 2]: ['parry'] });
-    expect(w.stats.deflects).toBe(1);
+    expect(mashScenario([whiff, 2]).stats.deflects).toBe(1);
   });
 
   it('mashing every few frames never finds the full window', () => {
-    const press: Record<number, ButtonAction[]> = {};
-    for (let t = 0; t < 60; t += 3) press[t] = ['parry'];
-    let deflectsAtFullWindowOnly = 0;
-    // The only way to deflect while mashing is to happen to land inside the
-    // short window; check that the window really is short while mashing.
     const { w } = duel('dummy');
+    let fullWindowWhileMashing = 0;
     for (let t = 0; t < 60; t++) {
-      step(w, input({ press: press[t] ?? [] }), cfg);
-      if (w.player.parry && t > 12 && w.player.parry.window === P.windowFrames) deflectsAtFullWindowOnly++;
+      step(w, input({ press: t % 3 === 0 ? ['parry'] : [] }), cfg);
+      if (w.player.parry && t > P.windowFrames + 2 && w.player.parry.window === P.windowFrames) fullWindowWhileMashing++;
     }
-    expect(deflectsAtFullWindowOnly).toBe(0);
+    expect(fullWindowWhileMashing).toBe(0);
   });
 
-  it('a successful deflect clears the penalty, so chained deflects keep the full window', () => {
-    const { w, e } = duel('dummy');
-    startEnemyAttack(w, e, 'swing', cfg);
-    const H = hitTick('swing');
-    for (let t = 0; t <= H; t++) step(w, input({ press: t === H - 2 ? ['parry'] : [], aim: aimAt(e) }), cfg);
-    run(w, cfg, 12, () => input({ aim: aimAt(e) }));
+  it('a successful deflect clears the penalty', () => {
+    const w = mashScenario([2]);
+    run(w, cfg, 12);
     expect(w.stats.deflects).toBe(1);
     expect(w.player.parryPenalty).toBe(0);
   });
@@ -276,7 +281,7 @@ describe('Dominion shield', () => {
     const { w, e } = duel('dominion');
     startEnemyAttack(w, e, 'bash', cfg);
     // Let the bash play out against a blocking Satan, then punish in recovery.
-    for (let t = 0; t < 26; t++) step(w, input({ hold: ['parry'], aim: aimAt(e) }), cfg);
+    for (let t = 0; t < 80 && e.phase !== 'recover'; t++) step(w, input({ hold: ['parry'], aim: aimAt(e) }), cfg);
     expect(e.phase).toBe('recover');
     step(w, input({ press: ['slash'], aim: aimAt(e) }), cfg);
     run(w, cfg, 12, () => input({ aim: aimAt(e) }));
@@ -371,5 +376,75 @@ describe('dash anti-spam', () => {
     run(w, cfg, cfg.player.dash.frames + cfg.player.dash.spamWindowFrames + 2);
     step(w, input({ press: ['dash'], move: { x: 0, y: 1 } }), cfg);
     expect(w.player.dash!.iframes).toBe(true);
+  });
+});
+
+describe('block responsiveness and the hold-vs-mash rule', () => {
+  it('block is live on the very first tick RMB is held (no delay after the parry window)', () => {
+    const { w, e } = duel('dummy');
+    step(w, input({ press: ['parry'], hold: ['parry'], aim: aimAt(e) }), cfg);
+    expect(w.player.guarding).toBe(true);
+  });
+
+  it('holding RMB into a block does not count as a whiffed parry', () => {
+    const { w, e } = duel('dummy');
+    step(w, input({ press: ['parry'], hold: ['parry'], aim: aimAt(e) }), cfg);
+    run(w, cfg, P.windowFrames + 5, () => input({ hold: ['parry'], aim: aimAt(e) }));
+    expect(w.player.parryPenalty).toBe(0);
+  });
+
+  it('a released tap that whiffs still gets the anti-mash penalty', () => {
+    const { w, e } = duel('dummy');
+    step(w, input({ press: ['parry'], aim: aimAt(e) }), cfg);
+    run(w, cfg, P.windowFrames + 1, () => input({ aim: aimAt(e) }));
+    expect(w.player.parryPenalty).toBeGreaterThan(0);
+  });
+
+  it('reacting to the "now" flash (with human reaction time) still lands a deflect', () => {
+    const lead = cfg.combat.telegraph.flashLeadFrames;
+    const reaction = 12; // ~200 ms
+    const H = hitTick('swing');
+    const { w } = scenario('swing', { [H - lead + reaction]: ['parry'] });
+    expect(w.stats.deflects).toBe(1);
+  });
+
+  it('every Dominion attack that can be parried flashes early enough to react to', () => {
+    for (const [k, atk] of Object.entries(cfg.enemies.dominion!.attacks)) {
+      if (atk.judgement) continue;
+      // Reaction window = time between flash start and the hit, must exceed ~200 ms.
+      expect(Math.min(atk.windup, cfg.combat.telegraph.flashLeadFrames), k).toBeGreaterThanOrEqual(15);
+    }
+  });
+});
+
+describe('Dominion flanking punish', () => {
+  it('lingering behind the shield triggers a fast pivot and a shield-spin', () => {
+    const { w, e } = duel('dominion');
+    w.flags.dummyAttacks = true;
+    e.facing = { x: 1, y: 0 }; // facing away: Satan is behind it
+    e.cooldown = 9999;
+    let spun = false;
+    for (let t = 0; t < 60 && !spun; t++) {
+      step(w, input({ aim: aimAt(e) }), cfg);
+      if (e.attack === 'spin') spun = true;
+    }
+    expect(spun).toBe(true);
+  });
+
+  it('the spin hits all around, but can be parried', () => {
+    const { w, e } = duel('dominion');
+    startEnemyAttack(w, e, 'spin', cfg);
+    const windup = cfg.enemies.dominion!.attacks.spin!.windup;
+    for (let t = 0; t < 60; t++) step(w, input({ press: t === windup - 2 ? ['parry'] : [], aim: aimAt(e) }), cfg);
+    expect(w.stats.deflects).toBe(1);
+    expect(w.stats.hitsTaken).toBe(0);
+  });
+
+  it('standing in front of the shield never triggers the spin', () => {
+    const { w, e } = duel('dominion');
+    w.flags.dummyAttacks = true;
+    e.cooldown = 9999;
+    for (let t = 0; t < 120; t++) step(w, input({ aim: aimAt(e) }), cfg);
+    expect(e.attack === 'spin').toBe(false);
   });
 });

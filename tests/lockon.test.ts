@@ -128,3 +128,24 @@ describe('group fights: focus attacks, others hold back', () => {
     expect(d).toBeGreaterThan(cfg.combat.groups.holdBackDistance - 15);
   });
 });
+
+describe('training spawns', () => {
+  it('the training room starts empty', async () => {
+    const { createWorld } = await import('../src/sim/world');
+    const { trainingRoom } = await import('./helpers');
+    expect(createWorld(trainingRoom(), cfg, 1).enemies.length).toBe(0);
+  });
+
+  it('spawnEnemyAt places the enemy at the point, or in front of Satan if the point is invalid', async () => {
+    const { createWorld, spawnEnemyAt } = await import('../src/sim/world');
+    const { pointInPolygon } = await import('../src/sim/physics/collide');
+    const { trainingRoom } = await import('./helpers');
+    const w = createWorld(trainingRoom(), cfg, 1);
+    const a = spawnEnemyAt(w, cfg, 'dominion', { x: 150, y: 120 });
+    expect(a.pos).toEqual({ x: 150, y: 120 });
+    const b = spawnEnemyAt(w, cfg, 'archer', { x: -500, y: -500 }); // outside the room
+    expect(pointInPolygon(b.pos.x, b.pos.y, w.room.bounds)).toBe(true);
+    const c = spawnEnemyAt(w, cfg, 'dummy', { x: 88, y: 64 }); // inside a pillar
+    for (const wall of w.room.walls) expect(pointInPolygon(c.pos.x, c.pos.y, wall)).toBe(false);
+  });
+});

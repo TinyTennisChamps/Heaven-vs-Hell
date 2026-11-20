@@ -99,6 +99,23 @@ Satan is trapped in Heaven and cuts his way down through its layers to get home.
 
 **Balance re-measured honestly:** the earlier 2.14× came from 10 lucky seeds. Over 40 seeds the true ratio is about **1.7×**. The benchmark now uses 20 seeds and reads 1.91×. Riposte tuning plateaus at 1.75×: the parrier is limited by how *often* the Dominion attacks, and the aggressor takes about 0 damage by flanking.
 
+## Third playtest pass: parrying felt impossible against the Dominion
+**Why:** the white "now!" flash began only 10 frames (0.17 s) before the hit, which is less than human reaction time (about 0.2 s). Block also only came on *after* the parry window ended, and holding block past the window counted as a whiffed parry.
+
+**Fixes:**
+- Parry window 18 frames, the first 9 perfect.
+- Anti-mash: penalised window 8, penalty 14 frames, and holding into a block is never penalised.
+- Block is live the instant RMB is held.
+- The flash starts 18 frames before the hit (`combat.telegraph.flashLeadFrames`).
+- Longer Dominion windups: thrust 28, thrust2 22, bash 22.
+- A test checks that reacting to the flash with 12 frames of reaction time still deflects. In the real game, a scripted "human" reacting 0.2 s after the flash went 4/4 perfect.
+
+**Flanking punish (the user chose this one):** the Dominion pivots at 12°/tick when Satan is outside its shield arc. After 10 ticks behind it within 30 px, it shield-spins: a 360° bash with a 16-frame windup that can be parried, on a 100-tick cooldown. Dominion cooldown is 25–50 ticks.
+
+**Balance:** parrying is now **1.67×** faster (20 seeds), against the 2× target. The longer windups that make parrying easy cap how fast a parry player can kill. To revisit at polish (M9).
+
+**Training spawns:** the court starts empty. Keys 1/2/3 or the panel buttons spawn a dummy, Dominion or Archer at the cursor, and 0 clears. Spawned enemies don't respawn.
+
 ## Rage Vials (7, flat additive, every stat ≤ +20%)
 | L1 | L2 |
 |---|---|

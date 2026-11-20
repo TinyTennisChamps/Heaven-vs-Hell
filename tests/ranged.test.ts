@@ -72,9 +72,12 @@ describe('throw (E) and pips', () => {
 
     const back = setup('dominion', 80);
     back.e.facing = { x: 1, y: 0 };
+    cfg.enemies.dominion!.flankTurnRateDeg = 0; // hold it facing away while the bolt flies
+    cfg.enemies.dominion!.turnRateDeg = 0;
     step(back.w, input({ press: ['throw'], aim: at(back.e) }), cfg);
     run(back.w, cfg, 40, () => input({ aim: at(back.e) }));
     expect(back.e.hp).toBe(cfg.enemies.dominion!.health - cfg.attacks.throw!.healthDamage);
+    Object.assign(cfg.enemies.dominion!, testConfig().enemies.dominion!); // restore for later tests
   });
 
   it('bolts deal bonus posture damage to archers', () => {
@@ -165,14 +168,19 @@ describe('Choir Archer arrows', () => {
     dom.pos = { x: 125, y: 120 };
     arc.pos = { x: 100, y: 210 };
     let overlap = 0;
+    let arrows = 0;
     for (let t = 0; t < 60 * 30; t++) {
+      // Arrows in the air *before* this tick, by shooter.
+      const flying = w.projectiles.filter((p) => p.owner !== 'player').map((p) => p.owner);
       step(w, input({ hold: ['parry'] }), cfg);
       w.player.hp = cfg.player.maxHealth;
       w.player.posture = 0;
-      const arrow = w.projectiles.some((p) => p.owner !== 'player');
-      const melee = w.enemies.filter((e) => e.phase === 'windup' || e.phase === 'active').length;
-      if (arrow && melee > 0 && w.enemies.some((e) => e.phase === 'windup' && e.phaseFrame === 0)) overlap++;
+      arrows += w.events.filter((ev) => ev.type === 'arrowLoosed').length;
+      w.events.length = 0;
+      // Violation: an enemy starts an attack while ANOTHER enemy's arrow is in the air.
+      for (const e of w.enemies) if (e.phase === 'windup' && e.phaseFrame === 0 && flying.some((o) => o !== e.id)) overlap++;
     }
-    expect(overlap).toBe(0); // no new attack starts while an arrow is in the air
+    expect(arrows).toBeGreaterThan(0); // the archer really did shoot
+    expect(overlap).toBe(0);
   });
 });

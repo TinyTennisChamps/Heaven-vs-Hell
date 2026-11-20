@@ -14,7 +14,8 @@ import type { AnimConfig } from './render/animSync';
 import { attackDef, attackPhase } from './sim/actors/player';
 import type { SimConfig, RoomDef } from './sim/config';
 import { step } from './sim/step';
-import { createWorld, type World } from './sim/world';
+import { createWorld, spawnEnemyAt, type World } from './sim/world';
+import { screenToGround } from './core/iso';
 
 const cfg: SimConfig = {
   player: getData('tuning/player'),
@@ -36,13 +37,52 @@ async function boot() {
   legend.className = 'legend';
   root.appendChild(legend);
   const updateLegend = (w: World) => {
-    legend.textContent = `WASD move · LMB slash / deathblow · RMB tap parry, hold block · E throw · Space dash · Q lock-on (tap: next, hold: release) · F3 enemy attacks: ${w.flags.dummyAttacks ? 'ON' : 'OFF'} · F4 reset · F1 debug`;
+    legend.textContent = `WASD move · LMB slash · RMB parry (hold: block) · E throw · Space dash · Q lock · 1/2/3 spawn, 0 clear · F3 attacks ${w.flags.dummyAttacks ? 'ON' : 'OFF'} · F4 reset · F1 debug`;
   };
+
+  // --- Spawn panel: test enemies one at a time (training room only) ---
+  const SPAWNS: [string, string, string][] = [
+    ['Digit1', 'dummy', 'Dummy'],
+    ['Digit2', 'dominion', 'Dominion'],
+    ['Digit3', 'archer', 'Archer'],
+  ];
+  const spawnPanel = document.createElement('div');
+  spawnPanel.className = 'spawn-panel';
+  root.appendChild(spawnPanel);
+  const cursorGround = () => {
+    const a = input.peekAim();
+    const c = world.camera.pos;
+    return screenToGround(c.x + a.x - VIEW_W / 2, c.y + a.y - VIEW_H / 2 + 10);
+  };
+  const spawn = (type: string) => spawnEnemyAt(world, cfg, type, cursorGround());
+  const clear = () => {
+    world.enemies = [];
+    world.projectiles = [];
+    world.player.lockId = null;
+  };
+  const title = document.createElement('div');
+  title.textContent = 'Spawn at cursor';
+  spawnPanel.appendChild(title);
+  for (const [key, type, label] of SPAWNS) {
+    const b = document.createElement('button');
+    b.textContent = `${key.slice(-1)} ${label}`;
+    b.addEventListener('click', () => {
+      // Button clicks spawn in front of Satan (the cursor is on the button).
+      const p = world.player;
+      spawnEnemyAt(world, cfg, type, { x: p.pos.x + p.facing.x * 50, y: p.pos.y + p.facing.y * 50 });
+    });
+    spawnPanel.appendChild(b);
+  }
+  const clr = document.createElement('button');
+  clr.textContent = '0 Clear';
+  clr.addEventListener('click', clear);
+  spawnPanel.appendChild(clr);
 
   const room = getData<RoomDef>('rooms/training');
   const satanAtlas = await loadAtlas(`${import.meta.env.BASE_URL}sprites/satan.json`);
   const anim = getData<AnimConfig>('anim/satan');
   let world = createWorld(room, cfg, 1);
+  world.flags.respawn = false; // training: spawned enemies stay dead
   let scene = new Scene(world, satanAtlas, anim);
   app.stage.addChild(scene.root);
   updateLegend(world);
@@ -53,6 +93,7 @@ async function boot() {
     scene.root.destroy({ children: true });
     world = createWorld(room, cfg, 1);
     world.flags = flags;
+    world.flags.respawn = false;
     scene = new Scene(world, satanAtlas, anim);
     app.stage.addChild(scene.root);
   };
@@ -93,6 +134,11 @@ async function boot() {
     } else if (e.code === 'F4') {
       e.preventDefault();
       reset();
+    } else if (e.code === 'Digit0') {
+      clear();
+    } else {
+      const sp = SPAWNS.find(([k]) => k === e.code);
+      if (sp && !e.repeat) spawn(sp[1]);
     }
   });
 

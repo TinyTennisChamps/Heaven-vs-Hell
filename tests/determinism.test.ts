@@ -20,7 +20,9 @@ function scriptedInput(tick: number): InputFrame {
 
 function runAt(hz: number, totalTicks: number) {
   const cfg = testConfig();
-  const world = createWorld(trainingRoom(), cfg, 7);
+  // Explicit spawns (the training room itself starts empty).
+  const room = { ...trainingRoom(), spawns: [{ type: 'dummy', at: [150, 70] as [number, number] }, { type: 'dominion', at: [200, 120] as [number, number] }] };
+  const world = createWorld(room, cfg, 7);
   const loop = new FixedLoop();
   while (world.tick < totalTicks) {
     const { steps } = loop.advance(1 / hz);

@@ -15,6 +15,14 @@ export const thinkDominion: Think = (world, e, def) => {
   const dist = Math.hypot(to.x, to.y);
   const dir = normalize(to);
 
+  // Flanking punish: Satan has been behind the shield too long — shield-spin.
+  const fs = def.flankSpin;
+  if (fs && e.flankTicks >= fs.afterFrames && e.specialCooldown <= 0 && def.attacks.spin) {
+    e.flankTicks = 0;
+    e.specialCooldown = fs.cooldownFrames;
+    return { move: { x: 0, y: 0 }, attack: 'spin' };
+  }
+
   // Counter: after absorbing several hits on the shield, bash immediately.
   if ((def.counterAfterBlocks ?? 0) > 0 && e.blockedHits >= (def.counterAfterBlocks ?? 0) && dist < def.attacks.bash!.range + 6) {
     e.blockedHits = 0;

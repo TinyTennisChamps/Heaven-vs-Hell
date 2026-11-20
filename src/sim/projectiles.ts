@@ -39,9 +39,9 @@ export function spawnProjectile(
   return p;
 }
 
-/** True while an enemy's arrow is in the air (counts as an attack in flight). */
-export function enemyArrowInFlight(world: World): boolean {
-  return world.projectiles.some((p) => p.owner !== 'player');
+/** True while an enemy's arrow is in the air (counts as an attack in flight). `exceptShooter` ignores that enemy's own arrows. */
+export function enemyArrowInFlight(world: World, exceptShooter?: number): boolean {
+  return world.projectiles.some((p) => p.owner !== 'player' && p.owner !== exceptShooter);
 }
 
 function end(world: World, p: Projectile): void {

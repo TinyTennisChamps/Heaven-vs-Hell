@@ -248,8 +248,9 @@ export class Scene {
       const atk = enemyAttack(cfg, e);
       const faceDir = e.phase === 'windup' || e.phase === 'active' ? e.attackDir : e.facing;
       this.place(s, ep, groundToScreen(faceDir.x, faceDir.y).x < 0);
-      // Last 10 windup frames blink white: "it's coming now".
-      const tele = !!atk && e.phase === 'windup' && e.phaseFrame > atk.windup - 10 && Math.floor(e.phaseFrame / 3) % 2 === 0;
+      // The last flashLeadFrames of a windup blink white: "it's coming now" —
+      // early enough that reacting to it still lands inside the parry window.
+      const tele = !!atk && e.phase === 'windup' && e.phaseFrame > atk.windup - cfg.combat.telegraph.flashLeadFrames && Math.floor(e.phaseFrame / 3) % 2 === 0;
       const flash = e.hitFlash > 0 || tele;
       if (e.type === 'dominion') {
         const pose = dominionPose(e);
@@ -481,7 +482,7 @@ function archerPose(e: Enemy): ArcherPose {
 function dominionPose(e: Enemy): DominionPose {
   if (e.phase === 'broken') return 'broken';
   if (e.phase === 'recoil') return 'recoil';
-  if (e.attack === 'bash' && (e.phase === 'active' || e.phase === 'recover')) return 'bash';
+  if ((e.attack === 'bash' || e.attack === 'spin') && (e.phase === 'active' || e.phase === 'recover')) return 'bash';
   if (e.attack === 'judgement' && e.phase === 'active') return 'lunge';
   if (e.phase === 'windup') return e.attack === 'bash' ? 'guard' : 'drawBack';
   if (e.phase === 'active' || (e.phase === 'recover' && e.phaseFrame < 8)) return 'thrust';

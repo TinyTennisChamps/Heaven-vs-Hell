@@ -3,7 +3,7 @@ import { groundToScreen } from '../core/iso';
 import { v2, type Vec2 } from '../core/math';
 import { InputBuffer } from '../input/buffer';
 import type { RoomDef, SimConfig } from './config';
-import { segmentsFromPolygon, type Seg } from './physics/collide';
+import { depenetrate, pointInPolygon, segmentsFromPolygon, type Seg } from './physics/collide';
 
 export interface AttackState {
   /** Key into the attack data ("slash1".."slash3", "deathblow"). */
@@ -124,6 +124,10 @@ export interface Enemy {
   shieldFlash: number;
   /** A non-focus enemy that has been given its turn to step in and attack. */
   engage: boolean;
+  /** Consecutive ticks Satan has spent behind this enemy's shield, nearby. */
+  flankTicks: number;
+  /** Cooldown for special moves (e.g. the flank spin). */
+  specialCooldown: number;
   spawn: Vec2;
 }
 
@@ -274,6 +278,8 @@ export function spawnEnemy(world: World, cfg: SimConfig, type: string, at: Vec2)
     blockedHits: 0,
     shieldFlash: 0,
     engage: false,
+    flankTicks: 0,
+    specialCooldown: 0,
     spawn: { ...at },
   };
   world.enemies.push(e);
@@ -284,4 +290,22 @@ const MAX_EVENTS = 256;
 export function emit(world: World, ev: SimEvent): void {
   if (world.events.length >= MAX_EVENTS) world.events.shift();
   world.events.push(ev);
+}
+
+/**
+ * Debug/training spawn at a ground point: clamped into the room and pushed out
+ * of walls; falls back to just in front of Satan if the point is outside.
+ */
+export function spawnEnemyAt(world: World, cfg: SimConfig, type: string, at: Vec2): Enemy {
+  let pos = { ...at };
+  const inWall = world.room.walls.some((w) => pointInPolygon(pos.x, pos.y, w));
+  if (!pointInPolygon(pos.x, pos.y, world.room.bounds) || inWall) {
+    const p = world.player;
+    pos = { x: p.pos.x + p.facing.x * 50, y: p.pos.y + p.facing.y * 50 };
+  }
+  const r = cfg.enemies[type]?.radius ?? 8;
+  pos = depenetrate(pos.x, pos.y, r + 1, world.segs);
+  const e = spawnEnemy(world, cfg, type, pos);
+  e.cooldown = Math.max(e.cooldown, 45); // a beat before it acts
+  return e;
 }

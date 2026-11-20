@@ -79,11 +79,12 @@ export function pickPlayerAnim(p: PlayerState, cfg: SimConfig, anim: AnimConfig)
     const d = attackDef(cfg, p.action.key);
     return { tag: key, facing: facingOf(p.action.dir), frame: syncedFrame(anim[key], d, Math.max(1, p.action.frame)) };
   }
-  if (p.parry) {
+  if (p.parry && !p.guarding) {
     // 4 frames: raise, deflect (glint), hold, lower — spread over the window.
     const f = p.parry.deflected ? 1 : Math.min(3, Math.floor(((p.parry.frame - 1) / Math.max(1, p.parry.window)) * 4));
     return { tag: 'parry', facing: facingOf(p.facing), frame: f };
   }
+  if (p.parry && p.parry.frame <= 4) return { tag: 'parry', facing: facingOf(p.facing), frame: p.parry.deflected ? 1 : 0 };
   if (p.guarding) return { tag: 'block', facing: facingOf(p.facing), frame: 0 };
   const speed = Math.hypot(p.vel.x, p.vel.y);
   if (speed >= anim.runMinSpeed) return { tag: 'run', facing: facingOf(p.vel), frame: -1 };

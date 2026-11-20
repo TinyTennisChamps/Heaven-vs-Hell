@@ -218,14 +218,17 @@ export function updatePlayer(world: World, inp: PlayerInput, aim: Vec2 | null, c
   if (p.parry) {
     p.parry.frame++;
     if (p.parry.frame > p.parry.window) {
-      if (!p.parry.deflected) {
+      // Holding the button into a block isn't mashing — only a released tap that whiffed is.
+      if (!p.parry.deflected && !inp.guardHeld) {
         p.parryPenalty = c.parry.whiffPenaltyFrames;
         emit(world, { type: 'parryWhiff', pos: { ...p.pos } });
       }
       p.parry = null;
     }
   }
-  p.guarding = inp.guardHeld && !p.parry && !p.dash && !p.action && !locked(p);
+  // Block is live the instant RMB is held (no gap after the parry window);
+  // during the window a deflect still takes priority.
+  p.guarding = inp.guardHeld && !p.dash && !p.action && !locked(p);
   if (p.parry || p.guarding) {
     // Guard faces the incoming attack, not the cursor: parrying is about timing.
     const threat = c.autoFace.enabled ? imminentThreat(world, cfg) : null;
