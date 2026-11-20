@@ -1,0 +1,23 @@
+{
+  "name": "heaven-vs-hell",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "npm run typecheck && npm test"
+  },
+  "dependencies": {
+    "pixi.js": "8.6.6"
+  },
+  "devDependencies": {
+    "@types/node": "22.10.2",
+    "typescript": "5.7.2",
+    "vite": "6.0.7",
+    "vitest": "3.0.5"
+  }
+}

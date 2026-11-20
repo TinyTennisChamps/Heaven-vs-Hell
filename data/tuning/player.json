@@ -1,0 +1,6 @@
+{
+  "maxSpeed": 110,
+  "accelFrames": 6,
+  "decelFrames": 4,
+  "radius": 6
+}
