@@ -4,9 +4,43 @@
   "knockbackFriction": 0.8,
   "hurtStunFrames": 14,
   "separationStrength": 0.5,
+  "hitPostureMul": 0.5,
   "aimAssist": {
     "coneDeg": 20,
     "range": 40,
     "maxRotateDeg": 15
-  }
+  },
+  "parry": {
+    "windowFrames": 9,
+    "perfectFrames": 4,
+    "whiffPenaltyFrames": 20,
+    "penalizedWindowFrames": 5,
+    "coneDeg": 150,
+    "selfPostureMul": 0.25,
+    "perfectSelfPostureMul": 0,
+    "attackerPostureMul": 1.4,
+    "perfectAttackerPostureMul": 2.2,
+    "hitstop": 5,
+    "perfectHitstop": 8,
+    "shake": 1.5,
+    "perfectShake": 2.5,
+    "moveSpeedMul": 0.5
+  },
+  "block": {
+    "coneDeg": 120,
+    "postureMul": 1.0,
+    "stunFrames": 10,
+    "dashAfter": 6,
+    "moveSpeedMul": 0.5,
+    "knockback": 90,
+    "hitstop": 3
+  },
+  "deathblow": {
+    "range": 26,
+    "hitstop": 12,
+    "slowmoFrames": 24,
+    "slowmoScale": 0.4,
+    "shake": 4
+  },
+  "breakHitstop": 6
 }

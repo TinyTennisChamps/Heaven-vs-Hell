@@ -18,7 +18,7 @@ export function testConfig(): SimConfig {
     combat: loadData('tuning/combat'),
     camera: loadData('tuning/camera'),
     attacks: loadData('attacks/satan'),
-    dummy: loadData('enemies/dummy'),
+    enemies: { dummy: loadData('enemies/dummy'), dominion: loadData('enemies/dominion') },
   };
 }
 
@@ -26,17 +26,23 @@ export function trainingRoom(): RoomDef {
   return loadData('rooms/training');
 }
 
-/** A world with the training room. `withDummy: false` removes the dummy. */
-export function testWorld(cfg: SimConfig, opts: { withDummy?: boolean; dummyAttacks?: boolean } = {}): World {
+/**
+ * A world with the training room. By default only the dummy is kept.
+ * `withDummy: false` removes every enemy; `only` keeps the listed types.
+ */
+export function testWorld(cfg: SimConfig, opts: { withDummy?: boolean; dummyAttacks?: boolean; only?: string[] } = {}): World {
   const w = createWorld(trainingRoom(), cfg, 7);
-  if (opts.withDummy === false) w.enemies = [];
+  const keep = opts.withDummy === false ? [] : (opts.only ?? ['dummy']);
+  w.enemies = w.enemies.filter((e) => keep.includes(e.type));
   w.flags.dummyAttacks = opts.dummyAttacks ?? false;
+  w.flags.respawn = false;
   return w;
 }
 
-export function input(opts: { press?: ButtonAction[]; move?: { x: number; y: number }; aim?: { x: number; y: number } } = {}): InputFrame {
+export function input(opts: { press?: ButtonAction[]; hold?: ButtonAction[]; move?: { x: number; y: number }; aim?: { x: number; y: number } } = {}): InputFrame {
   const f = emptyInputFrame();
   f.pressed = opts.press ?? [];
+  for (const a of opts.hold ?? []) f.held[a] = true;
   if (opts.move) f.move = opts.move;
   if (opts.aim) f.aimGround = opts.aim;
   return f;

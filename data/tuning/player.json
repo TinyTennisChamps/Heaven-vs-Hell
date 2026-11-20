@@ -4,6 +4,13 @@
   "decelFrames": 4,
   "radius": 6,
   "maxHealth": 100,
+  "posture": {
+    "max": 100,
+    "regenDelay": 60,
+    "regenPerSec": 22,
+    "lowHealthMul": 0.35,
+    "breakStunFrames": 75
+  },
   "dash": {
     "distance": 56,
     "frames": 12,

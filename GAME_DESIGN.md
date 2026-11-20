@@ -44,6 +44,23 @@ Satan is trapped in Heaven and cuts his way down through its layers to get home.
 - Throw: 5 pips that refill from melee hits (1 per 3 hits) and perfect parries (+1). Blocked by Dominion shields from the front. Bonus posture damage against archers and ophans.
 - Rage: gains are +8 per kill, +15 per deathblow, +4 per perfect parry and +6 when Satan takes a hit. The form lasts about 10 s, uses a claw combo, has a bigger collider, and gains health and time from kills. Parry and throw are disabled.
 
+## Implemented in M3: posture fight
+- **Parry:** tapping RMB opens a 9-frame deflect window. The first 4 frames are a perfect deflect, which costs Satan no posture and gives the attacker ×2.2 posture damage. A normal deflect gives Satan ×0.25 and the attacker ×1.4.
+- **Anti-mash:** a parry that whiffs, or a re-press during a window that hasn't deflected anything, sets a 20-frame penalty. During it, the next parry window is only 5 frames. A successful deflect clears the penalty.
+- **Block:** after the window, holding RMB guards a 120° cone toward the cursor at 0.5× movement speed. It costs no health but costs full posture, with 10 frames of block-stun. You can dash out of block-stun after 6 frames.
+- **Posture break:**
+  - Satan staggers for 75 frames, then his posture resets to 0.
+  - Enemies are stunned for their `brokenFrames`, with a red diamond showing. If the deathblow window passes, they recover with half posture.
+- **Deathblow (brought forward from M4):** left-click within 26 px of a broken enemy. It uses the slash3 art, kills instantly, and adds a 12-frame hit-stop plus 0.4× slow motion for 24 frames.
+- **Judgement attacks:** a white-gold glyph and path are shown. They can't be blocked or deflected, so dash through or away.
+- **Dominion:**
+  - The tower shield absorbs frontal hits: no health damage, ×0.6 posture damage.
+  - It turns slowly (5°/tick), so flanking works.
+  - The shield is down during its attack recovery, which is the punish window.
+  - It thrusts, and half the time follows with a quicker second thrust.
+  - It shield-bashes up close, and counter-bashes after absorbing 3 hits.
+  - It has an occasional Judgement lunge.
+
 ## Rage Vials (7, flat additive, every stat ≤ +20%)
 | L1 | L2 |
 |---|---|
@@ -75,8 +92,8 @@ Cherub (swarmer, L1/L2), Choir Archer (ranged, deflectable arrows, L1/L2), Domin
 - M0: scaffold, loop, input, debug overlay, tuning panel.
 - M1: movement, collision, dash, camera.
 - M2: slash combo and training room.
-- M3: posture, parry, block, Dominion.
-- M4: deathblow, throw, Archer, tokens.
+- M3: posture, parry, block, Dominion, and deathblow (pulled forward from M4).
+- M4: throw, Archer, tokens.
 - M5: Level 1 flow.
 - M6: Rage and vials.
 - M7: Gabriel.

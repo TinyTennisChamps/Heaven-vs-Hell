@@ -1,4 +1,4 @@
-import { createRng, type RngState } from '../core/rng';
+import { createRng, nextRange, type RngState } from '../core/rng';
 import { groundToScreen } from '../core/iso';
 import { v2, type Vec2 } from '../core/math';
 import { InputBuffer } from '../input/buffer';
@@ -6,7 +6,9 @@ import type { RoomDef, SimConfig } from './config';
 import { segmentsFromPolygon, type Seg } from './physics/collide';
 
 export interface AttackState {
-  /** Combo step 1..3 (keys "slash1".."slash3" in the attack data). */
+  /** Key into the attack data ("slash1".."slash3", "deathblow"). */
+  key: string;
+  /** Combo step 1..3 (0 for non-combo attacks like deathblow). */
   step: number;
   /** 1-based tick within the attack. 0 = just started, not yet advanced. */
   frame: number;
@@ -14,11 +16,21 @@ export interface AttackState {
   dir: Vec2;
   /** Enemy ids already hit by this swing. */
   hitIds: number[];
+  /** Deathblow target. */
+  targetId?: number;
 }
 
 export interface DashState {
   frame: number;
   dir: Vec2;
+}
+
+export interface ParryState {
+  /** 1-based tick since the press. */
+  frame: number;
+  /** Deflect window length for this attempt (shrinks after a whiff). */
+  window: number;
+  deflected: boolean;
 }
 
 export interface PlayerState {
@@ -30,6 +42,9 @@ export interface PlayerState {
   knock: Vec2;
   facing: Vec2;
   hp: number;
+  posture: number;
+  /** Ticks since Satan last took posture damage. */
+  sinceHit: number;
   action: AttackState | null;
   dash: DashState | null;
   dashEndLag: number;
@@ -37,13 +52,20 @@ export interface PlayerState {
   comboTimer: number;
   hurtStun: number;
   hitFlash: number;
+  parry: ParryState | null;
+  /** While > 0 the next parry gets the shortened window (anti-mash). */
+  parryPenalty: number;
+  guarding: boolean;
+  blockStun: number;
+  /** Posture-broken stagger ticks remaining. */
+  broken: number;
 }
 
-export type DummyPhase = 'idle' | 'windup' | 'swing' | 'recover' | 'down';
+export type EnemyPhase = 'idle' | 'windup' | 'active' | 'recover' | 'broken' | 'down';
 
 export interface Enemy {
   id: number;
-  type: 'dummy';
+  type: string;
   pos: Vec2;
   prevPos: Vec2;
   vel: Vec2;
@@ -51,12 +73,22 @@ export interface Enemy {
   facing: Vec2;
   hp: number;
   maxHp: number;
+  posture: number;
+  sinceHit: number;
   radius: number;
-  phase: DummyPhase;
+  phase: EnemyPhase;
   phaseFrame: number;
+  /** Current attack key while in windup/active/recover. */
+  attack: string | null;
+  /** Locked direction of the current attack. */
+  attackDir: Vec2;
   swingHit: boolean;
   cooldown: number;
   hitFlash: number;
+  /** Hits absorbed by the shield since the last counter. */
+  blockedHits: number;
+  /** Shield flash timer (render). */
+  shieldFlash: number;
   spawn: Vec2;
 }
 
@@ -66,7 +98,14 @@ export type SimEvent =
   | { type: 'swing'; pos: Vec2; dir: Vec2; step: number }
   | { type: 'dash'; pos: Vec2; dir: Vec2 }
   | { type: 'enemyDown'; pos: Vec2 }
-  | { type: 'telegraph'; pos: Vec2 };
+  | { type: 'telegraph'; pos: Vec2; judgement: boolean }
+  | { type: 'deflect'; pos: Vec2; dir: Vec2; perfect: boolean }
+  | { type: 'block'; pos: Vec2; dir: Vec2 }
+  | { type: 'shieldBlock'; pos: Vec2; dir: Vec2 }
+  | { type: 'postureBreak'; pos: Vec2 }
+  | { type: 'playerBroken'; pos: Vec2 }
+  | { type: 'deathblow'; pos: Vec2; dir: Vec2 }
+  | { type: 'parryWhiff'; pos: Vec2 };
 
 export interface CameraState {
   /** Camera centre in iso screen space. */
@@ -86,13 +125,17 @@ export interface World {
   buffer: InputBuffer;
   /** Global freeze counter (hit-stop). While > 0 actors and buffer expiry pause. */
   hitstop: number;
+  /** Slow-motion ticks remaining and the fractional-tick accumulator. */
+  slowmo: number;
+  slowScale: number;
+  slowAcc: number;
   player: PlayerState;
   enemies: Enemy[];
   nextId: number;
   camera: CameraState;
   events: SimEvent[];
-  flags: { dummyAttacks: boolean };
-  stats: { hitsLanded: number; hitsTaken: number; kills: number };
+  flags: { dummyAttacks: boolean; respawn: boolean };
+  stats: { hitsLanded: number; hitsTaken: number; kills: number; deflects: number; perfects: number; deathblows: number };
 }
 
 export function createWorld(room: RoomDef, cfg: SimConfig, seed = 1): World {
@@ -115,6 +158,9 @@ export function createWorld(room: RoomDef, cfg: SimConfig, seed = 1): World {
     screenBox,
     buffer: new InputBuffer({}, cfg.feel.inputBufferFrames),
     hitstop: 0,
+    slowmo: 0,
+    slowScale: 1,
+    slowAcc: 0,
     player: {
       pos: { ...spawn },
       prevPos: { ...spawn },
@@ -122,6 +168,8 @@ export function createWorld(room: RoomDef, cfg: SimConfig, seed = 1): World {
       knock: v2(),
       facing: v2(1, 0),
       hp: cfg.player.maxHealth,
+      posture: 0,
+      sinceHit: 999,
       action: null,
       dash: null,
       dashEndLag: 0,
@@ -129,23 +177,29 @@ export function createWorld(room: RoomDef, cfg: SimConfig, seed = 1): World {
       comboTimer: 0,
       hurtStun: 0,
       hitFlash: 0,
+      parry: null,
+      parryPenalty: 0,
+      guarding: false,
+      blockStun: 0,
+      broken: 0,
     },
     enemies: [],
     nextId: 1,
     camera: { pos: { ...camPos }, prevPos: { ...camPos }, shake: 0, shakeOffset: v2() },
     events: [],
-    flags: { dummyAttacks: true },
-    stats: { hitsLanded: 0, hitsTaken: 0, kills: 0 },
+    flags: { dummyAttacks: true, respawn: true },
+    stats: { hitsLanded: 0, hitsTaken: 0, kills: 0, deflects: 0, perfects: 0, deathblows: 0 },
   };
-  for (const [x, y] of room.dummySpawns) spawnDummy(world, cfg, v2(x, y));
+  for (const s of room.spawns) spawnEnemy(world, cfg, s.type, v2(s.at[0], s.at[1]));
   return world;
 }
 
-export function spawnDummy(world: World, cfg: SimConfig, at: Vec2): Enemy {
-  const d = cfg.dummy;
+export function spawnEnemy(world: World, cfg: SimConfig, type: string, at: Vec2): Enemy {
+  const d = cfg.enemies[type];
+  if (!d) throw new Error(`unknown enemy type ${type}`);
   const e: Enemy = {
     id: world.nextId++,
-    type: 'dummy',
+    type,
     pos: { ...at },
     prevPos: { ...at },
     vel: v2(),
@@ -153,12 +207,18 @@ export function spawnDummy(world: World, cfg: SimConfig, at: Vec2): Enemy {
     facing: v2(-1, 0),
     hp: d.health,
     maxHp: d.health,
+    posture: 0,
+    sinceHit: 999,
     radius: d.radius,
     phase: 'idle',
     phaseFrame: 0,
+    attack: null,
+    attackDir: v2(-1, 0),
     swingHit: false,
-    cooldown: d.attackCooldown,
+    cooldown: Math.round(nextRange(world.rng, d.cooldownMin, d.cooldownMax)),
     hitFlash: 0,
+    blockedHits: 0,
+    shieldFlash: 0,
     spawn: { ...at },
   };
   world.enemies.push(e);

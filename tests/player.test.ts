@@ -148,7 +148,7 @@ describe('dummy fights back', () => {
     w2.player.pos = { x: e2.pos.x - 20, y: e2.pos.y };
     // Dash when the swing goes active.
     for (let t = 0; t < 120; t++) {
-      const swingSoon = e2.phase === 'windup' && e2.phaseFrame === cfg.dummy.swing.windup - 2;
+      const swingSoon = e2.phase === 'windup' && e2.phaseFrame === cfg.enemies.dummy!.attacks.swing!.windup - 2;
       step(w2, swingSoon ? input({ press: ['dash'], move: { x: 0, y: 1 } }) : input(), cfg);
       if (w2.stats.hitsTaken > 0) break;
       if (e2.phase === 'recover') break;

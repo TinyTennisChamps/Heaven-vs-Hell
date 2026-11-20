@@ -2,18 +2,28 @@
   "health": 300,
   "radius": 8,
   "speed": 40,
+  "turnRateDeg": 360,
   "attackRange": 30,
-  "attackCooldown": 40,
+  "cooldownMin": 40,
+  "cooldownMax": 40,
   "respawnFrames": 90,
-  "swing": {
-    "windup": 26,
-    "trackUntil": 18,
-    "active": 3,
-    "recovery": 34,
-    "damage": 12,
-    "knockback": 220,
-    "hitstop": 4,
-    "shake": 2.4,
-    "hitbox": { "radius": 28, "angleDeg": 100, "offset": 6 }
+  "brokenFrames": 150,
+  "shieldArcDeg": 0,
+  "shieldPostureMul": 0,
+  "posture": { "max": 90, "regenDelay": 60, "regenPerSec": 18, "lowHealthMul": 0.5 },
+  "attacks": {
+    "swing": {
+      "range": 30,
+      "windup": 26,
+      "trackUntil": 18,
+      "active": 3,
+      "recovery": 34,
+      "healthDamage": 12,
+      "postureDamage": 20,
+      "knockback": 220,
+      "hitstop": 4,
+      "shake": 2.4,
+      "hitbox": { "radius": 28, "angleDeg": 100, "offset": 6 }
+    }
   }
 }

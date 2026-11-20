@@ -1,0 +1,73 @@
+{
+  "health": 120,
+  "radius": 9,
+  "speed": 46,
+  "turnRateDeg": 5,
+  "attackRange": 38,
+  "cooldownMin": 35,
+  "cooldownMax": 70,
+  "respawnFrames": 120,
+  "brokenFrames": 120,
+  "shieldArcDeg": 140,
+  "shieldPostureMul": 0.6,
+  "counterAfterBlocks": 3,
+  "judgementChance": 0.18,
+  "posture": { "max": 100, "regenDelay": 70, "regenPerSec": 16, "lowHealthMul": 0.4 },
+  "attacks": {
+    "thrust": {
+      "range": 38,
+      "windup": 22,
+      "trackUntil": 14,
+      "active": 3,
+      "recovery": 24,
+      "healthDamage": 14,
+      "postureDamage": 24,
+      "knockback": 200,
+      "hitstop": 4,
+      "shake": 2,
+      "hitbox": { "radius": 40, "angleDeg": 34, "offset": 4 },
+      "chain": { "next": "thrust2", "chance": 0.5 }
+    },
+    "thrust2": {
+      "range": 38,
+      "windup": 14,
+      "trackUntil": 8,
+      "active": 3,
+      "recovery": 30,
+      "healthDamage": 14,
+      "postureDamage": 26,
+      "knockback": 220,
+      "hitstop": 4,
+      "shake": 2,
+      "hitbox": { "radius": 40, "angleDeg": 34, "offset": 4 }
+    },
+    "bash": {
+      "range": 22,
+      "windup": 16,
+      "trackUntil": 12,
+      "active": 3,
+      "recovery": 22,
+      "healthDamage": 8,
+      "postureDamage": 34,
+      "knockback": 260,
+      "hitstop": 5,
+      "shake": 2.4,
+      "hitbox": { "radius": 22, "angleDeg": 110, "offset": 4 }
+    },
+    "judgement": {
+      "range": 70,
+      "windup": 34,
+      "trackUntil": 24,
+      "active": 8,
+      "recovery": 40,
+      "healthDamage": 24,
+      "postureDamage": 0,
+      "knockback": 320,
+      "hitstop": 6,
+      "shake": 3.5,
+      "judgement": true,
+      "lunge": { "px": 64, "overFrames": 8 },
+      "hitbox": { "radius": 22, "angleDeg": 90, "offset": 6 }
+    }
+  }
+}

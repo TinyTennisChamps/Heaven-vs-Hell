@@ -8,9 +8,11 @@ import { attackDef, attackPhase } from '../sim/actors/player';
 import type { ArcHitbox, SimConfig } from '../sim/config';
 import { pointInPolygon } from '../sim/physics/collide';
 import type { Enemy, World } from '../sim/world';
-import { ANGEL, HEAVEN, SATAN } from './palette';
+import { ANGEL, HEAVEN, JUDGEMENT, SATAN } from './palette';
 import { Particles } from './particles';
-import { drawDummy } from './sprites/placeholders';
+import { drawDominion, drawDummy, type DominionPose } from './sprites/placeholders';
+import { enemyAttack } from '../sim/actors/enemy';
+import { shieldUp } from '../sim/combat/damage';
 
 interface Sprite {
   root: Container;
@@ -196,8 +198,8 @@ export class Scene {
 
     // Ground wake of the slash: the true hitbox shape on the floor (the sprite
     // carries the main smear), then breaking into streaks like the reference.
-    if (p.action) {
-      const d = attackDef(cfg, p.action.step);
+    if (p.action && p.action.key !== 'deathblow') {
+      const d = attackDef(cfg, p.action.key);
       const age = p.action.frame - d.startup;
       if (age >= 1 && age <= d.active) {
         const prog = Math.min(1, age / d.active);
@@ -212,6 +214,12 @@ export class Scene {
         }
       }
     }
+    // Guard read: a thin hellfire arc while parry window is open, dim while blocking.
+    if (p.parry || p.guarding) {
+      const box = { radius: 12, angleDeg: p.parry ? cfg.combat.parry.coneDeg : cfg.combat.block.coneDeg, offset: 0 };
+      const open = p.parry && p.parry.frame <= p.parry.window;
+      this.fx.poly(proj(arcPoly(pp, p.facing, box, 0, 1, 0.82), 2)).fill({ color: open ? SATAN.hellfire : SATAN.blood, alpha: open ? 0.8 : 0.45 });
+    }
 
     // --- Enemies ---
     const alive = new Set<number>();
@@ -225,13 +233,21 @@ export class Scene {
       const ep = { x: lerp(e.prevPos.x, e.pos.x, alpha), y: lerp(e.prevPos.y, e.pos.y, alpha) };
       s.root.visible = e.phase !== 'down';
       if (!s.root.visible) continue;
-      this.place(s, ep, groundToScreen(e.facing.x, e.facing.y).x < 0);
-      const tele = e.phase === 'windup' && e.phaseFrame > cfg.dummy.swing.windup - 10 && Math.floor(e.phaseFrame / 3) % 2 === 0;
+      const atk = enemyAttack(cfg, e);
+      const faceDir = e.phase === 'windup' || e.phase === 'active' ? e.attackDir : e.facing;
+      this.place(s, ep, groundToScreen(faceDir.x, faceDir.y).x < 0);
+      // Last 10 windup frames blink white: "it's coming now".
+      const tele = !!atk && e.phase === 'windup' && e.phaseFrame > atk.windup - 10 && Math.floor(e.phaseFrame / 3) % 2 === 0;
       const flash = e.hitFlash > 0 || tele;
-      this.redraw(s, `${flash}`, () => drawDummy(s!.body, flash));
-      this.shadow(ep, 8);
-      this.enemyTelegraph(e, cfg);
-      this.enemyBar(e, ep);
+      if (e.type === 'dominion') {
+        const pose = dominionPose(e);
+        this.redraw(s, `${pose}${flash}${e.shieldFlash > 0}`, () => drawDominion(s!.body, pose, flash, e.shieldFlash > 0));
+      } else {
+        this.redraw(s, `${flash}`, () => drawDummy(s!.body, flash));
+      }
+      this.shadow(ep, e.radius);
+      this.enemyTelegraph(e, cfg, ep);
+      this.enemyBars(e, ep, cfg);
     }
     for (const [id, s] of this.enemySprites) {
       if (!alive.has(id)) {
@@ -266,25 +282,57 @@ export class Scene {
     this.shadows.ellipse(Math.round(sp.x), Math.round(sp.y), r, r / 2).fill({ color: ANGEL.void, alpha: 0.18 });
   }
 
-  private enemyTelegraph(e: Enemy, cfg: SimConfig): void {
-    if (e.phase !== 'windup' && e.phase !== 'swing') return;
-    const sw = cfg.dummy.swing;
-    const t = e.phase === 'swing' ? 1 : e.phaseFrame / sw.windup;
-    // Ground marker growing toward the swing: pale lilac, never red.
-    this.telegraphs.poly(proj(arcPoly(e.pos, e.facing, sw.hitbox, 0, 1, 0.2))).fill({ color: ANGEL.lilac, alpha: 0.12 + 0.3 * t });
-    this.telegraphs.poly(proj(arcPoly(e.pos, e.facing, sw.hitbox, 0, 1, 0.2))).stroke({ width: 1, color: ANGEL.angelLine, alpha: 0.3 + 0.5 * t });
-    if (e.phase === 'swing') {
-      this.fx.poly(proj(arcPoly(e.pos, e.facing, sw.hitbox, 0, 1, 0.75), 12)).fill({ color: 0xffffff, alpha: 0.9 });
+  private enemyTelegraph(e: Enemy, cfg: SimConfig, ep: Vec2): void {
+    const atk = enemyAttack(cfg, e);
+    if (!atk || (e.phase !== 'windup' && e.phase !== 'active')) return;
+    const t = e.phase === 'active' ? 1 : e.phaseFrame / atk.windup;
+    const box = atk.lunge ? { ...atk.hitbox, radius: atk.hitbox.radius + atk.lunge.px } : atk.hitbox;
+    if (atk.judgement) {
+      // Judgement: white-gold, never red. Unblockable — dash through or away.
+      this.telegraphs.poly(proj(arcPoly(e.pos, e.attackDir, { radius: box.radius, angleDeg: 26, offset: 0 }, 0, 1, 0.1))).fill({ color: JUDGEMENT, alpha: 0.25 + 0.45 * t });
+      const sp = groundToScreen(ep.x, ep.y);
+      const blink = e.phase === 'active' || Math.floor(e.phaseFrame / 4) % 2 === 0;
+      if (blink) this.glyph(sp.x, sp.y - 46);
+    } else {
+      // Ground marker growing toward the strike: pale lilac, never red.
+      this.telegraphs.poly(proj(arcPoly(e.pos, e.attackDir, box, 0, 1, 0.2))).fill({ color: ANGEL.lilac, alpha: 0.1 + 0.3 * t });
+      this.telegraphs.poly(proj(arcPoly(e.pos, e.attackDir, box, 0, 1, 0.2))).stroke({ width: 1, color: ANGEL.angelLine, alpha: 0.3 + 0.5 * t });
+    }
+    if (e.phase === 'active') {
+      this.fx.poly(proj(arcPoly(e.pos, e.attackDir, atk.hitbox, 0, 1, 0.75), 12)).fill({ color: atk.judgement ? JUDGEMENT : 0xffffff, alpha: 0.9 });
     }
   }
 
-  private enemyBar(e: Enemy, ground: Vec2): void {
+  /** White-gold sigil: a diamond with rays. */
+  private glyph(x: number, y: number): void {
+    const g = this.fx;
+    x = Math.round(x);
+    y = Math.round(y);
+    g.poly([x, y - 5, x + 4, y, x, y + 5, x - 4, y]).fill(JUDGEMENT).stroke({ width: 1, color: HEAVEN.gold3 });
+    g.rect(x, y - 8, 1, 2).rect(x, y + 7, 1, 2).rect(x - 7, y, 2, 1).rect(x + 6, y, 2, 1).fill(JUDGEMENT);
+    g.rect(x, y - 1, 1, 3).fill(HEAVEN.gold3);
+  }
+
+  private enemyBars(e: Enemy, ground: Vec2, cfg: SimConfig): void {
     const sp = groundToScreen(ground.x, ground.y);
-    const w = 20;
+    const w = 22;
     const x = Math.round(sp.x - w / 2);
-    const y = Math.round(sp.y - 36);
-    this.fx.rect(x - 1, y - 1, w + 2, 4).fill(ANGEL.void);
+    const y = Math.round(sp.y - 40);
+    const def = cfg.enemies[e.type]!;
+    // Health: pearl. Posture: centre-fill gold, white when nearly broken.
+    this.fx.rect(x - 1, y - 1, w + 2, 7).fill(ANGEL.void);
     this.fx.rect(x, y, Math.round((w * e.hp) / e.maxHp), 2).fill(ANGEL.pearl);
+    const pf = Math.min(1, e.posture / def.posture.max);
+    const pw = Math.round(w * pf);
+    if (pw > 0) this.fx.rect(x + Math.round((w - pw) / 2), y + 3, pw, 2).fill(pf > 0.8 ? 0xffffff : HEAVEN.gold2);
+    if (e.phase === 'broken') {
+      // Deathblow opening: the red diamond (red = Satan's opening).
+      const bx = Math.round(sp.x);
+      const by = y - 8;
+      const pulse = Math.floor(e.phaseFrame / 6) % 2 === 0 ? 1 : 0;
+      this.fx.poly([bx, by - 4 - pulse, bx + 4 + pulse, by, bx, by + 4 + pulse, bx - 4 - pulse, by]).fill(SATAN.crimson).stroke({ width: 1, color: SATAN.cloak });
+      this.fx.rect(bx - 1, by - 1, 2, 2).fill(SATAN.hellfire);
+    }
   }
 
   private drawHud(world: World, cfg: SimConfig): void {
@@ -298,11 +346,20 @@ export class Scene {
     g.rect(x, y, w, 5).fill(SATAN.lava);
     g.rect(x, y, Math.round((w * p.hp) / cfg.player.maxHealth), 5).fill(SATAN.crimson);
     g.rect(x, y, Math.round((w * p.hp) / cfg.player.maxHealth), 1).fill(SATAN.hellfire);
-    // Combo pips.
     for (let i = 0; i < 3; i++) {
       const lit = p.action ? i < p.action.step : p.comboTimer > 0 && i < p.lastStep;
       g.rect(x + i * 6, y + 9, 4, 2).fill(lit ? SATAN.ember : SATAN.cloak2);
     }
+    // Satan's posture: bottom centre, fills from the centre outward (HUD mock).
+    const pw = 140;
+    const px = Math.round(VIEW_W / 2 - pw / 2);
+    const py = VIEW_H - 14;
+    const frac = Math.min(1, p.posture / cfg.player.posture.max);
+    g.rect(px - 2, py - 2, pw + 4, 7).fill(SATAN.cloak);
+    g.rect(px, py, pw, 3).fill(SATAN.cloak2);
+    const fw = Math.round(pw * frac);
+    if (fw > 0) g.rect(px + Math.round((pw - fw) / 2), py, fw, 3).fill(p.broken > 0 ? 0xffffff : frac > 0.75 ? SATAN.hellfire : SATAN.ember);
+    g.rect(Math.round(VIEW_W / 2), py - 3, 1, 9).fill(HEAVEN.gold2);
   }
 
   private drawDebug(world: World, cfg: SimConfig): void {
@@ -316,13 +373,25 @@ export class Scene {
     const p = world.player;
     g.poly(proj(groundCircle(p.pos, cfg.player.radius))).stroke({ width: 1, color: p.dash && p.dash.frame >= cfg.player.dash.iFrameStart && p.dash.frame <= cfg.player.dash.iFrameEnd ? 0xffff00 : 0x00ff66 });
     if (p.action) {
-      const d = attackDef(cfg, p.action.step);
+      const d = attackDef(cfg, p.action.key);
       if (attackPhase(p.action, d) === 'active') g.poly(proj(arcPoly(p.pos, p.action.dir, d.hitbox, 0, 1, 0))).stroke({ width: 1, color: 0xff00ff });
     }
     for (const e of world.enemies) {
       if (e.phase === 'down') continue;
       g.poly(proj(groundCircle(e.pos, e.radius))).stroke({ width: 1, color: 0x00ff66 });
-      if (e.phase === 'swing') g.poly(proj(arcPoly(e.pos, e.facing, cfg.dummy.swing.hitbox, 0, 1, 0))).stroke({ width: 1, color: 0xff00ff });
+      const def = cfg.enemies[e.type]!;
+      if (def.shieldArcDeg > 0 && shieldUp(e)) g.poly(proj(arcPoly(e.pos, e.facing, { radius: e.radius + 4, angleDeg: def.shieldArcDeg, offset: 0 }, 0, 1, 0.7))).stroke({ width: 1, color: 0x00c0ff });
+      const atk = enemyAttack(cfg, e);
+      if (atk && e.phase === 'active') g.poly(proj(arcPoly(e.pos, e.attackDir, atk.hitbox, 0, 1, 0))).stroke({ width: 1, color: 0xff00ff });
     }
   }
+}
+
+function dominionPose(e: Enemy): DominionPose {
+  if (e.phase === 'broken') return 'broken';
+  if (e.attack === 'bash' && (e.phase === 'active' || e.phase === 'recover')) return 'bash';
+  if (e.attack === 'judgement' && e.phase === 'active') return 'lunge';
+  if (e.phase === 'windup') return e.attack === 'bash' ? 'guard' : 'drawBack';
+  if (e.phase === 'active' || (e.phase === 'recover' && e.phaseFrame < 8)) return 'thrust';
+  return 'guard';
 }

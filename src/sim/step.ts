@@ -3,8 +3,9 @@ import { screenToGround } from '../core/iso';
 import { normalize, type Vec2 } from '../core/math';
 import type { InputFrame } from '../input/actions';
 import type { SimConfig } from './config';
-import { updateDummy } from './actors/dummy';
+import { updateEnemy } from './actors/enemy';
 import { updatePlayer } from './actors/player';
+import { ENEMY_THINK } from './registry';
 import { updateCamera, updateShake } from './camera';
 import { moveAndSlide } from './physics/collide';
 import type { World } from './world';
@@ -32,8 +33,25 @@ export function step(world: World, input: InputFrame, cfg: SimConfig): void {
     return;
   }
 
-  updatePlayer(world, input.move, resolveAim(world, input), cfg);
-  for (const e of world.enemies) if (e.type === 'dummy') updateDummy(world, e, cfg);
+  // Slow motion (deathblow): only a fraction of ticks advance the game.
+  if (world.slowmo > 0) {
+    world.slowmo--;
+    world.slowAcc += world.slowScale;
+    if (world.slowAcc < 1) {
+      world.buffer.tick(true);
+      world.tick++;
+      return;
+    }
+    world.slowAcc -= 1;
+  } else {
+    world.slowAcc = 0;
+  }
+
+  updatePlayer(world, { move: input.move, guardHeld: input.held.parry }, resolveAim(world, input), cfg);
+  for (const e of world.enemies) {
+    const think = ENEMY_THINK[e.type];
+    if (think) updateEnemy(world, e, cfg, think);
+  }
   separate(world, cfg);
   updateCamera(world, input.aimScreen, cfg);
 
@@ -60,7 +78,7 @@ function separate(world: World, cfg: SimConfig): void {
   const k = cfg.combat.separationStrength;
   const p = world.player;
   const bodies: { pos: Vec2; r: number; ghost: boolean }[] = [
-    { pos: p.pos, r: cfg.player.radius, ghost: !!p.dash },
+    { pos: p.pos, r: cfg.player.radius, ghost: !!p.dash || !!(p.action && p.action.key === 'deathblow') },
     ...world.enemies.filter((e) => e.phase !== 'down').map((e) => ({ pos: e.pos, r: e.radius, ghost: false })),
   ];
   for (let i = 0; i < bodies.length; i++) {

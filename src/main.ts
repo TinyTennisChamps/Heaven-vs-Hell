@@ -8,6 +8,7 @@ import { KeyboardMouseInput } from './input/keyboardMouse';
 import { ANGEL, HEAVEN, SATAN } from './render/palette';
 import { createPixiApp, VIEW_H, VIEW_W } from './render/pixiApp';
 import { Scene } from './render/scene';
+import { sfx } from './audio/sfx';
 import { loadAtlas } from './render/atlas';
 import type { AnimConfig } from './render/animSync';
 import { attackDef, attackPhase } from './sim/actors/player';
@@ -21,7 +22,7 @@ const cfg: SimConfig = {
   combat: getData('tuning/combat'),
   camera: getData('tuning/camera'),
   attacks: getData('attacks/satan'),
-  dummy: getData('enemies/dummy'),
+  enemies: { dummy: getData('enemies/dummy'), dominion: getData('enemies/dominion') },
 };
 
 async function boot() {
@@ -35,7 +36,7 @@ async function boot() {
   legend.className = 'legend';
   root.appendChild(legend);
   const updateLegend = (w: World) => {
-    legend.textContent = `WASD move · Mouse aim · LMB slash (×3 combo) · Space dash · F3 dummy attacks: ${w.flags.dummyAttacks ? 'ON' : 'OFF'} · F4 reset · F1 debug`;
+    legend.textContent = `WASD move · LMB slash / deathblow · RMB tap parry, hold block · Space dash · F3 enemy attacks: ${w.flags.dummyAttacks ? 'ON' : 'OFF'} · F4 reset · F1 debug`;
   };
 
   const room = getData<RoomDef>('rooms/training');
@@ -128,8 +129,8 @@ async function boot() {
       const p = world.player;
       let act = '—';
       if (p.action) {
-        const d = attackDef(cfg, p.action.step);
-        act = `slash${p.action.step} f${p.action.frame}/${d.startup + d.active + d.recovery} ${attackPhase(p.action, d)}`;
+        const d = attackDef(cfg, p.action.key);
+        act = `${p.action.key} f${p.action.frame}/${d.startup + d.active + d.recovery} ${attackPhase(p.action, d)}`;
       }
       overlay.set('tick', world.tick);
       overlay.set('steps/frame', steps);
@@ -139,39 +140,74 @@ async function boot() {
       overlay.set('action', act);
       overlay.set('dash', p.dash ? `f${p.dash.frame}/${cfg.player.dash.frames}` : p.dashEndLag ? `endlag ${p.dashEndLag}` : '—');
       overlay.set('combo timer', p.comboTimer);
+      overlay.set('posture', `${p.posture.toFixed(1)} / ${cfg.player.posture.max}${p.broken ? `  BROKEN ${p.broken}` : ''}`);
+      overlay.set('guard', p.parry ? `parry f${p.parry.frame}/${p.parry.window}${p.parry.deflected ? ' ✓' : ''}` : p.guarding ? 'block' : '—');
+      overlay.set('anti-mash', p.parryPenalty);
       overlay.set('buffer', world.buffer.snapshot());
-      for (const e of world.enemies) overlay.set(`dummy#${e.id}`, `${e.phase} f${e.phaseFrame} hp ${e.hp}`);
+      for (const e of world.enemies) overlay.set(`${e.type}#${e.id}`, `${e.phase}${e.attack ? `:${e.attack}` : ''} f${e.phaseFrame} hp ${e.hp} pos ${e.posture.toFixed(0)}`);
       overlay.set('hits landed/taken', `${world.stats.hitsLanded} / ${world.stats.hitsTaken}`);
+      overlay.set('deflects (perfect) / deathblows', `${world.stats.deflects} (${world.stats.perfects}) / ${world.stats.deathblows}`);
     }
     overlay.render();
   };
   requestAnimationFrame(frame);
 }
 
-/** Turn sim events into particles. Red only for Satan's own effects. */
+/** Turn sim events into particles and sound hooks. Red only for Satan's own effects. */
 function spawnEffects(world: World, scene: Scene): void {
+  const P = scene.particles;
   for (const ev of world.events) {
     const s = groundToScreen(ev.pos.x, ev.pos.y);
+    sfx(ev.type);
     switch (ev.type) {
       case 'hit': {
         const d = groundToScreen(ev.dir.x, ev.dir.y);
-        scene.particles.burst(s.x, s.y - 12, { count: ev.strong ? 16 : 9, colors: [0xffffff, SATAN.ember, SATAN.hellfire, HEAVEN.gold1], speed: ev.strong ? 140 : 100, life: 0.28, dirX: d.x, dirY: d.y, spread: 1.6 });
-        scene.particles.burst(s.x, s.y - 12, { count: 6, colors: [ANGEL.pearl, ANGEL.white], speed: 50, life: 0.35 });
+        P.burst(s.x, s.y - 12, { count: ev.strong ? 16 : 9, colors: [0xffffff, SATAN.ember, SATAN.hellfire, HEAVEN.gold1], speed: ev.strong ? 140 : 100, life: 0.28, dirX: d.x, dirY: d.y, spread: 1.6 });
+        P.burst(s.x, s.y - 12, { count: 6, colors: [ANGEL.pearl, ANGEL.white], speed: 50, life: 0.35 });
         break;
       }
       case 'playerHit': {
         const d = groundToScreen(ev.dir.x, ev.dir.y);
-        scene.particles.burst(s.x, s.y - 14, { count: 12, colors: [SATAN.crimson, SATAN.blood, 0xffffff], speed: 110, life: 0.35, dirX: d.x, dirY: d.y, spread: 1.4 });
+        P.burst(s.x, s.y - 14, { count: 12, colors: [SATAN.crimson, SATAN.blood, 0xffffff], speed: 110, life: 0.35, dirX: d.x, dirY: d.y, spread: 1.4 });
+        break;
+      }
+      case 'deflect': {
+        // PDF: parry flash is white core, gold ring, red rays.
+        const n = ev.perfect ? 2 : 1;
+        P.burst(s.x, s.y - 14, { count: 6 * n, colors: [0xffffff], speed: 30, life: 0.18, size: 2 });
+        P.burst(s.x, s.y - 14, { count: 16 * n, colors: [HEAVEN.gold1, HEAVEN.gold2], speed: 90 * n, life: 0.22, drag: 0.8 });
+        P.burst(s.x, s.y - 14, { count: 8 * n, colors: [SATAN.hellfire, SATAN.ember], speed: 170 * n, life: 0.2, drag: 0.92 });
+        break;
+      }
+      case 'block':
+        P.burst(s.x, s.y - 14, { count: 8, colors: [HEAVEN.gold2, ANGEL.silver], speed: 70, life: 0.2 });
+        break;
+      case 'shieldBlock': {
+        const d = groundToScreen(-ev.dir.x, -ev.dir.y);
+        P.burst(s.x, s.y - 14, { count: 10, colors: [HEAVEN.gold1, ANGEL.white, ANGEL.silver], speed: 90, life: 0.22, dirX: d.x, dirY: d.y, spread: 1.8 });
+        break;
+      }
+      case 'postureBreak':
+        P.burst(s.x, s.y - 18, { count: 22, colors: [0xffffff, HEAVEN.gold1, ANGEL.pearl], speed: 120, life: 0.4 });
+        break;
+      case 'playerBroken':
+        P.burst(s.x, s.y - 18, { count: 18, colors: [SATAN.ember, SATAN.hellfire, 0xffffff], speed: 100, life: 0.4 });
+        break;
+      case 'deathblow': {
+        const d = groundToScreen(ev.dir.x, ev.dir.y);
+        P.burst(s.x, s.y - 14, { count: 40, colors: [SATAN.hellfire, SATAN.crimson, SATAN.ember, 0xffffff], speed: 200, life: 0.6, dirX: d.x, dirY: d.y, spread: 2.2, drag: 0.9 });
+        P.burst(s.x, s.y - 14, { count: 24, colors: [ANGEL.white, ANGEL.pearl, HEAVEN.gold2], speed: 90, life: 0.8 });
         break;
       }
       case 'dash':
-        scene.particles.burst(s.x, s.y, { count: 7, colors: [HEAVEN.marble, HEAVEN.stone], speed: 40, life: 0.3, size: 1 });
+        P.burst(s.x, s.y, { count: 7, colors: [HEAVEN.marble, HEAVEN.stone], speed: 40, life: 0.3, size: 1 });
         break;
       case 'enemyDown':
-        scene.particles.burst(s.x, s.y - 12, { count: 30, colors: [ANGEL.white, ANGEL.pearl, HEAVEN.gold2, ANGEL.lilac], speed: 120, life: 0.6 });
+        P.burst(s.x, s.y - 12, { count: 30, colors: [ANGEL.white, ANGEL.pearl, HEAVEN.gold2, ANGEL.lilac], speed: 120, life: 0.6 });
         break;
       case 'swing':
       case 'telegraph':
+      case 'parryWhiff':
         break;
     }
   }

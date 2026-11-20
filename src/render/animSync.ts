@@ -69,12 +69,21 @@ export function pickPlayerAnim(p: PlayerState, cfg: SimConfig, anim: AnimConfig)
     const n = cfg.player.dash.frames;
     return { tag: 'dash', facing: facingOf(p.dash.dir), frame: p.dash.frame <= n / 2 ? 0 : 1 };
   }
+  // Posture broken: reeling (hurt pose, alternating).
+  if (p.broken > 0) return { tag: 'hurt', facing: facingOf(p.facing), frame: Math.floor(p.broken / 10) % 2 };
   if (p.hurtStun > 0) return { tag: 'hurt', facing: facingOf(p.facing), frame: p.hurtStun > cfg.combat.hurtStunFrames / 2 ? 0 : 1 };
   if (p.action) {
-    const key = `slash${p.action.step}` as 'slash1' | 'slash2' | 'slash3';
-    const d = attackDef(cfg, p.action.step);
+    // Deathblow reuses the overhead slash3 art, synced to its own frame data.
+    const key = (p.action.key === 'deathblow' ? 'slash3' : p.action.key) as 'slash1' | 'slash2' | 'slash3';
+    const d = attackDef(cfg, p.action.key);
     return { tag: key, facing: facingOf(p.action.dir), frame: syncedFrame(anim[key], d, Math.max(1, p.action.frame)) };
   }
+  if (p.parry) {
+    // 4 frames: raise, deflect (glint), hold, lower — spread over the window.
+    const f = p.parry.deflected ? 1 : Math.min(3, Math.floor(((p.parry.frame - 1) / Math.max(1, p.parry.window)) * 4));
+    return { tag: 'parry', facing: facingOf(p.facing), frame: f };
+  }
+  if (p.guarding) return { tag: 'block', facing: facingOf(p.facing), frame: 0 };
   const speed = Math.hypot(p.vel.x, p.vel.y);
   if (speed >= anim.runMinSpeed) return { tag: 'run', facing: facingOf(p.vel), frame: -1 };
   return { tag: 'idle', facing: facingOf(p.facing), frame: -1 };

@@ -40,5 +40,19 @@
     "hitstop": 4,
     "knockback": 280,
     "shake": 2.6
+  },
+  "deathblow": {
+    "startup": 6,
+    "active": 1,
+    "recovery": 18,
+    "chainAt": 99,
+    "lunge": { "px": 12, "overFrames": 5 },
+    "moveSpeedMul": 0,
+    "hitbox": { "radius": 30, "angleDeg": 180, "offset": 0 },
+    "healthDamage": 9999,
+    "postureDamage": 0,
+    "hitstop": 12,
+    "knockback": 120,
+    "shake": 4
   }
 }

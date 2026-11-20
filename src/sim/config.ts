@@ -15,6 +15,15 @@ export interface DashTuning {
   exitSpeedMul: number;
 }
 
+export interface PostureTuning {
+  max: number;
+  /** Ticks without being hit before posture starts draining. */
+  regenDelay: number;
+  regenPerSec: number;
+  /** Regen multiplier at 0 HP (lerps to 1 at full HP) — low health recovers slower. */
+  lowHealthMul: number;
+}
+
 export interface PlayerTuning {
   /** Ground px per second. */
   maxSpeed: number;
@@ -24,6 +33,7 @@ export interface PlayerTuning {
   decelFrames: number;
   radius: number;
   maxHealth: number;
+  posture: PostureTuning & { breakStunFrames: number };
   dash: DashTuning;
 }
 
@@ -40,7 +50,28 @@ export interface CombatTuning {
   knockbackFriction: number;
   hurtStunFrames: number;
   separationStrength: number;
+  /** Fraction of an attack's postureDamage Satan takes when hit unguarded. */
+  hitPostureMul: number;
   aimAssist: { coneDeg: number; range: number; maxRotateDeg: number };
+  parry: {
+    windowFrames: number;
+    perfectFrames: number;
+    whiffPenaltyFrames: number;
+    penalizedWindowFrames: number;
+    coneDeg: number;
+    selfPostureMul: number;
+    perfectSelfPostureMul: number;
+    attackerPostureMul: number;
+    perfectAttackerPostureMul: number;
+    hitstop: number;
+    perfectHitstop: number;
+    shake: number;
+    perfectShake: number;
+    moveSpeedMul: number;
+  };
+  block: { coneDeg: number; postureMul: number; stunFrames: number; dashAfter: number; moveSpeedMul: number; knockback: number; hitstop: number };
+  deathblow: { range: number; hitstop: number; slowmoFrames: number; slowmoScale: number; shake: number };
+  breakHitstop: number;
 }
 
 export interface CameraTuning {
@@ -77,25 +108,44 @@ export interface AttackDef {
   shake: number;
 }
 
-export interface DummyDef {
+export interface EnemyAttackDef {
+  /** AI: preferred max distance to start this attack. */
+  range: number;
+  windup: number;
+  /** Windup frame after which the attack direction is locked. */
+  trackUntil: number;
+  active: number;
+  recovery: number;
+  healthDamage: number;
+  postureDamage: number;
+  knockback: number;
+  hitstop: number;
+  shake: number;
+  hitbox: ArcHitbox;
+  /** Unblockable and undeflectable; telegraphed white-gold. */
+  judgement?: boolean;
+  lunge?: { px: number; overFrames: number };
+  /** Optional follow-up attack started straight from recovery. */
+  chain?: { next: string; chance: number };
+}
+
+export interface EnemyDef {
   health: number;
   radius: number;
   speed: number;
+  turnRateDeg: number;
   attackRange: number;
-  attackCooldown: number;
+  cooldownMin: number;
+  cooldownMax: number;
   respawnFrames: number;
-  swing: {
-    windup: number;
-    /** Windup frame after which the swing direction is locked. */
-    trackUntil: number;
-    active: number;
-    recovery: number;
-    damage: number;
-    knockback: number;
-    hitstop: number;
-    shake: number;
-    hitbox: ArcHitbox;
-  };
+  brokenFrames: number;
+  /** Frontal arc where Satan's hits are absorbed by a shield (0 = no shield). */
+  shieldArcDeg: number;
+  shieldPostureMul: number;
+  counterAfterBlocks?: number;
+  judgementChance?: number;
+  posture: PostureTuning;
+  attacks: Record<string, EnemyAttackDef>;
 }
 
 export interface SimConfig {
@@ -104,7 +154,7 @@ export interface SimConfig {
   combat: CombatTuning;
   camera: CameraTuning;
   attacks: Record<string, AttackDef>;
-  dummy: DummyDef;
+  enemies: Record<string, EnemyDef>;
 }
 
 export interface RoomDef {
@@ -113,5 +163,5 @@ export interface RoomDef {
   bounds: [number, number][];
   walls: [number, number][][];
   playerSpawn: [number, number];
-  dummySpawns: [number, number][];
+  spawns: { type: string; at: [number, number] }[];
 }
