@@ -20,5 +20,10 @@
     "endLagSpeedMul": 0.4,
     "exitSpeedMul": 0.5,
     "spamWindowFrames": 18
+  },
+  "throw": {
+    "maxPips": 5,
+    "hitsPerPip": 3,
+    "perfectParryPips": 1
   }
 }

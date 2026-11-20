@@ -37,6 +37,15 @@ export interface PlayerTuning {
   maxHealth: number;
   posture: PostureTuning & { breakStunFrames: number };
   dash: DashTuning;
+  throw: { maxPips: number; hitsPerPip: number; perfectParryPips: number };
+}
+
+/** A thrown or shot projectile (Satan's bolt, an archer's arrow). */
+export interface ProjectileSpec {
+  /** px/s */
+  speed: number;
+  radius: number;
+  lifeFrames: number;
 }
 
 export interface FeelTuning {
@@ -78,6 +87,8 @@ export interface CombatTuning {
   deathblow: { range: number; hitstop: number; slowmoFrames: number; slowmoScale: number; shake: number };
   /** Perfect deflect staggers the attacker; Satan's hits on it are multiplied meanwhile. */
   riposte: { frames: number; healthMul: number; postureMul: number };
+  /** Deflected arrows fly back at their archer. */
+  reflect: { speedMul: number; perfectSpeedMul: number; healthDamage: number; postureDamage: number; perfectHealthDamage: number; perfectPostureDamage: number };
   /** Sekiro-style lock-on (Q). */
   lockOn: { range: number; breakRange: number; holdToReleaseFrames: number; cameraBias: number };
   /** Group fights: only the focus enemy attacks freely; the rest hold back. */
@@ -119,6 +130,8 @@ export interface AttackDef {
   /** Initial knockback speed (px/s) given to the target. */
   knockback: number;
   shake: number;
+  /** If set, the first active frame launches a projectile instead of a melee arc. */
+  projectile?: ProjectileSpec;
 }
 
 export interface EnemyAttackDef {
@@ -140,6 +153,8 @@ export interface EnemyAttackDef {
   lunge?: { px: number; overFrames: number };
   /** Optional follow-up attack started straight from recovery. */
   chain?: { next: string; chance: number };
+  /** If set, the first active frame fires this projectile instead of a melee arc. */
+  projectile?: ProjectileSpec;
 }
 
 export interface EnemyDef {
@@ -157,6 +172,10 @@ export interface EnemyDef {
   shieldPostureMul: number;
   counterAfterBlocks?: number;
   judgementChance?: number;
+  /** Ranged enemies: distance they try to keep from Satan. */
+  preferredRange?: number;
+  /** Posture multiplier for Satan's thrown bolts (archers, ophans take extra). */
+  throwPostureMul?: number;
   posture: PostureTuning;
   attacks: Record<string, EnemyAttackDef>;
 }

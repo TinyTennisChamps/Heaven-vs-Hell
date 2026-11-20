@@ -96,3 +96,59 @@ export function drawDominion(g: Graphics, pose: DominionPose, flash: boolean, sh
     g.rect(4, -3, 12, 3).fill(c(ANGEL.pearl)).stroke(st);
   }
 }
+
+export type ArcherPose = 'idle' | 'draw' | 'loose' | 'bash' | 'recoil' | 'broken';
+
+/**
+ * Choir Archer: gold-blindfolded cantor with a bow of pale-blue light.
+ * Silhouette per the PDF: "a cone and an arc". Draw/loose follow the
+ * mannequin's BowShot reference.
+ */
+export function drawArcher(g: Graphics, pose: ArcherPose, flash: boolean): void {
+  const c = (col: number) => (flash ? 0xffffff : col);
+  const line = flash ? 0xffffff : ANGEL.angelLine;
+  const st = { width: 1, color: line, alignment: 1 } as const;
+  g.clear();
+  const crouch = pose === 'broken' ? 3 : 0;
+  const lean = pose === 'draw' ? -1 : pose === 'bash' ? 2 : pose === 'recoil' ? -3 : 0;
+  const y = (v: number) => v + crouch;
+
+  // Small wings.
+  g.poly([-2 + lean, y(-19), -9 + lean, y(-25), -10 + lean, y(-17), -5 + lean, y(-13)]).fill(c(ANGEL.white)).stroke(st);
+  // Choir robe: a cone.
+  g.poly([-8, 0, 8, 0, 2 + lean, y(-20), -2 + lean, y(-20)]).fill(c(ANGEL.pearl)).stroke(st);
+  g.rect(-1 + lean, y(-18), 2, 16).fill(c(ANGEL.pearl2));
+  g.rect(-4 + lean, y(-21), 8, 2).fill(c(HEAVEN.gold2));
+  // Head: gold blindfold, mouth open mid-hymn.
+  g.rect(-3 + lean, y(-28), 6, 7).fill(c(ANGEL.pearl2)).stroke(st);
+  g.rect(-3 + lean, y(-26), 6, 2).fill(c(HEAVEN.gold2));
+  g.rect(0 + lean, y(-23), 2, 1).fill(flash ? 0xffffff : ANGEL.void);
+  g.ellipse(0 + lean, y(-31), 5, 1.5).stroke({ width: 1, color: flash ? 0xffffff : HEAVEN.gold2 });
+
+  if (pose === 'broken') {
+    // Bow dropped.
+    g.moveTo(-2, -1).lineTo(12, -3).stroke({ width: 1, color: c(ANGEL.sky2) });
+    return;
+  }
+  // Bow of pale-blue light: an arc held forward.
+  const bx = pose === 'bash' ? 10 + lean : pose === 'recoil' ? 2 + lean : 7 + lean;
+  const by = y(-14);
+  const pts: number[] = [];
+  for (let i = 0; i <= 8; i++) {
+    const a = (-70 + (140 * i) / 8) * (Math.PI / 180);
+    pts.push(bx + Math.cos(a) * 4, by + Math.sin(a) * 9);
+  }
+  for (let i = 0; i < pts.length - 2; i += 2) g.moveTo(pts[i]!, pts[i + 1]!).lineTo(pts[i + 2]!, pts[i + 3]!);
+  g.stroke({ width: 1, color: c(ANGEL.sky2) });
+  const top = { x: pts[0]!, y: pts[1]! };
+  const bot = { x: pts[pts.length - 2]!, y: pts[pts.length - 1]! };
+  if (pose === 'draw') {
+    // String pulled back, an arrow of light nocked.
+    const pull = bx - 7;
+    g.moveTo(top.x, top.y).lineTo(pull, by).lineTo(bot.x, bot.y).stroke({ width: 1, color: c(ANGEL.sky) });
+    g.moveTo(pull, by).lineTo(bx + 7, by).stroke({ width: 1, color: c(0xffffff) });
+    g.rect(bx + 6, by - 1, 2, 3).fill(c(ANGEL.sky));
+  } else {
+    g.moveTo(top.x, top.y).lineTo(bot.x, bot.y).stroke({ width: 1, color: c(ANGEL.sky), alpha: 0.8 });
+  }
+}

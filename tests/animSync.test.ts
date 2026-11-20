@@ -59,7 +59,7 @@ describe('animation selection', () => {
   it('every tag the game asks for exists in the generated atlas', () => {
     const atlas = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../public/sprites/satan.json'), 'utf8'));
     const names = new Set(atlas.meta.frameTags.map((t: { name: string }) => t.name));
-    for (const tag of ['idle', 'run', 'slash1', 'slash2', 'slash3', 'dash', 'hurt']) {
+    for (const tag of ['idle', 'run', 'slash1', 'slash2', 'slash3', 'throw', 'dash', 'hurt']) {
       for (const d of ['down', 'up', 'right']) expect(names.has(`${tag}_${d}`), `${tag}_${d}`).toBe(true);
     }
     // Phase maps only reference frames that exist.

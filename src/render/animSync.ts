@@ -19,6 +19,7 @@ export interface AnimConfig {
   slash1: PhaseMap;
   slash2: PhaseMap;
   slash3: PhaseMap;
+  throw: PhaseMap;
   runMinSpeed: number;
   [k: string]: unknown;
 }
@@ -74,7 +75,7 @@ export function pickPlayerAnim(p: PlayerState, cfg: SimConfig, anim: AnimConfig)
   if (p.hurtStun > 0) return { tag: 'hurt', facing: facingOf(p.facing), frame: p.hurtStun > cfg.combat.hurtStunFrames / 2 ? 0 : 1 };
   if (p.action) {
     // Deathblow reuses the overhead slash3 art, synced to its own frame data.
-    const key = (p.action.key === 'deathblow' ? 'slash3' : p.action.key) as 'slash1' | 'slash2' | 'slash3';
+    const key = (p.action.key === 'deathblow' ? 'slash3' : p.action.key) as 'slash1' | 'slash2' | 'slash3' | 'throw';
     const d = attackDef(cfg, p.action.key);
     return { tag: key, facing: facingOf(p.action.dir), frame: syncedFrame(anim[key], d, Math.max(1, p.action.frame)) };
   }

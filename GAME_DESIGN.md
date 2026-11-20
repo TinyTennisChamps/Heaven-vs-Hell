@@ -79,6 +79,26 @@ Satan is trapped in Heaven and cuts his way down through its layers to get home.
 - **Group fights:** the *focus* (the lock target, or the nearest enemy when unlocked) attacks freely. Every other enemy hangs back about 60 px away and circles. When its cooldown ends it has a 30% chance to get a turn, step in and attack. Then it falls back.
 - **No overlap:** no two enemies ever have attacks in flight at once, and this is tested. The focus waits for an in-flight supporter swing, and a supporter waits for the focus.
 
+## M4: throw and the Choir Archer
+- **Throw (E):** tap for an instant hellfire bolt (5-frame startup) at your aim or lock target.
+  - It costs 1 of 5 pips. Every 3 melee hits that land refill one, and a perfect parry refills one.
+  - The Dominion's shield stops bolts from the front.
+  - Archers take ×2 posture from bolts.
+  - Walls and pillars stop bolts.
+- **Choir Archer:**
+  - Keeps about 95 px away, backing off and drifting sideways.
+  - Its draw is telegraphed by an aim line.
+  - Sometimes it follows with a quick second shot, and it bow-bashes when cornered.
+- **Arrows:** they're pale light.
+  - **Any deflect sends one back at its archer** (12 HP / 30 posture).
+  - A perfect deflect sends it back faster and burning hellfire (18 HP / 55 posture).
+  - Blocking stops an arrow, dashing passes through it, and pillars block it.
+  - Guard auto-faces incoming arrows.
+- **Groups:** an arrow in the air counts as an attack in flight, so no other attack starts until it lands.
+- **Attack tokens:** the focus/hold-back system from the second playtest pass covers what tokens were for, so no separate token system was built.
+
+**Balance re-measured honestly:** the earlier 2.14× came from 10 lucky seeds. Over 40 seeds the true ratio is about **1.7×**. The benchmark now uses 20 seeds and reads 1.91×. Riposte tuning plateaus at 1.75×: the parrier is limited by how *often* the Dominion attacks, and the aggressor takes about 0 damage by flanking.
+
 ## Rage Vials (7, flat additive, every stat ≤ +20%)
 | L1 | L2 |
 |---|---|
@@ -111,7 +131,7 @@ Cherub (swarmer, L1/L2), Choir Archer (ranged, deflectable arrows, L1/L2), Domin
 - M1: movement, collision, dash, camera.
 - M2: slash combo and training room.
 - M3: posture, parry, block, Dominion, and deathblow (pulled forward from M4).
-- M4: throw, Archer, tokens.
+- M4: throw, Archer, projectiles and deflectable arrows (tokens covered by the focus system). Done.
 - M5: Level 1 flow.
 - M6: Rage and vials.
 - M7: Gabriel.

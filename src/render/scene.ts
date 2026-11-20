@@ -11,7 +11,7 @@ import type { Enemy, World } from '../sim/world';
 import { ANGEL, HEAVEN, JUDGEMENT, SATAN } from './palette';
 import { Particles } from './particles';
 import { Sparks } from './sparks';
-import { drawDominion, drawDummy, type DominionPose } from './sprites/placeholders';
+import { drawArcher, drawDominion, drawDummy, type ArcherPose, type DominionPose } from './sprites/placeholders';
 import { enemyAttack } from '../sim/actors/enemy';
 import { shieldUp } from '../sim/combat/damage';
 
@@ -74,6 +74,8 @@ export class Scene {
   readonly particles = new Particles();
   readonly sparks = new Sparks();
   private screenFlash = new Graphics();
+  /** Seconds left of the "no pips" HUD blink. */
+  noPipsFlash = 0;
   private player: PixiSprite;
   private enemySprites = new Map<number, Sprite>();
 
@@ -252,6 +254,9 @@ export class Scene {
       if (e.type === 'dominion') {
         const pose = dominionPose(e);
         this.redraw(s, `${pose}${flash}${e.shieldFlash > 0}`, () => drawDominion(s!.body, pose, flash, e.shieldFlash > 0));
+      } else if (e.type === 'archer') {
+        const pose = archerPose(e);
+        this.redraw(s, `${pose}${flash}`, () => drawArcher(s!.body, pose, flash));
       } else {
         this.redraw(s, `${flash}`, () => drawDummy(s!.body, flash));
       }
@@ -265,6 +270,28 @@ export class Scene {
         s.root.destroy({ children: true });
         this.enemySprites.delete(id);
       }
+    }
+
+    // --- Projectiles ---
+    for (const pr of world.projectiles) {
+      const gp = { x: lerp(pr.prevPos.x, pr.pos.x, alpha), y: lerp(pr.prevPos.y, pr.pos.y, alpha) };
+      const sp = groundToScreen(gp.x, gp.y);
+      const v = groundToScreen(pr.vel.x, pr.vel.y);
+      const vl = Math.hypot(v.x, v.y) || 1;
+      const tx = (-v.x / vl) * (pr.kind === 'bolt' ? 8 : 14);
+      const ty = (-v.y / vl) * (pr.kind === 'bolt' ? 8 : 14);
+      const x = Math.round(sp.x);
+      const y = Math.round(sp.y - 12);
+      const satans = pr.owner === 'player';
+      // Angels' arrows are pale light; anything Satan owns (bolts, reflected arrows) burns red.
+      const tail = satans ? (pr.perfect ? SATAN.eyeGlow : SATAN.ember) : ANGEL.sky2;
+      const core = satans ? (pr.kind === 'bolt' ? SATAN.hellfire : pr.perfect ? 0xffffff : SATAN.hellfire) : 0xffffff;
+      // Two-tone streak: wide coloured tail with a bright inner line, then a solid head.
+      this.fx.moveTo(x, y).lineTo(x + tx, y + ty).stroke({ width: 3, color: tail, alpha: 0.55 });
+      this.fx.moveTo(x, y).lineTo(x + tx * 0.6, y + ty * 0.6).stroke({ width: 1, color: core, alpha: 0.95 });
+      this.fx.rect(x - 1, y - 1, 3, 3).fill(core);
+      if (satans) this.fx.rect(x, y, 1, 1).fill(SATAN.eyeGlow);
+      this.shadows.ellipse(x, Math.round(sp.y), 2, 1).fill({ color: ANGEL.void, alpha: 0.15 });
     }
 
     // --- HUD ---
@@ -298,6 +325,16 @@ export class Scene {
     if (!atk || (e.phase !== 'windup' && e.phase !== 'active')) return;
     const t = e.phase === 'active' ? 1 : e.phaseFrame / atk.windup;
     const box = atk.lunge ? { ...atk.hitbox, radius: atk.hitbox.radius + atk.lunge.px } : atk.hitbox;
+    if (atk.projectile) {
+      // Ranged: a pale line along the shot, brightening as the bow draws.
+      if (e.phase === 'windup') {
+        const len = Math.min(atk.range, 130);
+        const a = groundToScreen(e.pos.x + e.attackDir.x * 8, e.pos.y + e.attackDir.y * 8);
+        const b = groundToScreen(e.pos.x + e.attackDir.x * len, e.pos.y + e.attackDir.y * len);
+        this.telegraphs.moveTo(a.x, a.y - 12).lineTo(b.x, b.y - 12).stroke({ width: 1, color: ANGEL.lilac, alpha: 0.15 + 0.6 * t });
+      }
+      return;
+    }
     if (atk.judgement) {
       // Judgement: white-gold, never red. Unblockable — dash through or away.
       this.telegraphs.poly(proj(arcPoly(e.pos, e.attackDir, { radius: box.radius, angleDeg: 26, offset: 0 }, 0, 1, 0.1))).fill({ color: JUDGEMENT, alpha: 0.25 + 0.45 * t });
@@ -387,6 +424,14 @@ export class Scene {
       const lit = p.action ? i < p.action.step : p.comboTimer > 0 && i < p.lastStep;
       g.rect(x + i * 6, y + 9, 4, 2).fill(lit ? SATAN.ember : SATAN.cloak2);
     }
+    // Throw pips (E): little hellfire diamonds under the health bar.
+    const blink = this.noPipsFlash > 0 && Math.floor(this.noPipsFlash * 20) % 2 === 0;
+    for (let i = 0; i < cfg.player.throw.maxPips; i++) {
+      const px = x + 26 + i * 8;
+      const py = y + 10;
+      const full = i < p.pips;
+      g.poly([px, py - 3, px + 3, py, px, py + 3, px - 3, py]).fill(blink ? 0xffffff : full ? SATAN.hellfire : SATAN.cloak2).stroke({ width: 1, color: SATAN.cloak });
+    }
     // Satan's posture: bottom centre, fills from the centre outward (HUD mock).
     const pw = 140;
     const px = Math.round(VIEW_W / 2 - pw / 2);
@@ -422,6 +467,15 @@ export class Scene {
       if (atk && e.phase === 'active') g.poly(proj(arcPoly(e.pos, e.attackDir, atk.hitbox, 0, 1, 0))).stroke({ width: 1, color: 0xff00ff });
     }
   }
+}
+
+function archerPose(e: Enemy): ArcherPose {
+  if (e.phase === 'broken') return 'broken';
+  if (e.phase === 'recoil') return 'recoil';
+  if (e.attack === 'bowBash' && (e.phase === 'active' || e.phase === 'recover')) return 'bash';
+  if (e.phase === 'windup' && e.attack !== 'bowBash') return 'draw';
+  if (e.phase === 'active' || (e.phase === 'recover' && e.phaseFrame < 10)) return 'loose';
+  return 'idle';
 }
 
 function dominionPose(e: Enemy): DominionPose {

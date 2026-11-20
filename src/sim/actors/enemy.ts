@@ -6,6 +6,7 @@ import { arcHitsCircle } from '../combat/hitbox';
 import { resolveOnPlayer } from '../combat/damage';
 import { regenPosture } from '../combat/posture';
 import { moveAndSlide } from '../physics/collide';
+import { enemyArrowInFlight, spawnProjectile } from '../projectiles';
 import { emit, type Enemy, type World } from '../world';
 
 /**
@@ -114,7 +115,7 @@ export function updateEnemy(world: World, e: Enemy, cfg: SimConfig, think: Think
       } else {
         e.engage = false;
         // The focus attacks freely, but never into a supporter's swing already in flight.
-        if (plan.attack && world.enemies.some((o) => o.id !== e.id && (o.phase === 'windup' || o.phase === 'active'))) plan.attack = null;
+        if (plan.attack && (enemyArrowInFlight(world) || world.enemies.some((o) => o.id !== e.id && (o.phase === 'windup' || o.phase === 'active')))) plan.attack = null;
       }
       if (plan.attack) startEnemyAttack(world, e, plan.attack, cfg);
       break;
@@ -136,7 +137,14 @@ export function updateEnemy(world: World, e: Enemy, cfg: SimConfig, think: Think
         const s = f <= n ? atk.lunge.px * (easeOutQuad(f / n) - easeOutQuad((f - 1) / n)) : 0;
         lungeDelta = { x: e.attackDir.x * s, y: e.attackDir.y * s };
       }
-      if (!e.swingHit && arcHitsCircle(e.pos, e.attackDir, atk.hitbox, p.pos, cfg.player.radius)) {
+      if (atk.projectile) {
+        if (!e.swingHit) {
+          e.swingHit = true;
+          const from = { x: e.pos.x + e.attackDir.x * (e.radius + 4), y: e.pos.y + e.attackDir.y * (e.radius + 4) };
+          spawnProjectile(world, 'arrow', e.id, from, e.attackDir, atk.projectile, atk);
+          emit(world, { type: 'arrowLoosed', pos: from });
+        }
+      } else if (!e.swingHit && arcHitsCircle(e.pos, e.attackDir, atk.hitbox, p.pos, cfg.player.radius)) {
         const out = resolveOnPlayer(world, e, atk, cfg);
         if (out !== 'evaded') e.swingHit = true;
       }
@@ -167,8 +175,9 @@ function holdBackMove(world: World, e: Enemy, def: EnemyDef, cfg: SimConfig): Ve
   const d = Math.hypot(to.x, to.y);
   const dir = normalize(to);
   const sp = def.speed * g.holdBackSpeedMul;
-  if (d < g.holdBackDistance - 8) return { x: -dir.x * sp, y: -dir.y * sp };
-  if (d > g.holdBackDistance + 12) return { x: dir.x * sp, y: dir.y * sp };
+  const want = Math.max(g.holdBackDistance, def.preferredRange ?? 0);
+  if (d < want - 8) return { x: -dir.x * sp, y: -dir.y * sp };
+  if (d > want + 12) return { x: dir.x * sp, y: dir.y * sp };
   // Circle slowly at the edge, direction fixed per enemy so they spread out.
   const side = e.id % 2 === 0 ? 1 : -1;
   return { x: -dir.y * sp * 0.5 * side, y: dir.x * sp * 0.5 * side };
@@ -177,6 +186,7 @@ function holdBackMove(world: World, e: Enemy, def: EnemyDef, cfg: SimConfig): Ve
 function noAttackInFlight(world: World, e: Enemy, key: string, cfg: SimConfig): boolean {
   const atk = cfg.enemies[e.type]!.attacks[key];
   if (!atk) return false;
+  if (enemyArrowInFlight(world)) return false;
   for (const o of world.enemies) {
     if (o.id === e.id) continue;
     if (o.phase === 'windup' || o.phase === 'active') return false;

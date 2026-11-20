@@ -51,6 +51,8 @@ interface Pose {
   stride?: number; // -1..1 leg phase
   glint?: boolean;
   tremble?: number;
+  /** Hellfire orb in the off hand: 'back' (wind-up) or 'fwd' (release). */
+  orb?: 'back' | 'fwd';
 }
 
 const rad = (d: number) => (d * Math.PI) / 180;
@@ -323,6 +325,19 @@ function drawFrame(dir: Dir, p: Pose): Canvas {
     }
   }
 
+  if (p.orb) {
+    const f = dirv(FACE[dir]);
+    const k = p.orb === 'fwd' ? 10 : -7;
+    const ox = Math.round(tx + f.x * k + (dir === 'right' ? 0 : -3));
+    const oy = Math.round(ty - 24 + f.y * k * 0.5);
+    const r = p.orb === 'fwd' ? 3 : 2;
+    fx.poly([[ox - r, oy], [ox, oy - r], [ox + r, oy], [ox, oy + r]], C.hellfire);
+    fx.set(ox, oy, C.eye);
+    if (p.orb === 'fwd') {
+      fx.line(ox - Math.round(f.x * 6), oy - Math.round(f.y * 3), ox - Math.round(f.x * 2), oy - Math.round(f.y * 1), C.ember);
+    }
+  }
+
   const out = new Canvas(FW, FH);
   out.blit(body, 0, 0);
   out.blit(fx, 0, 0);
@@ -388,6 +403,16 @@ const ANIMS: AnimDef[] = [
         { blade: g + 20, reach: 3 },
       ];
     },
+  },
+  {
+    name: 'throw',
+    durationMs: 50,
+    poses: (d) => [
+      { blade: REST[d], reach: 4, lean: -1, orb: 'back' },
+      { blade: REST[d], reach: 4, lean: -2, flare: 0.3, orb: 'back' },
+      { blade: REST[d], reach: 4, lean: 2, flare: 0.6, orb: 'fwd' },
+      { blade: REST[d], reach: 4, lean: 1, flare: 0.2 },
+    ],
   },
   {
     name: 'block',

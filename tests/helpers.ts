@@ -18,7 +18,7 @@ export function testConfig(): SimConfig {
     combat: loadData('tuning/combat'),
     camera: loadData('tuning/camera'),
     attacks: loadData('attacks/satan'),
-    enemies: { dummy: loadData('enemies/dummy'), dominion: loadData('enemies/dominion') },
+    enemies: { dummy: loadData('enemies/dummy'), dominion: loadData('enemies/dominion'), archer: loadData('enemies/archer') },
   };
 }
 
@@ -31,9 +31,12 @@ export function trainingRoom(): RoomDef {
  * `withDummy: false` removes every enemy; `only` keeps the listed types.
  */
 export function testWorld(cfg: SimConfig, opts: { withDummy?: boolean; dummyAttacks?: boolean; only?: string[] } = {}): World {
-  const w = createWorld(trainingRoom(), cfg, 7);
   const keep = opts.withDummy === false ? [] : (opts.only ?? ['dummy']);
-  w.enemies = w.enemies.filter((e) => keep.includes(e.type));
+  // Spawn only what the test uses, in the listed order, so adding content to
+  // the training room never shifts a test's random stream.
+  const base = trainingRoom();
+  const room = { ...base, spawns: keep.map((type) => base.spawns.find((s) => s.type === type) ?? { type, at: [200, 120] as [number, number] }) };
+  const w = createWorld(room, cfg, 7);
   w.flags.dummyAttacks = opts.dummyAttacks ?? false;
   w.flags.respawn = false;
   return w;

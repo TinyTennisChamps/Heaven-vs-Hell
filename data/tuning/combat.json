@@ -65,5 +65,13 @@
     "holdBackSpeedMul": 0.6,
     "supportAttackChance": 0.3,
     "supportCooldownMul": 2.5
+  },
+  "reflect": {
+    "speedMul": 1.25,
+    "perfectSpeedMul": 1.7,
+    "healthDamage": 12,
+    "postureDamage": 30,
+    "perfectHealthDamage": 18,
+    "perfectPostureDamage": 55
   }
 }

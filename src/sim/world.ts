@@ -20,6 +20,27 @@ export interface AttackState {
   targetId?: number;
 }
 
+export interface Projectile {
+  id: number;
+  kind: 'bolt' | 'arrow';
+  /** 'player' or the id of the enemy that fired it. A reflected arrow becomes Satan's. */
+  owner: 'player' | number;
+  /** Enemy that originally shot it (reflections fly back at them). */
+  shooter: number | null;
+  pos: Vec2;
+  prevPos: Vec2;
+  vel: Vec2;
+  radius: number;
+  life: number;
+  healthDamage: number;
+  postureDamage: number;
+  knockback: number;
+  hitstop: number;
+  shake: number;
+  reflected: boolean;
+  perfect: boolean;
+}
+
 export interface DashState {
   frame: number;
   dir: Vec2;
@@ -63,6 +84,10 @@ export interface PlayerState {
   blockStun: number;
   /** Posture-broken stagger ticks remaining. */
   broken: number;
+  /** Throw pips (E). */
+  pips: number;
+  /** Melee hits landed toward the next pip refill. */
+  pipProgress: number;
   /** Locked-on enemy id (Q), or null. */
   lockId: number | null;
   /** Ticks Q has been held since a press while locked (-1 = not measuring). */
@@ -117,6 +142,12 @@ export type SimEvent =
   | { type: 'deathblow'; pos: Vec2; dir: Vec2 }
   | { type: 'parryWhiff'; pos: Vec2 }
   | { type: 'riposteOpen'; pos: Vec2 }
+  | { type: 'throw'; pos: Vec2; dir: Vec2 }
+  | { type: 'noPips'; pos: Vec2 }
+  | { type: 'pipGained'; pos: Vec2 }
+  | { type: 'projectileEnd'; pos: Vec2; kind: 'bolt' | 'arrow'; reflected: boolean }
+  | { type: 'reflect'; pos: Vec2; perfect: boolean }
+  | { type: 'arrowLoosed'; pos: Vec2 }
   | { type: 'lockOn'; pos: Vec2 }
   | { type: 'lockOff'; pos: Vec2 };
 
@@ -144,6 +175,7 @@ export interface World {
   slowAcc: number;
   player: PlayerState;
   enemies: Enemy[];
+  projectiles: Projectile[];
   nextId: number;
   /** The enemy allowed to attack freely this tick (lock target, else nearest). */
   focusId: number | null;
@@ -200,8 +232,11 @@ export function createWorld(room: RoomDef, cfg: SimConfig, seed = 1): World {
       broken: 0,
       lockId: null,
       lockHold: -1,
+      pips: cfg.player.throw.maxPips,
+      pipProgress: 0,
     },
     enemies: [],
+    projectiles: [],
     nextId: 1,
     focusId: null,
     camera: { pos: { ...camPos }, prevPos: { ...camPos }, shake: 0, shakeOffset: v2() },

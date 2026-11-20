@@ -4,9 +4,16 @@
     "active": 3,
     "recovery": 10,
     "chainAt": 3,
-    "lunge": { "px": 10, "overFrames": 4 },
+    "lunge": {
+      "px": 10,
+      "overFrames": 4
+    },
     "moveSpeedMul": 0.35,
-    "hitbox": { "radius": 26, "angleDeg": 110, "offset": 6 },
+    "hitbox": {
+      "radius": 26,
+      "angleDeg": 110,
+      "offset": 6
+    },
     "healthDamage": 10,
     "postureDamage": 8,
     "hitstop": 3,
@@ -18,9 +25,16 @@
     "active": 3,
     "recovery": 10,
     "chainAt": 3,
-    "lunge": { "px": 10, "overFrames": 4 },
+    "lunge": {
+      "px": 10,
+      "overFrames": 4
+    },
     "moveSpeedMul": 0.35,
-    "hitbox": { "radius": 26, "angleDeg": 110, "offset": 6 },
+    "hitbox": {
+      "radius": 26,
+      "angleDeg": 110,
+      "offset": 6
+    },
     "healthDamage": 10,
     "postureDamage": 8,
     "hitstop": 3,
@@ -32,9 +46,16 @@
     "active": 4,
     "recovery": 16,
     "chainAt": 99,
-    "lunge": { "px": 14, "overFrames": 6 },
+    "lunge": {
+      "px": 14,
+      "overFrames": 6
+    },
     "moveSpeedMul": 0.2,
-    "hitbox": { "radius": 30, "angleDeg": 140, "offset": 6 },
+    "hitbox": {
+      "radius": 30,
+      "angleDeg": 140,
+      "offset": 6
+    },
     "healthDamage": 18,
     "postureDamage": 16,
     "hitstop": 4,
@@ -46,13 +67,46 @@
     "active": 1,
     "recovery": 18,
     "chainAt": 99,
-    "lunge": { "px": 12, "overFrames": 5 },
+    "lunge": {
+      "px": 12,
+      "overFrames": 5
+    },
     "moveSpeedMul": 0,
-    "hitbox": { "radius": 30, "angleDeg": 180, "offset": 0 },
+    "hitbox": {
+      "radius": 30,
+      "angleDeg": 180,
+      "offset": 0
+    },
     "healthDamage": 9999,
     "postureDamage": 0,
     "hitstop": 12,
     "knockback": 120,
     "shake": 4
+  },
+  "throw": {
+    "startup": 5,
+    "active": 1,
+    "recovery": 12,
+    "chainAt": 99,
+    "lunge": {
+      "px": 0,
+      "overFrames": 1
+    },
+    "moveSpeedMul": 0.5,
+    "hitbox": {
+      "radius": 0,
+      "angleDeg": 0,
+      "offset": 0
+    },
+    "healthDamage": 8,
+    "postureDamage": 14,
+    "hitstop": 3,
+    "knockback": 110,
+    "shake": 1,
+    "projectile": {
+      "speed": 300,
+      "radius": 3,
+      "lifeFrames": 60
+    }
   }
 }

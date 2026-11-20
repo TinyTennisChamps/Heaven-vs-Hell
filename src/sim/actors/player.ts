@@ -3,7 +3,8 @@ import { groundToScreen, screenToGround } from '../../core/iso';
 import { easeOutQuad, moveToward, normalize, type Vec2 } from '../../core/math';
 import type { AttackDef, SimConfig } from '../config';
 import { arcHitsCircle, assistAim } from '../combat/hitbox';
-import { hitEnemy, killEnemy, startHitstop } from '../combat/damage';
+import { hitEnemy, killEnemy, meleeHitLanded, startHitstop } from '../combat/damage';
+import { spawnProjectile } from '../projectiles';
 import { regenPosture } from '../combat/posture';
 import { moveAndSlide } from '../physics/collide';
 import { emit, type AttackState, type Enemy, type PlayerState, type World } from '../world';
@@ -88,23 +89,39 @@ function deathblowTarget(world: World, cfg: SimConfig): Enemy | null {
 }
 
 /**
- * The enemy whose attack will land soonest, within range: anything already
- * active first, then the windup closest to completion; ties go to the nearer one.
+ * Where the most imminent threat is coming from, within range: enemy attacks
+ * (already active first, then the windup closest to completion) and arrows
+ * flying at Satan (by time to impact). Ties go to the nearer one.
  */
-export function imminentThreat(world: World, cfg: SimConfig): Enemy | null {
+export function imminentThreat(world: World, cfg: SimConfig): Vec2 | null {
   const p = world.player;
-  let best: Enemy | null = null;
+  const range = cfg.combat.autoFace.range;
+  let best: Vec2 | null = null;
   let bestScore = Infinity;
   for (const e of world.enemies) {
     if (e.phase !== 'windup' && e.phase !== 'active') continue;
     const atk = e.attack ? cfg.enemies[e.type]!.attacks[e.attack] : undefined;
     if (!atk) continue;
     const d = Math.hypot(e.pos.x - p.pos.x, e.pos.y - p.pos.y);
-    if (d > cfg.combat.autoFace.range) continue;
-    const ticksLeft = e.phase === 'active' ? 0 : atk.windup - e.phaseFrame;
+    if (d > (atk.projectile ? range * 2 : range)) continue;
+    // A ranged windup lands later than its windup ends (flight time).
+    const flight = atk.projectile ? (d / atk.projectile.speed) * 60 : 0;
+    const ticksLeft = (e.phase === 'active' ? 0 : atk.windup - e.phaseFrame) + flight;
     const score = ticksLeft * 1000 + d;
     if (score < bestScore) {
-      best = e;
+      best = e.pos;
+      bestScore = score;
+    }
+  }
+  for (const pr of world.projectiles) {
+    if (pr.owner === 'player') continue;
+    const to = { x: p.pos.x - pr.pos.x, y: p.pos.y - pr.pos.y };
+    const d = Math.hypot(to.x, to.y);
+    const sp = Math.hypot(pr.vel.x, pr.vel.y);
+    if (d > range * 2 || sp < 1 || pr.vel.x * to.x + pr.vel.y * to.y <= 0) continue;
+    const score = (d / sp) * 60 * 1000 + d;
+    if (score < bestScore) {
+      best = pr.pos;
       bestScore = score;
     }
   }
@@ -169,6 +186,18 @@ export function updatePlayer(world: World, inp: PlayerInput, aim: Vec2 | null, c
     p.action = null;
     p.parry = { frame: 0, window, deflected: false };
   }
+  if (buf.has('throw') && canStartAttack(p, cfg) && !(p.action && p.action.key === 'throw')) {
+    buf.consume('throw');
+    if (p.pips > 0) {
+      p.pips--;
+      p.parry = null;
+      p.guarding = false;
+      p.dashEndLag = 0;
+      p.action = { key: 'throw', step: 0, frame: 0, dir: inp.locked ? { ...aimDir } : assistAim(p.pos, aimDir, targets, { ...c.aimAssist, range: 160 }), hitIds: [] };
+    } else {
+      emit(world, { type: 'noPips', pos: { ...p.pos } });
+    }
+  }
   if (buf.has('slash') && canStartAttack(p, cfg)) {
     buf.consume('slash');
     p.parry = null;
@@ -200,7 +229,7 @@ export function updatePlayer(world: World, inp: PlayerInput, aim: Vec2 | null, c
   if (p.parry || p.guarding) {
     // Guard faces the incoming attack, not the cursor: parrying is about timing.
     const threat = c.autoFace.enabled ? imminentThreat(world, cfg) : null;
-    if (threat) p.facing = normalize({ x: threat.pos.x - p.pos.x, y: threat.pos.y - p.pos.y });
+    if (threat) p.facing = normalize({ x: threat.x - p.pos.x, y: threat.y - p.pos.y });
     else if (aim) p.facing = { ...aim };
   }
 
@@ -228,7 +257,7 @@ export function updatePlayer(world: World, inp: PlayerInput, aim: Vec2 | null, c
     if (a) {
       const def = attackDef(cfg, a.key);
       a.frame++;
-      if (a.frame <= def.startup && a.key !== 'deathblow') a.dir = inp.locked ? { ...aimDir } : assistAim(p.pos, aimDir, targets, c.aimAssist);
+      if (a.frame <= def.startup && a.key !== 'deathblow' && a.key !== 'throw') a.dir = inp.locked ? { ...aimDir } : assistAim(p.pos, aimDir, targets, c.aimAssist);
       p.facing = { ...a.dir };
       speedMul = def.moveSpeedMul;
 
@@ -240,7 +269,14 @@ export function updatePlayer(world: World, inp: PlayerInput, aim: Vec2 | null, c
       }
 
       if (attackPhase(a, def) === 'active') {
-        if (a.key === 'deathblow') {
+        if (def.projectile) {
+          if (a.hitIds.length === 0) {
+            a.hitIds.push(-1); // launched
+            const from = { x: p.pos.x + a.dir.x * 8, y: p.pos.y + a.dir.y * 8 };
+            spawnProjectile(world, 'bolt', 'player', from, a.dir, def.projectile, def);
+            emit(world, { type: 'throw', pos: from, dir: { ...a.dir } });
+          }
+        } else if (a.key === 'deathblow') {
           const t = world.enemies.find((e) => e.id === a.targetId);
           if (t && t.phase === 'broken' && !a.hitIds.includes(t.id)) {
             a.hitIds.push(t.id);
@@ -257,7 +293,7 @@ export function updatePlayer(world: World, inp: PlayerInput, aim: Vec2 | null, c
             if (a.hitIds.includes(e.id) || e.phase === 'down') continue;
             if (arcHitsCircle(p.pos, a.dir, def.hitbox, e.pos, e.radius)) {
               a.hitIds.push(e.id);
-              hitEnemy(world, e, p.pos, a.dir, { ...def, strong: a.step === 3 }, cfg);
+              if (hitEnemy(world, e, p.pos, a.dir, { ...def, strong: a.step === 3 }, cfg) === 'hit') meleeHitLanded(world, cfg);
             }
           }
         }

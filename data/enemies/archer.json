@@ -1,0 +1,88 @@
+{
+  "health": 70,
+  "radius": 7,
+  "speed": 52,
+  "turnRateDeg": 12,
+  "attackRange": 150,
+  "preferredRange": 95,
+  "cooldownMin": 45,
+  "cooldownMax": 85,
+  "respawnFrames": 120,
+  "brokenFrames": 110,
+  "shieldArcDeg": 0,
+  "shieldPostureMul": 0,
+  "throwPostureMul": 2,
+  "posture": {
+    "max": 70,
+    "regenDelay": 60,
+    "regenPerSec": 14,
+    "lowHealthMul": 0.5
+  },
+  "attacks": {
+    "shot": {
+      "range": 150,
+      "windup": 30,
+      "trackUntil": 24,
+      "active": 1,
+      "recovery": 22,
+      "healthDamage": 10,
+      "postureDamage": 18,
+      "knockback": 120,
+      "hitstop": 3,
+      "shake": 1.4,
+      "hitbox": {
+        "radius": 0,
+        "angleDeg": 0,
+        "offset": 0
+      },
+      "projectile": {
+        "speed": 210,
+        "radius": 3,
+        "lifeFrames": 110
+      },
+      "chain": {
+        "next": "quickshot",
+        "chance": 0.35
+      }
+    },
+    "quickshot": {
+      "range": 150,
+      "windup": 16,
+      "trackUntil": 10,
+      "active": 1,
+      "recovery": 30,
+      "healthDamage": 8,
+      "postureDamage": 16,
+      "knockback": 110,
+      "hitstop": 3,
+      "shake": 1.2,
+      "hitbox": {
+        "radius": 0,
+        "angleDeg": 0,
+        "offset": 0
+      },
+      "projectile": {
+        "speed": 240,
+        "radius": 3,
+        "lifeFrames": 110
+      }
+    },
+    "bowBash": {
+      "range": 22,
+      "windup": 14,
+      "trackUntil": 10,
+      "active": 3,
+      "recovery": 22,
+      "healthDamage": 6,
+      "postureDamage": 20,
+      "knockback": 220,
+      "hitstop": 4,
+      "shake": 2,
+      "hitbox": {
+        "radius": 22,
+        "angleDeg": 110,
+        "offset": 4
+      }
+    }
+  }
+}

@@ -2179,10 +2179,274 @@
    "duration": 50
   },
   {
-   "filename": "block_down 0",
+   "filename": "throw_down 0",
    "frame": {
     "x": 192,
     "y": 512,
+    "w": 64,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 64,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 64,
+    "h": 64
+   },
+   "duration": 50
+  },
+  {
+   "filename": "throw_down 1",
+   "frame": {
+    "x": 256,
+    "y": 512,
+    "w": 64,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 64,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 64,
+    "h": 64
+   },
+   "duration": 50
+  },
+  {
+   "filename": "throw_down 2",
+   "frame": {
+    "x": 320,
+    "y": 512,
+    "w": 64,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 64,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 64,
+    "h": 64
+   },
+   "duration": 50
+  },
+  {
+   "filename": "throw_down 3",
+   "frame": {
+    "x": 384,
+    "y": 512,
+    "w": 64,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 64,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 64,
+    "h": 64
+   },
+   "duration": 50
+  },
+  {
+   "filename": "throw_up 0",
+   "frame": {
+    "x": 448,
+    "y": 512,
+    "w": 64,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 64,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 64,
+    "h": 64
+   },
+   "duration": 50
+  },
+  {
+   "filename": "throw_up 1",
+   "frame": {
+    "x": 512,
+    "y": 512,
+    "w": 64,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 64,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 64,
+    "h": 64
+   },
+   "duration": 50
+  },
+  {
+   "filename": "throw_up 2",
+   "frame": {
+    "x": 576,
+    "y": 512,
+    "w": 64,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 64,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 64,
+    "h": 64
+   },
+   "duration": 50
+  },
+  {
+   "filename": "throw_up 3",
+   "frame": {
+    "x": 640,
+    "y": 512,
+    "w": 64,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 64,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 64,
+    "h": 64
+   },
+   "duration": 50
+  },
+  {
+   "filename": "throw_right 0",
+   "frame": {
+    "x": 704,
+    "y": 512,
+    "w": 64,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 64,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 64,
+    "h": 64
+   },
+   "duration": 50
+  },
+  {
+   "filename": "throw_right 1",
+   "frame": {
+    "x": 0,
+    "y": 576,
+    "w": 64,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 64,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 64,
+    "h": 64
+   },
+   "duration": 50
+  },
+  {
+   "filename": "throw_right 2",
+   "frame": {
+    "x": 64,
+    "y": 576,
+    "w": 64,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 64,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 64,
+    "h": 64
+   },
+   "duration": 50
+  },
+  {
+   "filename": "throw_right 3",
+   "frame": {
+    "x": 128,
+    "y": 576,
+    "w": 64,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 64,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 64,
+    "h": 64
+   },
+   "duration": 50
+  },
+  {
+   "filename": "block_down 0",
+   "frame": {
+    "x": 192,
+    "y": 576,
     "w": 64,
     "h": 64
    },
@@ -2204,7 +2468,7 @@
    "filename": "block_up 0",
    "frame": {
     "x": 256,
-    "y": 512,
+    "y": 576,
     "w": 64,
     "h": 64
    },
@@ -2226,7 +2490,7 @@
    "filename": "block_right 0",
    "frame": {
     "x": 320,
-    "y": 512,
+    "y": 576,
     "w": 64,
     "h": 64
    },
@@ -2248,7 +2512,7 @@
    "filename": "dash_down 0",
    "frame": {
     "x": 384,
-    "y": 512,
+    "y": 576,
     "w": 64,
     "h": 64
    },
@@ -2270,7 +2534,7 @@
    "filename": "dash_down 1",
    "frame": {
     "x": 448,
-    "y": 512,
+    "y": 576,
     "w": 64,
     "h": 64
    },
@@ -2292,7 +2556,7 @@
    "filename": "dash_up 0",
    "frame": {
     "x": 512,
-    "y": 512,
+    "y": 576,
     "w": 64,
     "h": 64
    },
@@ -2314,7 +2578,7 @@
    "filename": "dash_up 1",
    "frame": {
     "x": 576,
-    "y": 512,
+    "y": 576,
     "w": 64,
     "h": 64
    },
@@ -2336,7 +2600,7 @@
    "filename": "dash_right 0",
    "frame": {
     "x": 640,
-    "y": 512,
+    "y": 576,
     "w": 64,
     "h": 64
    },
@@ -2358,7 +2622,7 @@
    "filename": "dash_right 1",
    "frame": {
     "x": 704,
-    "y": 512,
+    "y": 576,
     "w": 64,
     "h": 64
    },
@@ -2380,7 +2644,7 @@
    "filename": "hurt_down 0",
    "frame": {
     "x": 0,
-    "y": 576,
+    "y": 640,
     "w": 64,
     "h": 64
    },
@@ -2402,7 +2666,7 @@
    "filename": "hurt_down 1",
    "frame": {
     "x": 64,
-    "y": 576,
+    "y": 640,
     "w": 64,
     "h": 64
    },
@@ -2424,7 +2688,7 @@
    "filename": "hurt_up 0",
    "frame": {
     "x": 128,
-    "y": 576,
+    "y": 640,
     "w": 64,
     "h": 64
    },
@@ -2446,7 +2710,7 @@
    "filename": "hurt_up 1",
    "frame": {
     "x": 192,
-    "y": 576,
+    "y": 640,
     "w": 64,
     "h": 64
    },
@@ -2468,7 +2732,7 @@
    "filename": "hurt_right 0",
    "frame": {
     "x": 256,
-    "y": 576,
+    "y": 640,
     "w": 64,
     "h": 64
    },
@@ -2490,7 +2754,7 @@
    "filename": "hurt_right 1",
    "frame": {
     "x": 320,
-    "y": 576,
+    "y": 640,
     "w": 64,
     "h": 64
    },
@@ -2515,7 +2779,7 @@
   "format": "RGBA8888",
   "size": {
    "w": 768,
-   "h": 640
+   "h": 704
   },
   "scale": "1",
   "frameTags": [
@@ -2628,57 +2892,75 @@
     "direction": "forward"
    },
    {
-    "name": "block_down",
+    "name": "throw_down",
     "from": 99,
-    "to": 99,
+    "to": 102,
     "direction": "forward"
    },
    {
-    "name": "block_up",
-    "from": 100,
-    "to": 100,
+    "name": "throw_up",
+    "from": 103,
+    "to": 106,
     "direction": "forward"
    },
    {
-    "name": "block_right",
-    "from": 101,
-    "to": 101,
+    "name": "throw_right",
+    "from": 107,
+    "to": 110,
     "direction": "forward"
    },
    {
-    "name": "dash_down",
-    "from": 102,
-    "to": 103,
-    "direction": "forward"
-   },
-   {
-    "name": "dash_up",
-    "from": 104,
-    "to": 105,
-    "direction": "forward"
-   },
-   {
-    "name": "dash_right",
-    "from": 106,
-    "to": 107,
-    "direction": "forward"
-   },
-   {
-    "name": "hurt_down",
-    "from": 108,
-    "to": 109,
-    "direction": "forward"
-   },
-   {
-    "name": "hurt_up",
-    "from": 110,
+    "name": "block_down",
+    "from": 111,
     "to": 111,
     "direction": "forward"
    },
    {
-    "name": "hurt_right",
+    "name": "block_up",
     "from": 112,
+    "to": 112,
+    "direction": "forward"
+   },
+   {
+    "name": "block_right",
+    "from": 113,
     "to": 113,
+    "direction": "forward"
+   },
+   {
+    "name": "dash_down",
+    "from": 114,
+    "to": 115,
+    "direction": "forward"
+   },
+   {
+    "name": "dash_up",
+    "from": 116,
+    "to": 117,
+    "direction": "forward"
+   },
+   {
+    "name": "dash_right",
+    "from": 118,
+    "to": 119,
+    "direction": "forward"
+   },
+   {
+    "name": "hurt_down",
+    "from": 120,
+    "to": 121,
+    "direction": "forward"
+   },
+   {
+    "name": "hurt_up",
+    "from": 122,
+    "to": 123,
+    "direction": "forward"
+   },
+   {
+    "name": "hurt_right",
+    "from": 124,
+    "to": 125,
     "direction": "forward"
    }
   ],

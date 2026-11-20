@@ -22,7 +22,7 @@ const cfg: SimConfig = {
   combat: getData('tuning/combat'),
   camera: getData('tuning/camera'),
   attacks: getData('attacks/satan'),
-  enemies: { dummy: getData('enemies/dummy'), dominion: getData('enemies/dominion') },
+  enemies: { dummy: getData('enemies/dummy'), dominion: getData('enemies/dominion'), archer: getData('enemies/archer') },
 };
 
 async function boot() {
@@ -36,7 +36,7 @@ async function boot() {
   legend.className = 'legend';
   root.appendChild(legend);
   const updateLegend = (w: World) => {
-    legend.textContent = `WASD move · LMB slash / deathblow · RMB tap parry, hold block · Space dash · Q lock-on (tap: next, hold: release) · F3 enemy attacks: ${w.flags.dummyAttacks ? 'ON' : 'OFF'} · F4 reset · F1 debug`;
+    legend.textContent = `WASD move · LMB slash / deathblow · RMB tap parry, hold block · E throw · Space dash · Q lock-on (tap: next, hold: release) · F3 enemy attacks: ${w.flags.dummyAttacks ? 'ON' : 'OFF'} · F4 reset · F1 debug`;
   };
 
   const room = getData<RoomDef>('rooms/training');
@@ -122,6 +122,7 @@ async function boot() {
     scene.particles.update(Math.min(elapsed, 0.05));
     scene.particles.draw();
     scene.sparks.update(Math.min(elapsed, 0.05));
+    scene.noPipsFlash = Math.max(0, scene.noPipsFlash - elapsed);
     scene.sparks.draw();
     scene.render(world, alpha, cursor, cfg, debug);
     app.render();
@@ -145,6 +146,8 @@ async function boot() {
       overlay.set('posture', `${p.posture.toFixed(1)} / ${cfg.player.posture.max}${p.broken ? `  BROKEN ${p.broken}` : ''}`);
       overlay.set('guard', p.parry ? `parry f${p.parry.frame}/${p.parry.window}${p.parry.deflected ? ' ✓' : ''}` : p.guarding ? 'block' : '—');
       overlay.set('anti-mash', p.parryPenalty);
+      overlay.set('pips', `${p.pips} (+${p.pipProgress}/${cfg.player.throw.hitsPerPip})`);
+      overlay.set('projectiles', world.projectiles.length);
       overlay.set('lock / focus', `${p.lockId ?? '—'} / ${world.focusId ?? '—'}`);
       overlay.set('buffer', world.buffer.snapshot());
       for (const e of world.enemies) overlay.set(`${e.type}#${e.id}`, `${e.phase}${e.attack ? `:${e.attack}` : ''} f${e.phaseFrame} hp ${e.hp} pos ${e.posture.toFixed(0)}`);
@@ -219,6 +222,22 @@ function spawnEffects(world: World, scene: Scene): void {
       case 'parryWhiff':
       case 'lockOn':
       case 'lockOff':
+      case 'arrowLoosed':
+      case 'pipGained':
+        break;
+      case 'throw': {
+        const d = groundToScreen(ev.dir.x, ev.dir.y);
+        P.burst(s.x, s.y - 12, { count: 8, colors: [SATAN.ember, SATAN.hellfire, SATAN.eyeGlow], speed: 70, life: 0.2, dirX: d.x, dirY: d.y, spread: 1.2 });
+        break;
+      }
+      case 'noPips':
+        scene.noPipsFlash = 0.35;
+        break;
+      case 'projectileEnd':
+        P.burst(s.x, s.y - 12, { count: 5, colors: ev.kind === 'arrow' && !ev.reflected ? [ANGEL.sky, 0xffffff] : [SATAN.ember, SATAN.hellfire], speed: 50, life: 0.2 });
+        break;
+      case 'reflect':
+        P.burst(s.x, s.y - 12, { count: ev.perfect ? 12 : 6, colors: [SATAN.hellfire, SATAN.eyeGlow], speed: 90, life: 0.25 });
         break;
     }
   }

@@ -96,7 +96,7 @@ export function hitEnemy(world: World, e: Enemy, from: Vec2, dir: Vec2, spec: Hi
 
 export type HitOutcome = 'evaded' | 'perfect' | 'deflect' | 'block' | 'hit';
 
-function addPlayerPosture(world: World, amount: number, cfg: SimConfig): void {
+export function addPlayerPosture(world: World, amount: number, cfg: SimConfig): void {
   const p = world.player;
   if (p.broken > 0) return;
   p.posture = Math.min(cfg.player.posture.max, p.posture + amount);
@@ -128,7 +128,10 @@ export function resolveOnPlayer(world: World, attacker: Enemy, atk: EnemyAttackD
     p.parry.deflected = true;
     p.parryPenalty = 0;
     world.stats.deflects++;
-    if (perfect) world.stats.perfects++;
+    if (perfect) {
+      world.stats.perfects++;
+      gainPips(world, cfg.player.throw.perfectParryPips, cfg);
+    }
     startHitstop(world, perfect ? c.parry.perfectHitstop : c.parry.hitstop, perfect ? c.parry.perfectShake : c.parry.shake, cfg);
     emit(world, { type: 'deflect', pos: { x: (p.pos.x + attacker.pos.x) / 2, y: (p.pos.y + attacker.pos.y) / 2 }, dir, perfect });
     addPlayerPosture(world, atk.postureDamage * (perfect ? c.parry.perfectSelfPostureMul : c.parry.selfPostureMul), cfg);
@@ -169,4 +172,23 @@ export function resolveOnPlayer(world: World, attacker: Enemy, atk: EnemyAttackD
   emit(world, { type: 'playerHit', pos: { ...p.pos }, dir });
   addPlayerPosture(world, atk.postureDamage * c.hitPostureMul, cfg);
   return 'hit';
+}
+
+// ---------------------------------------------------------------- throw pips
+
+export function gainPips(world: World, n: number, cfg: SimConfig): void {
+  const pl = world.player;
+  const before = pl.pips;
+  pl.pips = Math.min(cfg.player.throw.maxPips, pl.pips + n);
+  if (pl.pips > before) emit(world, { type: 'pipGained', pos: { ...pl.pos } });
+}
+
+/** Every `hitsPerPip` melee hits that land (not shield-blocked) refill one pip. */
+export function meleeHitLanded(world: World, cfg: SimConfig): void {
+  const pl = world.player;
+  pl.pipProgress++;
+  if (pl.pipProgress >= cfg.player.throw.hitsPerPip) {
+    pl.pipProgress = 0;
+    gainPips(world, 1, cfg);
+  }
 }
