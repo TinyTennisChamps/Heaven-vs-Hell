@@ -55,6 +55,13 @@ export function updateEnemy(world: World, e: Enemy, cfg: SimConfig, think: Think
   if (e.specialCooldown > 0) e.specialCooldown--;
   e.phaseFrame++;
 
+  if (e.arrive > 0) {
+    // Spawning in: visible, harmless, not yet thinking.
+    e.arrive--;
+    turnToward(e, normalize({ x: p.pos.x - e.pos.x, y: p.pos.y - e.pos.y }), 90);
+    return;
+  }
+
   if (e.phase === 'down') {
     if (world.flags.respawn && e.phaseFrame >= def.respawnFrames) {
       e.hp = e.maxHp = def.health;
@@ -104,7 +111,14 @@ export function updateEnemy(world: World, e: Enemy, cfg: SimConfig, think: Think
       turnToward(e, toP, flanked ? (def.flankTurnRateDeg ?? def.turnRateDeg) : def.turnRateDeg);
       const plan = think(world, e, def, cfg);
       move = plan.move;
-      if (world.focusId !== null && world.focusId !== e.id) {
+      if (def.swarm) {
+        // Swarmers have their own pool: up to swarmMax lunge at once, regardless of focus.
+        e.engage = false;
+        if (plan.attack && swarmAttacking(world, cfg) >= cfg.combat.groups.swarmMax) {
+          plan.attack = null;
+          e.cooldown = Math.round(nextRange(world.rng, 8, 30));
+        }
+      } else if (world.focusId !== null && world.focusId !== e.id) {
         // Not the focus: hang back, and only now and then get a turn to step
         // in and attack — never while anyone else's attack is in flight.
         if (!e.engage) {
@@ -120,7 +134,7 @@ export function updateEnemy(world: World, e: Enemy, cfg: SimConfig, think: Think
       } else {
         e.engage = false;
         // The focus attacks freely, but never into a supporter's swing already in flight.
-        if (plan.attack && (enemyArrowInFlight(world, e.id) || world.enemies.some((o) => o.id !== e.id && (o.phase === 'windup' || o.phase === 'active')))) plan.attack = null;
+        if (plan.attack && (enemyArrowInFlight(world, e.id) || world.enemies.some((o) => o.id !== e.id && isBusy(o, cfg)))) plan.attack = null;
       }
       if (plan.attack) startEnemyAttack(world, e, plan.attack, cfg);
       break;
@@ -165,7 +179,7 @@ export function updateEnemy(world: World, e: Enemy, cfg: SimConfig, think: Think
       } else if (atk.chain && e.phaseFrame === Math.floor(atk.recovery / 3)) {
         // Decide once, early in recovery, whether this becomes a 2-hit string —
         // but never into another enemy's attack or arrow already in flight.
-        const othersBusy = enemyArrowInFlight(world, e.id) || world.enemies.some((o) => o.id !== e.id && (o.phase === 'windup' || o.phase === 'active'));
+        const othersBusy = !def.swarm && (enemyArrowInFlight(world, e.id) || world.enemies.some((o) => o.id !== e.id && isBusy(o, cfg)));
         if (!othersBusy && nextFloat(world.rng) < atk.chain.chance) startEnemyAttack(world, e, atk.chain.next, cfg);
       }
       break;
@@ -173,6 +187,17 @@ export function updateEnemy(world: World, e: Enemy, cfg: SimConfig, think: Think
   }
 
   moveBody(world, e, move, cfg, lungeDelta);
+}
+
+/** A non-swarm enemy with an attack in flight (swarm lunges run in their own pool). */
+function isBusy(o: Enemy, cfg: SimConfig): boolean {
+  return (o.phase === 'windup' || o.phase === 'active') && !cfg.enemies[o.type]!.swarm;
+}
+
+function swarmAttacking(world: World, cfg: SimConfig): number {
+  let n = 0;
+  for (const o of world.enemies) if ((o.phase === 'windup' || o.phase === 'active') && cfg.enemies[o.type]!.swarm) n++;
+  return n;
 }
 
 function holdBackMove(world: World, e: Enemy, def: EnemyDef, cfg: SimConfig): Vec2 {
@@ -196,7 +221,7 @@ function noAttackInFlight(world: World, e: Enemy, key: string, cfg: SimConfig): 
   if (enemyArrowInFlight(world, e.id)) return false;
   for (const o of world.enemies) {
     if (o.id === e.id) continue;
-    if (o.phase === 'windup' || o.phase === 'active') return false;
+    if (isBusy(o, cfg)) return false;
     // Don't start if the focus could start its own swing before ours lands.
     if (o.id === world.focusId && o.phase === 'idle' && o.cooldown < atk.windup + atk.active) return false;
   }
@@ -204,6 +229,14 @@ function noAttackInFlight(world: World, e: Enemy, key: string, cfg: SimConfig): 
 }
 
 function moveBody(world: World, e: Enemy, vel: Vec2, cfg: SimConfig, extra: Vec2 = { x: 0, y: 0 }): void {
+  // Unstick: walking into a wall head-on gets nowhere (no slide), so after a
+  // few blocked ticks steer sideways around it — one way, then the other.
+  if (e.stuck > 6 && (vel.x !== 0 || vel.y !== 0)) {
+    const side = (e.id + Math.floor(e.stuck / 90)) % 2 === 0 ? 1 : -1;
+    vel = { x: -vel.y * side, y: vel.x * side };
+  }
+  const want = Math.hypot(vel.x, vel.y) * SIM_DT;
+  const before = { x: e.pos.x, y: e.pos.y };
   const dx = (vel.x + e.knock.x) * SIM_DT + extra.x;
   const dy = (vel.y + e.knock.y) * SIM_DT + extra.y;
   e.knock.x *= cfg.combat.knockbackFriction;
@@ -213,4 +246,7 @@ function moveBody(world: World, e: Enemy, vel: Vec2, cfg: SimConfig, extra: Vec2
   const r = moveAndSlide(e.pos.x, e.pos.y, dx, dy, e.radius, world.segs);
   e.pos.x = r.x;
   e.pos.y = r.y;
+  const moved = Math.hypot(e.pos.x - before.x, e.pos.y - before.y);
+  if (want > 0.2 && moved < want * 0.3) e.stuck++;
+  else if (e.stuck > 0 && moved >= want * 0.6) e.stuck = e.stuck > 6 ? e.stuck - 1 : 0;
 }

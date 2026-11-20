@@ -1,0 +1,19 @@
+{
+  "id": "l1",
+  "name": "The Outer Gardens",
+  "pool": [
+    "l1/cloister",
+    "l1/hedgerow",
+    "l1/fountain",
+    "l1/crosspath",
+    "l1/terrace",
+    "l1/balustrade"
+  ],
+  "combatRooms": 4,
+  "restFrom": 2,
+  "rest": "l1/rest",
+  "openers": [
+    "l1/cloister",
+    "l1/hedgerow"
+  ]
+}

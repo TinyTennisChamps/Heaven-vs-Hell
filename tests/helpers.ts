@@ -18,7 +18,8 @@ export function testConfig(): SimConfig {
     combat: loadData('tuning/combat'),
     camera: loadData('tuning/camera'),
     attacks: loadData('attacks/satan'),
-    enemies: { dummy: loadData('enemies/dummy'), dominion: loadData('enemies/dominion'), archer: loadData('enemies/archer') },
+    enemies: { dummy: loadData('enemies/dummy'), dominion: loadData('enemies/dominion'), archer: loadData('enemies/archer'), cherub: loadData('enemies/cherub') },
+    rooms: loadData('tuning/rooms'),
   };
 }
 
@@ -30,7 +31,7 @@ export function trainingRoom(): RoomDef {
  * A world with the training room. By default only the dummy is kept.
  * `withDummy: false` removes every enemy; `only` keeps the listed types.
  */
-export function testWorld(cfg: SimConfig, opts: { withDummy?: boolean; dummyAttacks?: boolean; only?: string[] } = {}): World {
+export function testWorld(cfg: SimConfig, opts: { withDummy?: boolean; dummyAttacks?: boolean; only?: string[]; immortal?: boolean } = {}): World {
   const keep = opts.withDummy === false ? [] : (opts.only ?? ['dummy']);
   // Spawn only what the test uses, in the listed order, so adding content to
   // the training room never shifts a test's random stream.
@@ -39,6 +40,7 @@ export function testWorld(cfg: SimConfig, opts: { withDummy?: boolean; dummyAtta
   const w = createWorld(room, cfg, 7);
   w.flags.dummyAttacks = opts.dummyAttacks ?? false;
   w.flags.respawn = false;
+  w.flags.immortal = opts.immortal ?? true;
   return w;
 }
 

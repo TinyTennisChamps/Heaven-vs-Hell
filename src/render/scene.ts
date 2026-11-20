@@ -8,10 +8,12 @@ import { attackDef, attackPhase } from '../sim/actors/player';
 import type { ArcHitbox, SimConfig } from '../sim/config';
 import { pointInPolygon } from '../sim/physics/collide';
 import type { Enemy, World } from '../sim/world';
-import { ANGEL, HEAVEN, JUDGEMENT, SATAN } from './palette';
+import { ANGEL, GARDEN, HEAVEN, JUDGEMENT, SATAN } from './palette';
 import { Particles } from './particles';
 import { Sparks } from './sparks';
-import { drawArcher, drawDominion, drawDummy, type ArcherPose, type DominionPose } from './sprites/placeholders';
+import { drawArcher, drawCherub, drawDominion, drawDummy, type ArcherPose, type CherubPose, type DominionPose } from './sprites/placeholders';
+import type { DoorKind } from '../sim/rooms/run';
+import type { WallKind } from '../sim/config';
 import { enemyAttack } from '../sim/actors/enemy';
 import { shieldUp } from '../sim/combat/damage';
 
@@ -21,8 +23,19 @@ interface Sprite {
   key: string;
 }
 
-const PILLAR_H = 30;
+const WALL_H: Record<WallKind, number> = { pillar: 30, hedge: 10, fountain: 7 };
 const LIP_H = 8;
+const DOOR_H = 26;
+const DOOR_HALF = 11;
+
+interface DoorSprite {
+  g: Graphics;
+  /** Exit index, or -1 for the entry door (always shut behind Satan). */
+  exit: number;
+  at: Vec2;
+  /** Ground tangent along the room edge. */
+  tan: Vec2;
+}
 
 /** Projects a ground-space polygon to a flat screen point list. */
 function proj(points: ReadonlyArray<Vec2 | readonly [number, number]>, lift = 0): number[] {
@@ -78,6 +91,11 @@ export class Scene {
   noPipsFlash = 0;
   private player: PixiSprite;
   private enemySprites = new Map<number, Sprite>();
+  private doors: DoorSprite[] = [];
+  private clouds = new Graphics();
+  private fontG = new Graphics();
+  /** Where each exit door leads (icons above them); null hides icons (training). */
+  doorKinds: DoorKind[] | null = null;
 
   constructor(
     world: World,
@@ -85,11 +103,13 @@ export class Scene {
     private anim: AnimConfig,
   ) {
     this.entities.sortableChildren = true;
-    this.worldLayer.addChild(this.floor, this.shadows, this.telegraphs, this.entities, this.fx, this.particles.g, this.sparks.g, this.debugG);
+    this.worldLayer.addChild(this.clouds, this.floor, this.fontG, this.shadows, this.telegraphs, this.entities, this.fx, this.particles.g, this.sparks.g, this.debugG);
     this.screenFlash.rect(0, 0, VIEW_W, VIEW_H).fill(0xffffff);
     this.screenFlash.alpha = 0;
     this.root.addChild(this.worldLayer, this.screenFlash, this.hud, this.cursorG);
+    this.drawClouds(world);
     this.drawRoom(world);
+    this.makeDoors(world);
     this.player = new PixiSprite();
     this.player.anchor.set(satan.pivot.x / satan.frameW, satan.pivot.y / satan.frameH);
     this.entities.addChild(this.player);
@@ -136,8 +156,10 @@ export class Scene {
     // Gold rim along the top edge of the platform.
     g.poly(proj(b)).stroke({ width: 1, color: HEAVEN.gold2 });
 
-    // Pillars: extruded prisms, depth-sorted with entities.
-    for (const wall of room.walls) {
+    // Walls: extruded prisms (pillars tall, hedges low, the fountain a basin), depth-sorted with entities.
+    room.walls.forEach((wall, wi) => {
+      const kind: WallKind = room.wallKinds?.[wi] ?? 'pillar';
+      const H = WALL_H[kind];
       const pc = new Graphics();
       const cx = wall.reduce((s, p) => s + p[0], 0) / wall.length;
       const cy = wall.reduce((s, p) => s + p[1], 0) / wall.length;
@@ -157,13 +179,130 @@ export class Scene {
         const sp = groundToScreen(p[0], p[1]);
         const sq = groundToScreen(q[0], q[1]);
         // East-facing faces catch the light; south-facing ones sit in shade.
-        const shade = nx > ny ? HEAVEN.marble : HEAVEN.stone;
-        pc.poly([sp.x, sp.y, sq.x, sq.y, sq.x, sq.y - PILLAR_H, sp.x, sp.y - PILLAR_H]).fill(shade);
-        pc.moveTo(sp.x, sp.y - 3).lineTo(sq.x, sq.y - 3).stroke({ width: 1, color: HEAVEN.gold3 });
+        const lit = nx > ny;
+        const shade = kind === 'hedge' ? (lit ? GARDEN.hedge : GARDEN.hedgeDark) : lit ? HEAVEN.marble : HEAVEN.stone;
+        pc.poly([sp.x, sp.y, sq.x, sq.y, sq.x, sq.y - H, sp.x, sp.y - H]).fill(shade);
+        if (kind !== 'hedge') pc.moveTo(sp.x, sp.y - 3).lineTo(sq.x, sq.y - 3).stroke({ width: 1, color: HEAVEN.gold3 });
       }
-      pc.poly(proj(wall, PILLAR_H)).fill(HEAVEN.gold2).stroke({ width: 1, color: HEAVEN.gold3 });
+      if (kind === 'hedge') {
+        pc.poly(proj(wall, H)).fill(GARDEN.hedgeTop).stroke({ width: 1, color: GARDEN.hedgeDark });
+        // White blossoms scattered on top (deterministic per wall).
+        const xs = wall.map((p) => p[0]);
+        const ys = wall.map((p) => p[1]);
+        let seed = wi * 97 + 13;
+        for (let gx = Math.min(...xs) + 4; gx < Math.max(...xs) - 2; gx += 7) {
+          for (let gy = Math.min(...ys) + 3; gy < Math.max(...ys) - 2; gy += 6) {
+            seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+            if (seed % 3 !== 0) continue;
+            const b = groundToScreen(gx + (seed % 4), gy);
+            pc.rect(Math.round(b.x), Math.round(b.y - H), 1, 1).fill(GARDEN.blossom);
+          }
+        }
+      } else if (kind === 'fountain') {
+        pc.poly(proj(wall, H)).fill(HEAVEN.ivory2).stroke({ width: 1, color: HEAVEN.gold3 });
+        const inner = wall.map(([x, y]) => [x + (x < cx ? 3 : -3), y + (y < cy ? 3 : -3)] as const);
+        pc.poly(proj(inner, H)).fill(GARDEN.water);
+        const c = groundToScreen(cx, cy);
+        pc.rect(Math.round(c.x) - 1, Math.round(c.y - H - 10), 3, 10).fill(HEAVEN.marble);
+        pc.rect(Math.round(c.x) - 3, Math.round(c.y - H - 12), 7, 2).fill(HEAVEN.gold2);
+      } else {
+        pc.poly(proj(wall, H)).fill(HEAVEN.gold2).stroke({ width: 1, color: HEAVEN.gold3 });
+      }
       pc.zIndex = cx + cy;
       this.entities.addChild(pc);
+    });
+  }
+
+  /** Clouds drifting below and around the floating platform. */
+  private drawClouds(world: World): void {
+    const g = this.clouds;
+    const b = world.screenBox;
+    let seed = world.room.id.length * 31 + 7;
+    const rnd = () => {
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      return (seed % 1000) / 1000;
+    };
+    for (let i = 0; i < 16; i++) {
+      // Around the rim, biased below (we look down at the platform).
+      const a = rnd() * Math.PI * 2;
+      const cx = (b.minX + b.maxX) / 2 + Math.cos(a) * ((b.maxX - b.minX) / 2 + 20 + rnd() * 50);
+      const cy = (b.minY + b.maxY) / 2 + Math.sin(a) * ((b.maxY - b.minY) / 2 + 10 + rnd() * 40) + 30;
+      const n = 3 + Math.floor(rnd() * 3);
+      for (let k = 0; k < n; k++) {
+        const r = 8 + rnd() * 10;
+        const ox = (k - n / 2) * r * 0.9;
+        g.ellipse(Math.round(cx + ox), Math.round(cy + 2), r, r * 0.55).fill(GARDEN.cloudShade);
+        g.ellipse(Math.round(cx + ox), Math.round(cy), r, r * 0.55).fill(GARDEN.cloud);
+      }
+    }
+  }
+
+  private makeDoors(world: World): void {
+    const r = world.room;
+    const xs = r.bounds.map((p) => p[0]);
+    const tanOf = (at: [number, number]): Vec2 => (at[0] <= Math.min(...xs) || at[0] >= Math.max(...xs) ? { x: 0, y: 1 } : { x: 1, y: 0 });
+    const add = (at: [number, number], exit: number) => {
+      const g = new Graphics();
+      g.zIndex = at[0] + at[1] + 0.5;
+      this.entities.addChild(g);
+      this.doors.push({ g, exit, at: { x: at[0], y: at[1] }, tan: tanOf(at) });
+    };
+    if (r.entry) add(r.entry.at, -1);
+    (r.exits ?? []).forEach((d, i) => add(d.at, i));
+  }
+
+  /** Gate on the platform edge: gold posts + lintel; bars while shut, a glow when open. Icon above where it leads. */
+  private drawDoors(world: World): void {
+    const rr = world.roomRun;
+    for (const d of this.doors) {
+      const g = d.g;
+      g.clear();
+      const used = d.exit >= 0 && d.exit < rr.exitCount;
+      if (d.exit >= 0 && !used) continue; // this way doesn't go anywhere this run
+      const open = d.exit >= 0 && rr.cleared;
+      const a = groundToScreen(d.at.x - d.tan.x * DOOR_HALF, d.at.y - d.tan.y * DOOR_HALF);
+      const b = groundToScreen(d.at.x + d.tan.x * DOOR_HALF, d.at.y + d.tan.y * DOOR_HALF);
+      const H = DOOR_H;
+      if (open) {
+        const pulse = 0.55 + 0.2 * Math.sin(world.tick * 0.12);
+        // A shaft of light rising from an open gate, so it reads from across the room.
+        const mx = (a.x + b.x) / 2;
+        const my = (a.y + b.y) / 2;
+        g.poly([mx - 9, my - H, mx + 9, my - H, mx + 5, my - H - 70, mx - 5, my - H - 70]).fill({ color: HEAVEN.gold1, alpha: 0.25 + 0.15 * pulse });
+        g.poly([a.x, a.y, b.x, b.y, b.x, b.y - H, a.x, a.y - H]).stroke({ width: 2, color: HEAVEN.gold2 });
+        g.poly([a.x, a.y, b.x, b.y, b.x, b.y - H, a.x, a.y - H]).fill({ color: HEAVEN.gold1, alpha: pulse });
+        g.poly([a.x, a.y - H + 4, b.x, b.y - H + 4, b.x, b.y - 2, a.x, a.y - 2]).fill({ color: 0xffffff, alpha: pulse * 0.8 });
+      } else {
+        g.poly([a.x, a.y, b.x, b.y, b.x, b.y - H, a.x, a.y - H]).fill({ color: ANGEL.void, alpha: 0.25 });
+        for (let k = 1; k < 5; k++) {
+          const t = k / 5;
+          const x = a.x + (b.x - a.x) * t;
+          const y = a.y + (b.y - a.y) * t;
+          g.moveTo(Math.round(x), Math.round(y)).lineTo(Math.round(x), Math.round(y - H)).stroke({ width: 1, color: HEAVEN.gold3 });
+        }
+      }
+      for (const p of [a, b]) g.rect(Math.round(p.x) - 1, Math.round(p.y - H - 2), 3, H + 2).fill(HEAVEN.gold2).stroke({ width: 1, color: HEAVEN.goldDark, alignment: 1 });
+      g.moveTo(a.x, a.y - H - 2).lineTo(b.x, b.y - H - 2).stroke({ width: 2, color: HEAVEN.gold2 });
+      const kind = d.exit >= 0 ? this.doorKinds?.[d.exit] : undefined;
+      if (kind) {
+        const m = { x: Math.round((a.x + b.x) / 2), y: Math.round((a.y + b.y) / 2 - H - 12) };
+        const bob = open ? Math.round(Math.sin(world.tick * 0.08) * 1.5) : 0;
+        doorIcon(g, kind, m.x, m.y + bob, open);
+      }
+    }
+  }
+
+  /** The rest font glows until used. */
+  private drawFont(world: World): void {
+    const g = this.fontG;
+    g.clear();
+    const f = world.room.font;
+    if (!f) return;
+    const s = groundToScreen(f[0], f[1]);
+    if (!world.roomRun.fontUsed) {
+      const k = 0.5 + 0.5 * Math.sin(world.tick * 0.07);
+      g.ellipse(Math.round(s.x), Math.round(s.y), 26 + k * 3, 13 + k * 1.5).fill({ color: HEAVEN.gold1, alpha: 0.35 + 0.15 * k });
+      g.rect(Math.round(s.x) - 4, Math.round(s.y) - 70, 9, 70).fill({ color: HEAVEN.gold1, alpha: 0.18 + 0.1 * k });
     }
   }
 
@@ -184,6 +323,8 @@ export class Scene {
     this.shadows.clear();
     this.telegraphs.clear();
     this.fx.clear();
+    this.drawDoors(world);
+    this.drawFont(world);
 
     // --- Player ---
     const p = world.player;
@@ -196,6 +337,9 @@ export class Scene {
     const ps = groundToScreen(pp.x, pp.y);
     this.player.position.set(Math.round(ps.x), Math.round(ps.y));
     this.player.scale.x = pick.facing === 'left' ? -1 : 1;
+    // Fallen: Satan keels over and dims.
+    this.player.rotation = p.dead ? (pick.facing === 'left' ? 1.4 : -1.4) : 0;
+    this.player.tint = p.dead ? 0x8a7a80 : 0xffffff;
     this.player.zIndex = pp.x + pp.y;
     this.shadow(pp, 8);
     if (p.dash) {
@@ -252,7 +396,19 @@ export class Scene {
       // early enough that reacting to it still lands inside the parry window.
       const tele = !!atk && e.phase === 'windup' && e.phaseFrame > atk.windup - cfg.combat.telegraph.flashLeadFrames && Math.floor(e.phaseFrame / 3) % 2 === 0;
       const flash = e.hitFlash > 0 || tele;
-      if (e.type === 'dominion') {
+      // Spawning in: descend from the light and fade up.
+      const arriving = e.arrive > 0 ? e.arrive / Math.max(1, cfg.rooms.arriveFrames) : 0;
+      s.root.alpha = 1 - arriving * 0.85;
+      if (arriving > 0) {
+        s.root.position.y -= Math.round(arriving * 30);
+        const sp = groundToScreen(ep.x, ep.y);
+        this.telegraphs.rect(Math.round(sp.x) - 3, Math.round(sp.y) - 90, 7, 90).fill({ color: HEAVEN.gold1, alpha: 0.35 * arriving });
+      }
+      if (e.type === 'cherub') {
+        const pose = cherubPose(e);
+        const lift = Math.round(2 * Math.sin(world.tick * 0.12 + e.id * 1.7));
+        this.redraw(s, `${pose}${flash}${lift}`, () => drawCherub(s!.body, pose, flash, lift));
+      } else if (e.type === 'dominion') {
         const pose = dominionPose(e);
         this.redraw(s, `${pose}${flash}${e.shieldFlash > 0}`, () => drawDominion(s!.body, pose, flash, e.shieldFlash > 0));
       } else if (e.type === 'archer') {
@@ -263,7 +419,7 @@ export class Scene {
       }
       this.shadow(ep, e.radius);
       this.enemyTelegraph(e, cfg, ep);
-      this.enemyBars(e, ep, cfg);
+      if (!cfg.enemies[e.type]?.noPosture) this.enemyBars(e, ep, cfg); // cherubs: no bars (one hit kills)
       if (world.player.lockId === e.id) this.lockMarker(ep, world.tick);
     }
     for (const [id, s] of this.enemySprites) {
@@ -468,6 +624,53 @@ export class Scene {
       if (atk && e.phase === 'active') g.poly(proj(arcPoly(e.pos, e.attackDir, atk.hitbox, 0, 1, 0))).stroke({ width: 1, color: 0xff00ff });
     }
   }
+}
+
+/**
+ * Door icon on a dark plate: one sword = combat, crossed swords = hard,
+ * a chalice = rest, a horn = the level's end (the herald). No red: these are Heaven's doors.
+ */
+function doorIcon(g: Graphics, kind: DoorKind, x: number, y: number, open: boolean): void {
+  const ink = open ? HEAVEN.gold1 : HEAVEN.gold2;
+  g.rect(x - 7, y - 7, 15, 15).fill(ANGEL.void).stroke({ width: 1, color: open ? HEAVEN.gold1 : HEAVEN.gold3, alignment: 1 });
+  const px = (dx: number, dy: number, w = 1, h = 1) => g.rect(x + dx, y + dy, w, h).fill(ink);
+  switch (kind) {
+    case 'combat':
+      px(0, -5, 1, 8); // blade
+      px(-2, 2, 5, 1); // guard
+      px(0, 3, 1, 2); // grip
+      break;
+    case 'hard':
+      for (let i = 0; i < 9; i++) {
+        px(-4 + i, -4 + i);
+        px(4 - i, -4 + i);
+      }
+      px(-4, 2, 3, 1);
+      px(2, 2, 3, 1);
+      break;
+    case 'rest':
+      px(-4, -4, 9, 1); // rim
+      px(-3, -3, 7, 2);
+      px(-2, -1, 5, 1);
+      px(0, 0, 1, 3); // stem
+      px(-2, 3, 5, 1); // foot
+      g.rect(x - 2, y - 3, 5, 1).fill(GARDEN.water);
+      break;
+    case 'end':
+      // Herald's horn flaring right.
+      px(-5, 0, 2, 1);
+      px(-3, -1, 4, 2);
+      px(1, -2, 2, 4);
+      px(3, -3, 2, 6);
+      break;
+  }
+}
+
+function cherubPose(e: Enemy): CherubPose {
+  if (e.phase === 'recoil' || e.phase === 'broken') return 'recoil';
+  if (e.phase === 'windup') return 'windup';
+  if (e.phase === 'active') return 'lunge';
+  return 'idle';
 }
 
 function archerPose(e: Enemy): ArcherPose {

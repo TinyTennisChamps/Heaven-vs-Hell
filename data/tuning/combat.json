@@ -64,7 +64,8 @@
     "holdBackDistance": 60,
     "holdBackSpeedMul": 0.6,
     "supportAttackChance": 0.3,
-    "supportCooldownMul": 2.5
+    "supportCooldownMul": 2.5,
+    "swarmMax": 3
   },
   "reflect": {
     "speedMul": 1.25,

@@ -1,7 +1,7 @@
 import { SIM_DT } from '../core/loop';
 import { normalize, type Vec2 } from '../core/math';
 import type { ProjectileSpec, SimConfig } from './config';
-import { addPlayerPosture, gainPips, hitEnemy, inFrontCone, isPlayerInvulnerable, startHitstop } from './combat/damage';
+import { addPlayerPosture, damagePlayer, gainPips, hitEnemy, inFrontCone, isPlayerInvulnerable, startHitstop } from './combat/damage';
 import { moveAndSlide } from './physics/collide';
 import { emit, type Projectile, type World } from './world';
 
@@ -123,8 +123,7 @@ function hitPlayerAt(world: World, p: Projectile, at: Vec2, cfg: SimConfig): boo
     return true;
   }
   // Hit.
-  pl.hp -= p.healthDamage;
-  if (pl.hp <= 0) pl.hp = cfg.player.maxHealth; // training: no death yet
+  damagePlayer(world, p.healthDamage, cfg);
   pl.hitFlash = c.hitFlashFrames;
   pl.hurtStun = Math.max(pl.hurtStun, Math.round(c.hurtStunFrames * 0.6));
   pl.action = null;

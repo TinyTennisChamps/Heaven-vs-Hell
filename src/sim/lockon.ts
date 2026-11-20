@@ -71,5 +71,7 @@ export function updateLock(w: World, input: InputFrame, cfg: SimConfig): void {
   }
 
   const t = lockTarget(w);
-  w.focusId = t ? t.id : (byDistance(w, Infinity)[0]?.id ?? null);
+  // Unlocked: the nearest non-swarmer is the focus (cherubs run their own pool).
+  const near = byDistance(w, Infinity);
+  w.focusId = t ? t.id : ((near.find((e) => !cfg.enemies[e.type]?.swarm) ?? near[0])?.id ?? null);
 }

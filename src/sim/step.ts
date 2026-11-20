@@ -10,6 +10,7 @@ import { lockTarget, updateLock } from './lockon';
 import { updateProjectiles } from './projectiles';
 import { updateCamera, updateShake } from './camera';
 import { moveAndSlide } from './physics/collide';
+import { updateRoom } from './rooms/roomRunner';
 import type { World } from './world';
 
 /**
@@ -56,6 +57,7 @@ export function step(world: World, input: InputFrame, cfg: SimConfig): void {
     if (think) updateEnemy(world, e, cfg, think);
   }
   updateProjectiles(world, cfg);
+  updateRoom(world, cfg);
   separate(world, cfg);
   updateCamera(world, input.aimScreen, cfg);
 

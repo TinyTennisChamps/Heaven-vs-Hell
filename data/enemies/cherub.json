@@ -1,0 +1,45 @@
+{
+  "health": 8,
+  "radius": 6,
+  "speed": 70,
+  "turnRateDeg": 14,
+  "attackRange": 44,
+  "orbitRange": 42,
+  "cooldownMin": 70,
+  "cooldownMax": 150,
+  "respawnFrames": 120,
+  "brokenFrames": 60,
+  "shieldArcDeg": 0,
+  "shieldPostureMul": 0,
+  "swarm": true,
+  "noPosture": true,
+  "posture": {
+    "max": 1,
+    "regenDelay": 60,
+    "regenPerSec": 10,
+    "lowHealthMul": 1
+  },
+  "attacks": {
+    "lunge": {
+      "range": 44,
+      "windup": 26,
+      "trackUntil": 18,
+      "active": 8,
+      "recovery": 30,
+      "healthDamage": 6,
+      "postureDamage": 14,
+      "knockback": 140,
+      "hitstop": 3,
+      "shake": 1.2,
+      "lunge": {
+        "px": 40,
+        "overFrames": 8
+      },
+      "hitbox": {
+        "radius": 11,
+        "angleDeg": 80,
+        "offset": 2
+      }
+    }
+  }
+}

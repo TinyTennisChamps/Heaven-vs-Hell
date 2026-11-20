@@ -1,0 +1,9 @@
+{
+  "waveDelayFrames": 50,
+  "firstWaveDelayFrames": 40,
+  "arriveFrames": 30,
+  "doorRadius": 14,
+  "fontRadius": 20,
+  "restHealFrac": 0.4,
+  "deathFrames": 90
+}

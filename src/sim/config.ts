@@ -92,7 +92,7 @@ export interface CombatTuning {
   /** Sekiro-style lock-on (Q). */
   lockOn: { range: number; breakRange: number; holdToReleaseFrames: number; cameraBias: number };
   /** Group fights: only the focus enemy attacks freely; the rest hold back. */
-  groups: { holdBackDistance: number; holdBackSpeedMul: number; supportAttackChance: number; supportCooldownMul: number };
+  groups: { holdBackDistance: number; holdBackSpeedMul: number; supportAttackChance: number; supportCooldownMul: number; swarmMax: number };
   /** While parrying/blocking, turn to face the most imminent attacker within range. */
   autoFace: { enabled: boolean; range: number };
   breakHitstop: number;
@@ -183,6 +183,12 @@ export interface EnemyDef {
   /** Flanking punish: after Satan spends `afterFrames` behind the shield within `range`, spin (once per cooldown). */
   flankSpin?: { afterFrames: number; range: number; cooldownFrames: number };
   posture: PostureTuning;
+  /** Swarmers (cherubs) ignore the focus/hold-back rule and use their own pool (combat.groups.swarmMax). */
+  swarm?: boolean;
+  /** No posture bar: every hit just deals damage (cherubs die in one hit). */
+  noPosture?: boolean;
+  /** Swarmers: distance they circle at before lunging. */
+  orbitRange?: number;
   attacks: Record<string, EnemyAttackDef>;
 }
 
@@ -193,13 +199,69 @@ export interface SimConfig {
   camera: CameraTuning;
   attacks: Record<string, AttackDef>;
   enemies: Record<string, EnemyDef>;
+  rooms: RoomTuning;
+}
+
+export type WallKind = 'pillar' | 'hedge' | 'fountain';
+
+/** A group of enemies in a wave. `count` > 1 scatters them in a ring of `spread` px around `at`. */
+export interface WaveSpawn {
+  type: string;
+  at: [number, number];
+  count?: number;
+  spread?: number;
+}
+
+export interface DoorDef {
+  /** Ground point on the room's edge. */
+  at: [number, number];
 }
 
 export interface RoomDef {
   id: string;
   name: string;
+  /** 'combat' | 'hard' | 'rest' | 'training' — shown on door icons. */
+  tier?: 'combat' | 'hard' | 'rest' | 'training';
   bounds: [number, number][];
   walls: [number, number][][];
+  /** Visual kind per wall (parallel to `walls`), default 'pillar'. */
+  wallKinds?: WallKind[];
   playerSpawn: [number, number];
+  /** Enemies present from the start (training / tests). */
   spawns: { type: string; at: [number, number] }[];
+  /** Waves: each starts when the previous one is fully down. */
+  waves?: WaveSpawn[][];
+  /** Entry door (behind Satan) and exit doors (up to 2). */
+  entry?: DoorDef;
+  exits?: DoorDef[];
+  /** Rest room: the font that heals once when Satan reaches it. */
+  font?: [number, number];
+}
+
+export interface RoomTuning {
+  /** Ticks between one wave going down and the next appearing. */
+  waveDelayFrames: number;
+  /** Ticks after entering before the first wave appears. */
+  firstWaveDelayFrames: number;
+  /** Spawn-in: enemies are visible but harmless for this many ticks. */
+  arriveFrames: number;
+  doorRadius: number;
+  fontRadius: number;
+  /** Rest font heal, fraction of max health. */
+  restHealFrac: number;
+  /** Ticks after Satan falls before the run can end. */
+  deathFrames: number;
+}
+
+/** A level: a pool of combat rooms, how many a run visits, the rest room and the end. */
+export interface LevelDef {
+  id: string;
+  name: string;
+  pool: string[];
+  combatRooms: number;
+  /** Earliest combat-room count after which the rest room may be offered. */
+  restFrom: number;
+  rest: string;
+  /** The first room is always drawn from these (gentle start + tutorial). */
+  openers: string[];
 }

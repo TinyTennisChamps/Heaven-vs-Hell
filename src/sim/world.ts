@@ -90,6 +90,8 @@ export interface PlayerState {
   lockId: number | null;
   /** Ticks Q has been held since a press while locked (-1 = not measuring). */
   lockHold: number;
+  /** Health reached 0 (and the world isn't immortal). */
+  dead: boolean;
 }
 
 export type EnemyPhase = 'idle' | 'windup' | 'active' | 'recover' | 'recoil' | 'broken' | 'down';
@@ -126,6 +128,10 @@ export interface Enemy {
   flankTicks: number;
   /** Cooldown for special moves (e.g. the flank spin). */
   specialCooldown: number;
+  /** Spawn-in ticks remaining (visible, harmless, not thinking). */
+  arrive: number;
+  /** Ticks the enemy has been pushing into a wall without getting anywhere. */
+  stuck: number;
   spawn: Vec2;
 }
 
@@ -152,7 +158,33 @@ export type SimEvent =
   | { type: 'reflect'; pos: Vec2; perfect: boolean }
   | { type: 'arrowLoosed'; pos: Vec2 }
   | { type: 'lockOn'; pos: Vec2 }
-  | { type: 'lockOff'; pos: Vec2 };
+  | { type: 'lockOff'; pos: Vec2 }
+  | { type: 'playerDied'; pos: Vec2 }
+  | { type: 'spawnIn'; pos: Vec2; swarm: boolean }
+  | { type: 'roomCleared'; pos: Vec2 }
+  | { type: 'restHeal'; pos: Vec2 };
+
+/** Progress through the current room's waves and doors. */
+export interface RoomRun {
+  /** Index of the next wave to spawn (== waves.length once all have spawned). */
+  wave: number;
+  /** Ticks until the next wave spawns (counts only while the field is clear). */
+  timer: number;
+  cleared: boolean;
+  /** How many exit doors lead somewhere this run (set by the run layer). */
+  exitCount: number;
+  /** Exit door Satan walked into, or null. */
+  exit: number | null;
+  fontUsed: boolean;
+  /** Ticks since Satan fell. */
+  deadTicks: number;
+}
+
+/** What carries from room to room within a run. */
+export interface Carry {
+  hp: number;
+  pips: number;
+}
 
 export interface CameraState {
   /** Camera centre in iso screen space. */
@@ -184,11 +216,12 @@ export interface World {
   focusId: number | null;
   camera: CameraState;
   events: SimEvent[];
-  flags: { dummyAttacks: boolean; respawn: boolean };
+  flags: { dummyAttacks: boolean; respawn: boolean; immortal: boolean };
+  roomRun: RoomRun;
   stats: { hitsLanded: number; hitsTaken: number; kills: number; deflects: number; perfects: number; deathblows: number };
 }
 
-export function createWorld(room: RoomDef, cfg: SimConfig, seed = 1): World {
+export function createWorld(room: RoomDef, cfg: SimConfig, seed = 1, carry?: Carry): World {
   const segs = [...segmentsFromPolygon(room.bounds), ...room.walls.flatMap((w) => segmentsFromPolygon(w))];
   const pts = room.bounds.map(([x, y]) => groundToScreen(x, y));
   const screenBox = {
@@ -217,7 +250,7 @@ export function createWorld(room: RoomDef, cfg: SimConfig, seed = 1): World {
       vel: v2(),
       knock: v2(),
       facing: v2(1, 0),
-      hp: cfg.player.maxHealth,
+      hp: carry ? carry.hp : cfg.player.maxHealth,
       posture: 0,
       sinceHit: 999,
       action: null,
@@ -235,8 +268,9 @@ export function createWorld(room: RoomDef, cfg: SimConfig, seed = 1): World {
       broken: 0,
       lockId: null,
       lockHold: -1,
-      pips: cfg.player.throw.maxPips,
+      pips: carry ? carry.pips : cfg.player.throw.maxPips,
       pipProgress: 0,
+      dead: false,
     },
     enemies: [],
     projectiles: [],
@@ -244,7 +278,8 @@ export function createWorld(room: RoomDef, cfg: SimConfig, seed = 1): World {
     focusId: null,
     camera: { pos: { ...camPos }, prevPos: { ...camPos }, shake: 0, shakeOffset: v2() },
     events: [],
-    flags: { dummyAttacks: true, respawn: true },
+    flags: { dummyAttacks: true, respawn: true, immortal: false },
+    roomRun: { wave: 0, timer: cfg.rooms.firstWaveDelayFrames, cleared: false, exitCount: room.exits?.length ?? 0, exit: null, fontUsed: false, deadTicks: 0 },
     stats: { hitsLanded: 0, hitsTaken: 0, kills: 0, deflects: 0, perfects: 0, deathblows: 0 },
   };
   for (const s of room.spawns) spawnEnemy(world, cfg, s.type, v2(s.at[0], s.at[1]));
@@ -279,6 +314,8 @@ export function spawnEnemy(world: World, cfg: SimConfig, type: string, at: Vec2)
     engage: false,
     flankTicks: 0,
     specialCooldown: 0,
+    arrive: 0,
+    stuck: 0,
     spawn: { ...at },
   };
   world.enemies.push(e);

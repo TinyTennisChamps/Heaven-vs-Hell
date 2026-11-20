@@ -121,6 +121,73 @@ Satan is trapped in Heaven and cuts his way down through its layers to get home.
 - This **replaces** the dash anti-spam rule. Chained dashes are now impossible, so the "lose i-frames" rule became redundant and was removed.
 - **Balance:** parrying is now **1.99×** faster than dash-and-slash over 40 seeds, hitting the 2× target. The aggressor now takes damage (about 6 HP per fight, up from about 0).
 
+## M5: Level 1 (The Outer Gardens)
+Decisions confirmed with the user on 2026-11-20:
+- Cherubs have their own pool, with up to 3 lunging at once regardless of focus.
+- Two doors with icons.
+- Tutorial prompts appear in the early rooms.
+- Title → run → restart, with Training on the title screen.
+
+**Cherub (swarmer).**
+- A winged head with hollow eyes and a halo.
+- It has 8 HP, so one slash or one bolt kills it, and it has no posture bar (`noPosture`).
+- It circles Satan at `orbitRange` 42, each cherub at its own angle, then lunges: a 26f windup, 40 px over 8f, 6 damage.
+- The lunge can be deflected and blocked.
+- Swarmers skip the focus/hold-back rule. At most `combat.groups.swarmMax` (3) are in windup or active at once.
+- Swarm attacks don't count as "busy" for Dominions and Archers, and the reverse holds too, so a cloud never stops the Dominion's turn.
+- The unlocked focus is the nearest non-swarmer.
+
+**Rooms** (`data/rooms/l1/*.json`):
+- Each room has bounds, walls with `wallKinds` (pillar, hedge or fountain), waves, an entry gate and two exit gates.
+- Each wave spawns when the field is clear, after `waveDelayFrames`.
+- Enemies arrive over `arriveFrames`. They descend in a shaft of light, harmless and not thinking.
+- When every wave is down, the exits unlock and a light beam rises from each open gate.
+- Walking into an open gate leaves the room.
+- Pool:
+
+  | Room | Tier |
+  |---|---|
+  | Cloister of Blossoms | opener |
+  | Hedgerow Walk | opener |
+  | Fountain of Light | combat |
+  | The Marble Cross | combat |
+  | High Terrace | hard |
+  | The Balustrade | hard |
+  | The Still Font | rest |
+
+  At the font, Satan heals 40% once and refills his pips.
+
+**Run** (`src/sim/rooms/run.ts`, pure and seeded):
+- The first room is an opener. A run is `combatRooms` (4) combat rooms with no repeats, plus the rest room, then the level end.
+- After each room, two gates offer two different rooms. The icons are a sword (combat), crossed swords (hard), a chalice (rest) and a horn (the end, Gabriel).
+- From `restFrom` (2) rooms on, one gate may be the rest room. If it was skipped, it's the only gate before the end.
+- HP and pips carry over. Posture resets.
+- Hard rooms have no extra reward yet. M6 puts the locked vial cages in them.
+
+**Death:**
+- At 0 HP Satan falls. Training sets `flags.immortal`, so he refills there instead.
+- The Fallen screen appears after `deathFrames`, with "Descend again" (a new seed, so a new room order) or Title.
+- Runs and falls are counted in localStorage for the title, and later for Rage carry-over.
+
+**Level end (until M7):** a "Level cleared" screen, then back to the title.
+
+**Tutorial** (`src/ui/tutorial.ts`):
+- One prompt at a time: move, deathblow, deflect, slash, font, gates, posture, lock, throw, dash.
+- Each prompt shows when it's relevant and retires once you've done it. This is remembered in localStorage.
+- The title offers "Replay tutorial" once it's complete.
+
+**Enemy unstick:** an enemy that walks head-on into a wall for more than 6 ticks steers sideways around it. Archers used to stall behind hedges.
+
+**Difficulty check** (`tests/difficulty.test.ts`): a "decent player" bot plays every room. It deflects with ±3f human jitter, misses 1 in 5, blocks most arrows, and doesn't hack at a raised shield. Average damage per room:
+
+| Room | Damage |
+|---|---|
+| Openers | 7–12 |
+| Combat | 8–21 |
+| Hard | 30–38 |
+
+So a full run costs a decent player about 70 of 140 effective HP. The guard rails are under 35% of max HP for combat rooms and under 50% for hard ones.
+
 ## Rage Vials (7, flat additive, every stat ≤ +20%)
 | L1 | L2 |
 |---|---|
@@ -154,7 +221,7 @@ Cherub (swarmer, L1/L2), Choir Archer (ranged, deflectable arrows, L1/L2), Domin
 - M2: slash combo and training room.
 - M3: posture, parry, block, Dominion, and deathblow (pulled forward from M4).
 - M4: throw, Archer, projectiles and deflectable arrows (tokens covered by the focus system). Done.
-- M5: Level 1 flow.
+- M5: Level 1 flow: cherub, rooms, doors, rest, tutorial, title and death. Done.
 - M6: Rage and vials.
 - M7: Gabriel.
 - M8: Level 2, Ophan, Virtue and Raphael.

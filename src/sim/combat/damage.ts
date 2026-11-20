@@ -3,6 +3,7 @@ import type { EnemyAttackDef, SimConfig } from '../config';
 import { emit, type Enemy, type PlayerState, type World } from '../world';
 
 export function isPlayerInvulnerable(p: PlayerState, cfg: SimConfig): boolean {
+  if (p.dead) return true; // nothing more can happen to a fallen Satan
   if (!p.dash) return false;
   return p.dash.frame >= cfg.player.dash.iFrameStart && p.dash.frame <= cfg.player.dash.iFrameEnd;
 }
@@ -46,6 +47,7 @@ export function breakEnemy(world: World, e: Enemy, cfg: SimConfig): void {
 export function addEnemyPosture(world: World, e: Enemy, amount: number, cfg: SimConfig): void {
   if (e.phase === 'broken' || e.phase === 'down') return;
   const def = cfg.enemies[e.type]!;
+  if (def.noPosture) return;
   e.posture = Math.min(def.posture.max, e.posture + amount);
   e.sinceHit = 0;
   if (e.posture >= def.posture.max) breakEnemy(world, e, cfg);
@@ -160,8 +162,7 @@ export function resolveOnPlayer(world: World, attacker: Enemy, atk: EnemyAttackD
   }
 
   // Clean hit.
-  p.hp -= atk.healthDamage;
-  if (p.hp <= 0) p.hp = cfg.player.maxHealth; // training: no death yet (M5)
+  damagePlayer(world, atk.healthDamage, cfg);
   p.hitFlash = c.hitFlashFrames;
   p.hurtStun = Math.max(p.hurtStun, c.hurtStunFrames);
   p.action = null;
@@ -172,6 +173,25 @@ export function resolveOnPlayer(world: World, attacker: Enemy, atk: EnemyAttackD
   emit(world, { type: 'playerHit', pos: { ...p.pos }, dir });
   addPlayerPosture(world, atk.postureDamage * c.hitPostureMul, cfg);
   return 'hit';
+}
+
+/** Health loss on Satan. At 0 he falls (or, with flags.immortal, e.g. training, refills). */
+export function damagePlayer(world: World, amount: number, cfg: SimConfig): void {
+  const p = world.player;
+  p.hp -= amount;
+  if (p.hp > 0) return;
+  if (world.flags.immortal) {
+    p.hp = cfg.player.maxHealth;
+    return;
+  }
+  p.hp = 0;
+  p.dead = true;
+  p.action = null;
+  p.dash = null;
+  p.parry = null;
+  p.guarding = false;
+  p.lockId = null;
+  emit(world, { type: 'playerDied', pos: { ...p.pos } });
 }
 
 // ---------------------------------------------------------------- throw pips

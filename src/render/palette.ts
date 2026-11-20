@@ -44,3 +44,15 @@ export const SATAN = {
 
 /** Judgement (unblockable) telegraph — white-gold, never red. */
 export const JUDGEMENT = 0xfff6c8;
+
+/** Outer Gardens accents (hedges, water). Greens and blues only. */
+export const GARDEN = {
+  hedgeTop: 0xc4d8b4,
+  hedge: 0xa3bf95,
+  hedgeDark: 0x7f9c76,
+  blossom: 0xffffff,
+  water: 0xa9c4da,
+  waterLight: 0xd0e8f5,
+  cloud: 0xffffff,
+  cloudShade: 0xe4eef5,
+} as const;

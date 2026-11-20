@@ -152,3 +152,34 @@ export function drawArcher(g: Graphics, pose: ArcherPose, flash: boolean): void 
     g.moveTo(top.x, top.y).lineTo(bot.x, bot.y).stroke({ width: 1, color: c(ANGEL.sky), alpha: 0.8 });
   }
 }
+
+export type CherubPose = 'idle' | 'windup' | 'lunge' | 'recoil';
+
+/**
+ * Cherub: a winged head with hollow black eyes, a gold halo. Silhouette per
+ * the PDF: "a dot with ears". It hovers — origin is the ground point below it;
+ * `lift` raises the head (the caller bobs it).
+ */
+export function drawCherub(g: Graphics, pose: CherubPose, flash: boolean, lift: number): void {
+  const c = (col: number) => (flash ? 0xffffff : col);
+  const line = flash ? 0xffffff : ANGEL.angelLine;
+  const st = { width: 1, color: line, alignment: 1 } as const;
+  g.clear();
+  const hy = -14 - lift + (pose === 'lunge' ? 3 : 0);
+  const hx = pose === 'lunge' ? 2 : pose === 'windup' ? -1 : pose === 'recoil' ? -2 : 0;
+  // Wings: raised on the windup, swept back in the lunge.
+  const wy = pose === 'windup' ? -4 : pose === 'lunge' ? 2 : 0;
+  const ws = pose === 'lunge' ? -3 : 0;
+  g.poly([hx - 3, hy, hx - 10 + ws, hy - 5 + wy, hx - 11 + ws, hy + 1 + wy, hx - 7, hy + 3]).fill(c(ANGEL.white)).stroke(st);
+  g.poly([hx + 3, hy, hx + 10 + ws, hy - 5 + wy, hx + 11 + ws, hy + 1 + wy, hx + 7, hy + 3]).fill(c(ANGEL.white)).stroke(st);
+  // Head.
+  g.circle(hx, hy, 5).fill(c(ANGEL.pearl)).stroke(st);
+  // Hollow black eyes, a small dark mouth.
+  if (!flash) {
+    g.rect(hx - 3, hy - 1, 2, 2).fill(ANGEL.void);
+    g.rect(hx + 1, hy - 1, 2, 2).fill(ANGEL.void);
+    g.rect(hx, hy + 2, 1, 1).fill(ANGEL.angelLine);
+  }
+  // Halo.
+  g.ellipse(hx, hy - 8, 4, 1.2).stroke({ width: 1, color: flash ? 0xffffff : HEAVEN.gold2 });
+}

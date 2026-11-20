@@ -147,6 +147,14 @@ export function updatePlayer(world: World, inp: PlayerInput, aim: Vec2 | null, c
   const dashCfg = cfg.player.dash;
   const c = cfg.combat;
 
+  if (p.dead) {
+    // Fallen: no input, no movement.
+    p.vel = { x: 0, y: 0 };
+    p.knock = { x: 0, y: 0 };
+    if (p.hitFlash > 0) p.hitFlash--;
+    return;
+  }
+
   if (p.hitFlash > 0) p.hitFlash--;
   if (p.comboTimer > 0) p.comboTimer--;
   if (p.hurtStun > 0) p.hurtStun--;
