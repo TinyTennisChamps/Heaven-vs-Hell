@@ -175,11 +175,28 @@ describe('block', () => {
 });
 
 describe('judgement attacks', () => {
-  it('cannot be blocked or deflected', () => {
-    const H = hitTick('judgement', 'dominion');
+  it('cannot be blocked (holding RMB does nothing)', () => {
     const blocked = scenario('judgement', {}, ['parry'], 'dominion').w;
     expect(blocked.stats.hitsTaken).toBe(1);
+  });
+
+  it("the Dominion's charge can be deflected with a timed parry; a perfect one opens a riposte", () => {
+    const H = hitTick('judgement', 'dominion');
     const parried = scenario('judgement', { [H - 1]: ['parry'] }, [], 'dominion').w;
+    expect(parried.stats.hitsTaken).toBe(0);
+    expect(parried.stats.deflects).toBe(1);
+    expect(parried.stats.perfects).toBe(1);
+    const early = scenario('judgement', { [H - cfg.combat.parry.perfectFrames - 2]: ['parry'] }, [], 'dominion').w;
+    expect(early.stats.hitsTaken).toBe(0);
+    expect(early.stats.perfects).toBe(0);
+  });
+
+  it('a judgement without `deflectable` still cannot be deflected', () => {
+    const j = cfg.enemies.dominion!.attacks.judgement!;
+    j.deflectable = false;
+    const H = hitTick('judgement', 'dominion');
+    const parried = scenario('judgement', { [H - 1]: ['parry'] }, [], 'dominion').w;
+    j.deflectable = true;
     expect(parried.stats.hitsTaken).toBe(1);
   });
 

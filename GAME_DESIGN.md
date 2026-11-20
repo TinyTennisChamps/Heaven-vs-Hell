@@ -41,7 +41,7 @@ Satan is trapped in Heaven and cuts his way down through its layers to get home.
 ## Combat
 - Posture regeneration starts after 60 frames without a hit, at a rate of `regen · lerp(lowHealthMul, 1, hp/maxHp)`.
 - Hit resolution order: i-frames, then judgement, then deflect, then block, then hit.
-- Judgement attacks are unblockable and undeflectable, telegraphed with a white-gold glyph.
+- Judgement attacks are unblockable, telegraphed with a white-gold glyph, and undeflectable unless the attack sets `deflectable` (the Dominion's charge does).
 - Throw: 5 pips that refill from melee hits (1 per 3 hits) and perfect parries (+1). Blocked by Dominion shields from the front. Bonus posture damage against archers and ophans.
 - Rage: gains are +8 per kill, +15 per deathblow, +4 per perfect parry and +6 when Satan takes a hit. The form lasts about 10 s, uses a claw combo, has a bigger collider, and gains health and time from kills. Parry and throw are disabled.
 
@@ -188,6 +188,12 @@ Decisions confirmed with the user on 2026-11-20:
 | Hard | 30–38 |
 
 So a full run costs a decent player about 70 of 140 effective HP. The guard rails are under 35% of max HP for combat rooms and under 50% for hard ones.
+
+## The Dominion's charge can be parried (user request)
+- The Judgement lunge now has `deflectable: true`.
+- A timed RMB tap deflects it, and a perfect deflect staggers the Dominion for a riposte.
+- Holding block still doesn't stop it, and it keeps its white-gold glyph. It's a "read it and tap" attack, and dashing through still works.
+- Other Judgement attacks stay undeflectable unless they set the flag. This covers Gabriel's and Raphael's later.
 
 ## Rage Vials (7, flat additive, every stat ≤ +20%)
 | L1 | L2 |

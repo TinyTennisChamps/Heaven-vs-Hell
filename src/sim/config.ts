@@ -150,8 +150,10 @@ export interface EnemyAttackDef {
   hitstop: number;
   shake: number;
   hitbox: ArcHitbox;
-  /** Unblockable and undeflectable; telegraphed white-gold. */
+  /** Unblockable (and undeflectable unless `deflectable`); telegraphed white-gold. */
   judgement?: boolean;
+  /** A judgement attack that a timed parry can still deflect (holding block never stops it). */
+  deflectable?: boolean;
   lunge?: { px: number; overFrames: number };
   /** Optional follow-up attack started straight from recovery. */
   chain?: { next: string; chance: number };

@@ -94,7 +94,8 @@
         "radius": 22,
         "angleDeg": 90,
         "offset": 6
-      }
+      },
+      "deflectable": true
     },
     "spin": {
       "range": 30,

@@ -115,7 +115,7 @@ export function addPlayerPosture(world: World, amount: number, cfg: SimConfig): 
 
 /**
  * An enemy attack reaches Satan. Resolution order:
- *   i-frames -> judgement (skips guard) -> deflect window -> block cone -> hit.
+ *   i-frames -> judgement (skips guard; `deflectable` ones still allow the deflect) -> deflect window -> block cone -> hit.
  */
 export function resolveOnPlayer(world: World, attacker: Enemy, atk: EnemyAttackDef, cfg: SimConfig): HitOutcome {
   const p = world.player;
@@ -123,9 +123,10 @@ export function resolveOnPlayer(world: World, attacker: Enemy, atk: EnemyAttackD
   const c = cfg.combat;
   const dir = normalize({ x: p.pos.x - attacker.pos.x, y: p.pos.y - attacker.pos.y });
   const canGuard = !atk.judgement && p.broken === 0;
+  const canDeflect = (!atk.judgement || !!atk.deflectable) && p.broken === 0;
 
   // Deflect: any tick inside the window, attacker in front.
-  if (canGuard && p.parry && p.parry.frame <= p.parry.window && inFrontCone(p.pos, p.facing, attacker.pos, c.parry.coneDeg)) {
+  if (canDeflect && p.parry && p.parry.frame <= p.parry.window && inFrontCone(p.pos, p.facing, attacker.pos, c.parry.coneDeg)) {
     const perfect = p.parry.frame <= c.parry.perfectFrames;
     p.parry.deflected = true;
     p.parryPenalty = 0;
