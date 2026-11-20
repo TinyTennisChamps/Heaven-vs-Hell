@@ -130,6 +130,49 @@ describe('group fights: focus attacks, others hold back', () => {
 });
 
 describe('training spawns', () => {
+  it('fuzz: spawns always land inside the arena and clear of walls, whatever Satan or the cursor is doing', async () => {
+    const { createWorld, spawnEnemyAt, isValidSpot } = await import('../src/sim/world');
+    const { trainingRoom } = await import('./helpers');
+    const { createRng, nextRange } = await import('../src/core/rng');
+    const rng = createRng(99);
+    for (let i = 0; i < 600; i++) {
+      const w = createWorld(trainingRoom(), cfg, i);
+      w.player.pos = { x: nextRange(rng, 7, 281), y: nextRange(rng, 7, 217) };
+      const a = nextRange(rng, 0, Math.PI * 2);
+      w.player.facing = { x: Math.cos(a), y: Math.sin(a) };
+      const type = ['dummy', 'dominion', 'archer'][i % 3]!;
+      // Cursor anywhere, including far off the platform (the sky).
+      const target = { x: nextRange(rng, -300, 600), y: nextRange(rng, -300, 600) };
+      const e = spawnEnemyAt(w, cfg, type, target);
+      expect(isValidSpot(w, e.pos.x, e.pos.y, e.radius), `case ${i}: ${type} at ${e.pos.x.toFixed(1)},${e.pos.y.toFixed(1)}`).toBe(true);
+    }
+  });
+
+  it('fuzz: in long chaotic fights no enemy (or Satan) ever leaves the arena', async () => {
+    const { createWorld, spawnEnemyAt } = await import('../src/sim/world');
+    const { pointInPolygon } = await import('../src/sim/physics/collide');
+    const { trainingRoom } = await import('./helpers');
+    const { createRng, nextRange, nextFloat } = await import('../src/core/rng');
+    for (const seed of [1, 2, 3]) {
+      const w = createWorld(trainingRoom(), cfg, seed);
+      w.flags.respawn = true;
+      w.flags.dummyAttacks = true;
+      for (const t of ['dominion', 'archer', 'dummy']) spawnEnemyAt(w, cfg, t, { x: 140, y: 110 });
+      const rng = createRng(seed * 7);
+      for (let t = 0; t < 60 * 60; t++) {
+        const r = nextFloat(rng);
+        const press = (r < 0.06 ? ['slash'] : r < 0.09 ? ['dash'] : r < 0.12 ? ['parry'] : r < 0.13 ? ['throw'] : []) as ('slash' | 'dash' | 'parry' | 'throw')[];
+        const tgt = w.enemies[Math.floor(nextFloat(rng) * w.enemies.length)];
+        step(w, input({ press, move: { x: Math.sign(nextRange(rng, -1, 1)), y: Math.sign(nextRange(rng, -1, 1)) }, aim: tgt ? tgt.pos : undefined }), cfg);
+        w.player.hp = cfg.player.maxHealth;
+        for (const b of [w.player, ...w.enemies.filter((e) => e.phase !== 'down')]) {
+          expect(pointInPolygon(b.pos.x, b.pos.y, w.room.bounds)).toBe(true);
+          for (const wall of w.room.walls) expect(pointInPolygon(b.pos.x, b.pos.y, wall)).toBe(false);
+        }
+      }
+    }
+  });
+
   it('the training room starts empty', async () => {
     const { createWorld } = await import('../src/sim/world');
     const { trainingRoom } = await import('./helpers');

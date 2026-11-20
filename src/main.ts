@@ -67,7 +67,8 @@ async function boot() {
     const b = document.createElement('button');
     b.textContent = `${key.slice(-1)} ${label}`;
     b.addEventListener('click', () => {
-      // Button clicks spawn in front of Satan (the cursor is on the button).
+      // Button clicks spawn in front of Satan (the cursor is on the button);
+      // spawnEnemyAt validates the spot and falls back if it's off the arena.
       const p = world.player;
       spawnEnemyAt(world, cfg, type, { x: p.pos.x + p.facing.x * 50, y: p.pos.y + p.facing.y * 50 });
     });

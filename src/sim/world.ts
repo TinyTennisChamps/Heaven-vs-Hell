@@ -292,19 +292,45 @@ export function emit(world: World, ev: SimEvent): void {
   world.events.push(ev);
 }
 
+/** Is a circle of radius r at (x,y) fully inside the room and clear of every wall? */
+export function isValidSpot(world: World, x: number, y: number, r: number): boolean {
+  if (!pointInPolygon(x, y, world.room.bounds)) return false;
+  if (world.room.walls.some((w) => pointInPolygon(x, y, w))) return false;
+  for (const s of world.segs) {
+    const ex = s.bx - s.ax;
+    const ey = s.by - s.ay;
+    const l2 = ex * ex + ey * ey;
+    const u = l2 > 1e-12 ? Math.max(0, Math.min(1, ((x - s.ax) * ex + (y - s.ay) * ey) / l2)) : 0;
+    if (Math.hypot(x - (s.ax + ex * u), y - (s.ay + ey * u)) < r) return false;
+  }
+  return true;
+}
+
 /**
- * Debug/training spawn at a ground point: clamped into the room and pushed out
- * of walls; falls back to just in front of Satan if the point is outside.
+ * Debug/training spawn. Tries the requested point, then points in front of
+ * Satan (closer and closer), then a ring around Satan, then the room centre —
+ * and only ever accepts a spot verifiably inside the arena and clear of walls.
  */
 export function spawnEnemyAt(world: World, cfg: SimConfig, type: string, at: Vec2): Enemy {
-  let pos = { ...at };
-  const inWall = world.room.walls.some((w) => pointInPolygon(pos.x, pos.y, w));
-  if (!pointInPolygon(pos.x, pos.y, world.room.bounds) || inWall) {
-    const p = world.player;
-    pos = { x: p.pos.x + p.facing.x * 50, y: p.pos.y + p.facing.y * 50 };
+  const r = (cfg.enemies[type]?.radius ?? 8) + 2;
+  const p = world.player;
+  const candidates: Vec2[] = [{ ...at }];
+  for (const d of [50, 40, 30, 60, 75]) candidates.push({ x: p.pos.x + p.facing.x * d, y: p.pos.y + p.facing.y * d });
+  for (const d of [45, 70, 30]) {
+    for (let i = 0; i < 16; i++) {
+      const a = (i / 16) * Math.PI * 2;
+      candidates.push({ x: p.pos.x + Math.cos(a) * d, y: p.pos.y + Math.sin(a) * d });
+    }
   }
-  const r = cfg.enemies[type]?.radius ?? 8;
-  pos = depenetrate(pos.x, pos.y, r + 1, world.segs);
+  const b = world.room.bounds;
+  candidates.push({ x: b.reduce((s, q) => s + q[0], 0) / b.length, y: b.reduce((s, q) => s + q[1], 0) / b.length });
+
+  let pos = candidates.find((c) => isValidSpot(world, c.x, c.y, r));
+  if (!pos) {
+    // Last resort: nudge the room centre out of anything it overlaps.
+    const c = candidates[candidates.length - 1]!;
+    pos = depenetrate(c.x, c.y, r, world.segs);
+  }
   const e = spawnEnemy(world, cfg, type, pos);
   e.cooldown = Math.max(e.cooldown, 45); // a beat before it acts
   return e;
