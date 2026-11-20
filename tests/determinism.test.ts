@@ -2,38 +2,39 @@ import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { FixedLoop } from '../src/core/loop';
-import { emptyInputFrame, type InputFrame } from '../src/input/actions';
+import type { InputFrame } from '../src/input/actions';
 import { step } from '../src/sim/step';
 import { createWorld } from '../src/sim/world';
-import { testConfig } from './helpers';
+import { input, testConfig, trainingRoom } from './helpers';
 
 /** Input as a function of sim tick, so every render rate feeds identical inputs. */
 function scriptedInput(tick: number): InputFrame {
-  const f = emptyInputFrame();
-  if (tick < 40) f.move = { x: 1, y: 0 };
-  else if (tick < 70) f.move = { x: 1, y: 1 };
-  else if (tick < 90) f.move = { x: 0, y: -1 };
-  return f;
+  const aim = { x: 200, y: 100 };
+  if (tick === 10 || tick === 20 || tick === 30) return input({ press: ['slash'], aim });
+  if (tick === 50) return input({ press: ['dash'], move: { x: 1, y: 1 }, aim });
+  if (tick < 40) return input({ move: { x: 1, y: 0 }, aim });
+  if (tick < 70) return input({ move: { x: 1, y: 1 }, aim });
+  if (tick < 90) return input({ move: { x: 0, y: -1 }, aim });
+  return input({ aim });
 }
 
 function runAt(hz: number, totalTicks: number) {
-  const world = createWorld(7);
   const cfg = testConfig();
+  const world = createWorld(trainingRoom(), cfg, 7);
   const loop = new FixedLoop();
   while (world.tick < totalTicks) {
     const { steps } = loop.advance(1 / hz);
     for (let i = 0; i < steps && world.tick < totalTicks; i++) step(world, scriptedInput(world.tick), cfg);
   }
-  return world.player.pos;
+  return { p: world.player.pos, e: world.enemies[0]!.pos, hp: world.enemies[0]!.hp };
 }
 
 describe('determinism', () => {
-  it('ends in the identical position regardless of display refresh rate', () => {
-    const ref = runAt(60, 120);
+  it('ends in the identical state regardless of display refresh rate', () => {
+    const ref = runAt(60, 240);
     for (const hz of [30, 120, 144, 240]) {
-      const p = runAt(hz, 120);
-      expect(p.x).toBe(ref.x);
-      expect(p.y).toBe(ref.y);
+      const r = runAt(hz, 240);
+      expect(r).toEqual(ref);
     }
   });
 });

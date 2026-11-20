@@ -1,7 +1,13 @@
+import { VIEW_H, VIEW_W } from '../core/constants';
+import { screenToGround } from '../core/iso';
+import { normalize, type Vec2 } from '../core/math';
 import type { InputFrame } from '../input/actions';
 import type { SimConfig } from './config';
+import { updateDummy } from './actors/dummy';
+import { updatePlayer } from './actors/player';
+import { updateCamera, updateShake } from './camera';
+import { moveAndSlide } from './physics/collide';
 import type { World } from './world';
-import { stepPlayerMovement } from './actors/player';
 
 /**
  * Advance the world one fixed tick (1/60 s). Deterministic: same world + same
@@ -9,11 +15,73 @@ import { stepPlayerMovement } from './actors/player';
  */
 export function step(world: World, input: InputFrame, cfg: SimConfig): void {
   const p = world.player;
-  p.prevPos = { x: p.pos.x, y: p.pos.y };
+  p.prevPos = { ...p.pos };
+  for (const e of world.enemies) e.prevPos = { ...e.pos };
+  world.camera.prevPos = { ...world.camera.pos };
 
-  // M0: screen-aligned movement on a flat plane. M1 swaps in the iso ground transform.
-  const dir = { x: input.move.x, y: input.move.y * cfg.feel.verticalSpeedComp };
-  stepPlayerMovement(p, dir, cfg);
+  world.buffer.setWindowDefault(cfg.feel.inputBufferFrames);
+  for (const a of input.pressed) world.buffer.press(a);
 
+  updateShake(world, cfg);
+
+  // Hit-stop: everything holds, presses keep buffering and don't expire.
+  if (world.hitstop > 0) {
+    world.hitstop--;
+    world.buffer.tick(true);
+    world.tick++;
+    return;
+  }
+
+  updatePlayer(world, input.move, resolveAim(world, input), cfg);
+  for (const e of world.enemies) if (e.type === 'dummy') updateDummy(world, e, cfg);
+  separate(world, cfg);
+  updateCamera(world, input.aimScreen, cfg);
+
+  world.buffer.tick(false);
   world.tick++;
+}
+
+/** Ground-space unit vector from the player to the cursor (null if the cursor is on the player). */
+function resolveAim(world: World, input: InputFrame): Vec2 | null {
+  const p = world.player.pos;
+  let target: Vec2;
+  if (input.aimGround) {
+    target = input.aimGround;
+  } else {
+    const c = world.camera.pos;
+    target = screenToGround(c.x + input.aimScreen.x - VIEW_W / 2, c.y + input.aimScreen.y - VIEW_H / 2 + 10);
+  }
+  const d = normalize({ x: target.x - p.x, y: target.y - p.y });
+  return d.x === 0 && d.y === 0 ? null : d;
+}
+
+/** Soft push-apart between bodies. Skipped for the player while dashing (dash passes through). */
+function separate(world: World, cfg: SimConfig): void {
+  const k = cfg.combat.separationStrength;
+  const p = world.player;
+  const bodies: { pos: Vec2; r: number; ghost: boolean }[] = [
+    { pos: p.pos, r: cfg.player.radius, ghost: !!p.dash },
+    ...world.enemies.filter((e) => e.phase !== 'down').map((e) => ({ pos: e.pos, r: e.radius, ghost: false })),
+  ];
+  for (let i = 0; i < bodies.length; i++) {
+    for (let j = i + 1; j < bodies.length; j++) {
+      const a = bodies[i]!;
+      const b = bodies[j]!;
+      if (a.ghost || b.ghost) continue;
+      const dx = b.pos.x - a.pos.x;
+      const dy = b.pos.y - a.pos.y;
+      const d = Math.hypot(dx, dy);
+      const overlap = a.r + b.r - d;
+      if (overlap <= 0) continue;
+      const nx = d > 1e-6 ? dx / d : 1;
+      const ny = d > 1e-6 ? dy / d : 0;
+      const push = overlap * k * 0.5;
+      const ra = moveAndSlide(a.pos.x, a.pos.y, -nx * push, -ny * push, a.r, world.segs);
+      const rb = moveAndSlide(b.pos.x, b.pos.y, nx * push, ny * push, b.r, world.segs);
+      a.pos.x = ra.x;
+      a.pos.y = ra.y;
+      b.pos.x = rb.x;
+      b.pos.y = rb.y;
+    }
+  }
 }

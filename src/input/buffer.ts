@@ -14,6 +14,16 @@ export class InputBuffer {
     this.windows[action] = frames;
   }
 
+  /** Live-tunable default window (from feel.inputBufferFrames). */
+  setWindowDefault(frames: number): void {
+    this.defaultWindow = frames;
+  }
+
+  /** Debug view: buffered actions and their remaining ticks. */
+  snapshot(): string {
+    return [...this.remaining].map(([a, n]) => `${a}:${n}`).join(' ') || '—';
+  }
+
   press(action: ButtonAction): void {
     const w = this.windows[action] ?? this.defaultWindow;
     if (w > 0) this.remaining.set(action, w);

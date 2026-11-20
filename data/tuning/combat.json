@@ -1,0 +1,12 @@
+{
+  "comboResetFrames": 20,
+  "hitFlashFrames": 4,
+  "knockbackFriction": 0.8,
+  "hurtStunFrames": 14,
+  "separationStrength": 0.5,
+  "aimAssist": {
+    "coneDeg": 20,
+    "range": 40,
+    "maxRotateDeg": 15
+  }
+}

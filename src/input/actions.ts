@@ -11,6 +11,8 @@ export interface InputFrame {
   move: { x: number; y: number };
   /** Cursor in internal render pixels (0..427, 0..240). */
   aimScreen: { x: number; y: number };
+  /** Optional ground-space aim target; overrides aimScreen (tests, replays, future gamepad). */
+  aimGround?: { x: number; y: number };
   /** Buttons pressed (edge) since the previous sim tick. */
   pressed: ButtonAction[];
   /** Buttons currently held. */

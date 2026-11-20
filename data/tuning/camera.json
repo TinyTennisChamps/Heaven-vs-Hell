@@ -1,0 +1,8 @@
+{
+  "followRate": 0.14,
+  "lookAheadFactor": 0.22,
+  "lookAheadMax": 34,
+  "roomMargin": 24,
+  "shakeDecay": 0.82,
+  "shakeMax": 6
+}

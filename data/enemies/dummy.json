@@ -1,0 +1,19 @@
+{
+  "health": 300,
+  "radius": 8,
+  "speed": 40,
+  "attackRange": 30,
+  "attackCooldown": 40,
+  "respawnFrames": 90,
+  "swing": {
+    "windup": 26,
+    "trackUntil": 18,
+    "active": 3,
+    "recovery": 34,
+    "damage": 12,
+    "knockback": 220,
+    "hitstop": 4,
+    "shake": 2.4,
+    "hitbox": { "radius": 28, "angleDeg": 100, "offset": 6 }
+  }
+}

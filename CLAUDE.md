@@ -4,7 +4,8 @@ Pixel-art action roguelike. TypeScript + Vite + PixiJS v8 (render only) with a c
 
 ## Commands
 Node comes from nvm and is not on the default PATH, so run `source ~/.nvm/nvm.sh && nvm use 22` first.
-- `npm run dev`: the game at http://localhost:5173. **F1** toggles the debug overlay and the tuning panel. **F2** cycles the render-rate cap (display / 30 / 60 / 144).
+- `npm run dev`: the game at http://localhost:5173. **F1** toggles the debug overlay (hitboxes, states, frame counters) and the tuning panel. **F2** cycles the render-rate cap (display / 30 / 60 / 144). **F3** toggles training-dummy attacks. **F4** resets the room.
+- In dev builds `window.__hvh` exposes `world` and `toPage(gx, gy)` for scripted play-testing. Headless Chrome needs `--enable-gpu --use-angle=metal` to get WebGL on this Mac.
 - `npm test`: Vitest (sim only). `npm run typecheck`, `npm run build`, and `npm run check` (typecheck + tests).
 
 ## Hard rules

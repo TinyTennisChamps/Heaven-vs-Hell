@@ -1,7 +1,7 @@
 import { Application, TextureStyle } from 'pixi.js';
+import { VIEW_H, VIEW_W } from '../core/constants';
 
-export const VIEW_W = 427;
-export const VIEW_H = 240;
+export { VIEW_H, VIEW_W };
 
 /**
  * Pixi renders at the native 427×240. The canvas is then scaled by an integer
@@ -19,6 +19,8 @@ export async function createPixiApp(parent: HTMLElement, background: number): Pr
     autoDensity: false,
     roundPixels: true,
     preference: 'webgl',
+    // Allow software WebGL (blocklisted GPUs, headless test browsers) rather than failing to start.
+    failIfMajorPerformanceCaveat: false,
   });
   const canvas = app.canvas;
   canvas.style.imageRendering = 'pixelated';

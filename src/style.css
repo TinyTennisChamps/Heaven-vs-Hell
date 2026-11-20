@@ -17,6 +17,17 @@ canvas {
   cursor: none;
 }
 
+.legend {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 6px;
+  text-align: center;
+  color: #9b8f78;
+  font: 12px/1.3 ui-monospace, Menlo, monospace;
+  pointer-events: none;
+}
+
 .debug-overlay {
   position: fixed;
   top: 8px;

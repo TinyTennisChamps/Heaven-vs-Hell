@@ -91,6 +91,11 @@ export class KeyboardMouseInput {
     if (a) this.held[a] = false;
   };
 
+  /** Current cursor position without consuming anything. */
+  peekAim(): { x: number; y: number } {
+    return { x: this.aim.x, y: this.aim.y };
+  }
+
   /** Build the frame for the next sim tick and clear accumulated edges. */
   sample(): InputFrame {
     const frame: InputFrame = {

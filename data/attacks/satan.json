@@ -1,0 +1,44 @@
+{
+  "slash1": {
+    "startup": 5,
+    "active": 3,
+    "recovery": 10,
+    "chainAt": 3,
+    "lunge": { "px": 10, "overFrames": 4 },
+    "moveSpeedMul": 0.35,
+    "hitbox": { "radius": 26, "angleDeg": 110, "offset": 6 },
+    "healthDamage": 10,
+    "postureDamage": 8,
+    "hitstop": 3,
+    "knockback": 150,
+    "shake": 1.2
+  },
+  "slash2": {
+    "startup": 4,
+    "active": 3,
+    "recovery": 10,
+    "chainAt": 3,
+    "lunge": { "px": 10, "overFrames": 4 },
+    "moveSpeedMul": 0.35,
+    "hitbox": { "radius": 26, "angleDeg": 110, "offset": 6 },
+    "healthDamage": 10,
+    "postureDamage": 8,
+    "hitstop": 3,
+    "knockback": 150,
+    "shake": 1.2
+  },
+  "slash3": {
+    "startup": 7,
+    "active": 4,
+    "recovery": 16,
+    "chainAt": 99,
+    "lunge": { "px": 14, "overFrames": 6 },
+    "moveSpeedMul": 0.2,
+    "hitbox": { "radius": 30, "angleDeg": 140, "offset": 6 },
+    "healthDamage": 18,
+    "postureDamage": 16,
+    "hitstop": 4,
+    "knockback": 280,
+    "shake": 2.6
+  }
+}
