@@ -13,8 +13,8 @@ export interface DashTuning {
   endLagSpeedMul: number;
   /** Fraction of maxSpeed kept when the dash ends, so it flows into running. */
   exitSpeedMul: number;
-  /** A dash started within this many ticks of the previous dash ending has no i-frames. */
-  spamWindowFrames: number;
+  /** Ticks after a dash ends before another dash is allowed (no double-dashing). */
+  cooldownFrames: number;
 }
 
 export interface PostureTuning {

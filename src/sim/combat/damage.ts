@@ -3,7 +3,7 @@ import type { EnemyAttackDef, SimConfig } from '../config';
 import { emit, type Enemy, type PlayerState, type World } from '../world';
 
 export function isPlayerInvulnerable(p: PlayerState, cfg: SimConfig): boolean {
-  if (!p.dash || !p.dash.iframes) return false;
+  if (!p.dash) return false;
   return p.dash.frame >= cfg.player.dash.iFrameStart && p.dash.frame <= cfg.player.dash.iFrameEnd;
 }
 

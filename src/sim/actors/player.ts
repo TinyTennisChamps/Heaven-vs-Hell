@@ -54,6 +54,7 @@ function locked(p: PlayerState): boolean {
 
 function canDash(p: PlayerState, cfg: SimConfig): boolean {
   if (p.dash || p.dashEndLag > 0 || locked(p)) return false;
+  if (p.sinceDash < cfg.player.dash.cooldownFrames) return false; // no double-dashing
   const b = cfg.combat.block;
   if (p.blockStun > Math.max(0, b.stunFrames - b.dashAfter)) return false;
   return inRecoveryNext(p, cfg);
@@ -150,7 +151,10 @@ export function updatePlayer(world: World, inp: PlayerInput, aim: Vec2 | null, c
   if (p.comboTimer > 0) p.comboTimer--;
   if (p.hurtStun > 0) p.hurtStun--;
   if (p.dashEndLag > 0) p.dashEndLag--;
-  if (!p.dash && p.sinceDash < 9999) p.sinceDash++;
+  if (!p.dash && p.sinceDash < 9999) {
+    p.sinceDash++;
+    if (p.sinceDash === cfg.player.dash.cooldownFrames) emit(world, { type: 'dashReady', pos: { ...p.pos } });
+  }
   if (p.blockStun > 0) p.blockStun--;
   if (p.parryPenalty > 0) p.parryPenalty--;
   if (p.broken > 0) {
@@ -172,11 +176,9 @@ export function updatePlayer(world: World, inp: PlayerInput, aim: Vec2 | null, c
     p.action = null;
     p.parry = null;
     p.guarding = false;
-    // Anti-spam: chaining dashes back-to-back loses the i-frames.
-    const iframes = p.sinceDash > dashCfg.spamWindowFrames;
-    p.dash = { frame: 0, dir: { ...dir }, iframes };
+    p.dash = { frame: 0, dir: { ...dir } };
     p.vel = { x: 0, y: 0 };
-    emit(world, { type: 'dash', pos: { ...p.pos }, dir: { ...dir }, tired: !iframes });
+    emit(world, { type: 'dash', pos: { ...p.pos }, dir: { ...dir } });
   }
   if (buf.has('parry') && canParry(p, cfg)) {
     buf.consume('parry');

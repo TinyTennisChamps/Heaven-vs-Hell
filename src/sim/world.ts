@@ -44,8 +44,6 @@ export interface Projectile {
 export interface DashState {
   frame: number;
   dir: Vec2;
-  /** False when this dash was chained too soon after the last one (anti-spam). */
-  iframes: boolean;
 }
 
 export interface ParryState {
@@ -71,7 +69,7 @@ export interface PlayerState {
   action: AttackState | null;
   dash: DashState | null;
   dashEndLag: number;
-  /** Ticks since the last dash ended (anti-spam). */
+  /** Ticks since the last dash ended (dash cooldown). */
   sinceDash: number;
   lastStep: number;
   comboTimer: number;
@@ -135,7 +133,8 @@ export type SimEvent =
   | { type: 'hit'; pos: Vec2; dir: Vec2; strong: boolean; riposte?: boolean }
   | { type: 'playerHit'; pos: Vec2; dir: Vec2 }
   | { type: 'swing'; pos: Vec2; dir: Vec2; step: number }
-  | { type: 'dash'; pos: Vec2; dir: Vec2; tired: boolean }
+  | { type: 'dash'; pos: Vec2; dir: Vec2 }
+  | { type: 'dashReady'; pos: Vec2 }
   | { type: 'enemyDown'; pos: Vec2 }
   | { type: 'telegraph'; pos: Vec2; judgement: boolean }
   | { type: 'deflect'; pos: Vec2; dir: Vec2; perfect: boolean }

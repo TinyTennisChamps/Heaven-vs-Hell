@@ -198,8 +198,8 @@ export class Scene {
     this.player.scale.x = pick.facing === 'left' ? -1 : 1;
     this.player.zIndex = pp.x + pp.y;
     this.shadow(pp, 8);
-    if (p.dash && p.dash.iframes) {
-      // Ember smear behind a dash (only when it's a real, invulnerable dash).
+    if (p.dash) {
+      // Ember smear behind a dash.
       const back = { x: pp.x - p.dash.dir.x * 10, y: pp.y - p.dash.dir.y * 10 };
       this.fx.poly(proj([...groundCircle(back, 4, 8)])).fill({ color: SATAN.ember, alpha: 0.35 });
     }

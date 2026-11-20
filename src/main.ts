@@ -254,9 +254,11 @@ function spawnEffects(world: World, scene: Scene): void {
         break;
       }
       case 'dash':
-        // A spammed dash (no i-frames) kicks up grey dust and no embers.
-        if (ev.tired) P.burst(s.x, s.y, { count: 5, colors: [HEAVEN.stoneDark, ANGEL.silver2], speed: 25, life: 0.35, size: 1 });
-        else P.burst(s.x, s.y, { count: 7, colors: [HEAVEN.marble, HEAVEN.stone, SATAN.ember], speed: 40, life: 0.3, size: 1 });
+        P.burst(s.x, s.y, { count: 7, colors: [HEAVEN.marble, HEAVEN.stone, SATAN.ember], speed: 40, life: 0.3, size: 1 });
+        break;
+      case 'dashReady':
+        // Tiny ember flicker at the feet: the dash is back.
+        P.burst(s.x, s.y - 2, { count: 4, colors: [SATAN.ember, SATAN.hellfire], speed: 20, life: 0.18, size: 1 });
         break;
       case 'riposteOpen':
         P.burst(s.x, s.y - 4, { count: 10, colors: [SATAN.ember, SATAN.hellfire], speed: 60, life: 0.35 });

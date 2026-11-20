@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ButtonAction } from '../src/input/actions';
 import { startEnemyAttack } from '../src/sim/actors/enemy';
 import { regenPosture } from '../src/sim/combat/posture';
+import { isPlayerInvulnerable } from '../src/sim/combat/damage';
 import type { SimConfig } from '../src/sim/config';
 import { step } from '../src/sim/step';
 import type { Enemy, World } from '../src/sim/world';
@@ -357,25 +358,47 @@ describe('riposte (perfect-parry reward)', () => {
   }
 });
 
-describe('dash anti-spam', () => {
-  it('a dash chained within spamWindowFrames of the last one has no i-frames', () => {
+describe('dash cooldown (no double-dashing)', () => {
+  const D = cfg.player.dash;
+
+  it('a second dash pressed right after the first does not happen', () => {
     const w = testWorld(cfg, { withDummy: false });
     w.player.pos = { x: 60, y: 100 };
     step(w, input({ press: ['dash'], move: { x: 1, y: 0 } }), cfg);
-    expect(w.player.dash!.iframes).toBe(true);
-    run(w, cfg, cfg.player.dash.frames + cfg.player.dash.endLag, () => input({ move: { x: 1, y: 0 } }));
+    run(w, cfg, D.frames + D.endLag, () => input({ move: { x: 1, y: 0 } }));
     step(w, input({ press: ['dash'], move: { x: 0, y: 1 } }), cfg);
-    expect(w.player.dash).not.toBeNull();
-    expect(w.player.dash!.iframes).toBe(false);
+    expect(w.player.dash).toBeNull();
+    // ...and that early press is not saved up to fire much later.
+    run(w, cfg, D.cooldownFrames + 10);
+    expect(w.player.dash).toBeNull();
   });
 
-  it('waiting out the window restores the i-frames', () => {
+  it('after the cooldown, dashing works again (with full i-frames)', () => {
     const w = testWorld(cfg, { withDummy: false });
     w.player.pos = { x: 60, y: 100 };
     step(w, input({ press: ['dash'], move: { x: 1, y: 0 } }), cfg);
-    run(w, cfg, cfg.player.dash.frames + cfg.player.dash.spamWindowFrames + 2);
+    run(w, cfg, D.frames + D.cooldownFrames);
     step(w, input({ press: ['dash'], move: { x: 0, y: 1 } }), cfg);
-    expect(w.player.dash!.iframes).toBe(true);
+    expect(w.player.dash).not.toBeNull();
+    step(w, input(), cfg);
+    expect(isPlayerInvulnerable(w.player, cfg)).toBe(true);
+  });
+
+  it('a press made just before the cooldown ends is buffered and fires on the first ready tick', () => {
+    const w = testWorld(cfg, { withDummy: false });
+    w.player.pos = { x: 60, y: 100 };
+    step(w, input({ press: ['dash'], move: { x: 1, y: 0 } }), cfg);
+    run(w, cfg, D.frames - 1);
+    expect(w.player.dash).toBeNull();
+    run(w, cfg, D.cooldownFrames - 4);
+    step(w, input({ press: ['dash'], move: { x: 0, y: 1 } }), cfg); // 3 ticks early
+    let fired = -1;
+    for (let t = 0; t < 10 && fired < 0; t++) {
+      step(w, input({ move: { x: 0, y: 1 } }), cfg);
+      if (w.player.dash) fired = t;
+    }
+    expect(fired).toBeGreaterThanOrEqual(0);
+    expect(fired).toBeLessThanOrEqual(3);
   });
 });
 

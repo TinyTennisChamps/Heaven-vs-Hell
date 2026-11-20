@@ -116,6 +116,11 @@ Satan is trapped in Heaven and cuts his way down through its layers to get home.
 
 **Training spawns:** the court starts empty. Keys 1/2/3 or the panel buttons spawn a dummy, Dominion or Archer at the cursor, and 0 clears. Spawned enemies don't respawn.
 
+## Dash cooldown (user request: no double dash)
+- After a dash ends there's an 18-tick (0.3 s) cooldown before the next one. A press in the last 8 ticks of the cooldown is buffered and fires on the first ready tick. An ember flicker at Satan's feet shows the dash is back.
+- This **replaces** the dash anti-spam rule. Chained dashes are now impossible, so the "lose i-frames" rule became redundant and was removed.
+- **Balance:** parrying is now **1.99×** faster than dash-and-slash over 40 seeds, hitting the 2× target. The aggressor now takes damage (about 6 HP per fight, up from about 0).
+
 ## Rage Vials (7, flat additive, every stat ≤ +20%)
 | L1 | L2 |
 |---|---|
