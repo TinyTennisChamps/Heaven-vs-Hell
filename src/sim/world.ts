@@ -23,6 +23,8 @@ export interface AttackState {
 export interface DashState {
   frame: number;
   dir: Vec2;
+  /** False when this dash was chained too soon after the last one (anti-spam). */
+  iframes: boolean;
 }
 
 export interface ParryState {
@@ -48,6 +50,8 @@ export interface PlayerState {
   action: AttackState | null;
   dash: DashState | null;
   dashEndLag: number;
+  /** Ticks since the last dash ended (anti-spam). */
+  sinceDash: number;
   lastStep: number;
   comboTimer: number;
   hurtStun: number;
@@ -61,7 +65,7 @@ export interface PlayerState {
   broken: number;
 }
 
-export type EnemyPhase = 'idle' | 'windup' | 'active' | 'recover' | 'broken' | 'down';
+export type EnemyPhase = 'idle' | 'windup' | 'active' | 'recover' | 'recoil' | 'broken' | 'down';
 
 export interface Enemy {
   id: number;
@@ -93,10 +97,10 @@ export interface Enemy {
 }
 
 export type SimEvent =
-  | { type: 'hit'; pos: Vec2; dir: Vec2; strong: boolean }
+  | { type: 'hit'; pos: Vec2; dir: Vec2; strong: boolean; riposte?: boolean }
   | { type: 'playerHit'; pos: Vec2; dir: Vec2 }
   | { type: 'swing'; pos: Vec2; dir: Vec2; step: number }
-  | { type: 'dash'; pos: Vec2; dir: Vec2 }
+  | { type: 'dash'; pos: Vec2; dir: Vec2; tired: boolean }
   | { type: 'enemyDown'; pos: Vec2 }
   | { type: 'telegraph'; pos: Vec2; judgement: boolean }
   | { type: 'deflect'; pos: Vec2; dir: Vec2; perfect: boolean }
@@ -105,7 +109,8 @@ export type SimEvent =
   | { type: 'postureBreak'; pos: Vec2 }
   | { type: 'playerBroken'; pos: Vec2 }
   | { type: 'deathblow'; pos: Vec2; dir: Vec2 }
-  | { type: 'parryWhiff'; pos: Vec2 };
+  | { type: 'parryWhiff'; pos: Vec2 }
+  | { type: 'riposteOpen'; pos: Vec2 };
 
 export interface CameraState {
   /** Camera centre in iso screen space. */
@@ -173,6 +178,7 @@ export function createWorld(room: RoomDef, cfg: SimConfig, seed = 1): World {
       action: null,
       dash: null,
       dashEndLag: 0,
+      sinceDash: 999,
       lastStep: 0,
       comboTimer: 0,
       hurtStun: 0,

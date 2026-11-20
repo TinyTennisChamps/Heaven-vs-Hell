@@ -13,6 +13,8 @@ export interface DashTuning {
   endLagSpeedMul: number;
   /** Fraction of maxSpeed kept when the dash ends, so it flows into running. */
   exitSpeedMul: number;
+  /** A dash started within this many ticks of the previous dash ending has no i-frames. */
+  spamWindowFrames: number;
 }
 
 export interface PostureTuning {
@@ -74,6 +76,8 @@ export interface CombatTuning {
   };
   block: { coneDeg: number; postureMul: number; stunFrames: number; dashAfter: number; moveSpeedMul: number; knockback: number; hitstop: number };
   deathblow: { range: number; hitstop: number; slowmoFrames: number; slowmoScale: number; shake: number };
+  /** Perfect deflect staggers the attacker; Satan's hits on it are multiplied meanwhile. */
+  riposte: { frames: number; healthMul: number; postureMul: number };
   /** While parrying/blocking, turn to face the most imminent attacker within range. */
   autoFace: { enabled: boolean; range: number };
   breakHitstop: number;

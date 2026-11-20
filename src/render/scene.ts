@@ -196,8 +196,8 @@ export class Scene {
     this.player.scale.x = pick.facing === 'left' ? -1 : 1;
     this.player.zIndex = pp.x + pp.y;
     this.shadow(pp, 8);
-    if (p.dash) {
-      // Ember smear behind a dash.
+    if (p.dash && p.dash.iframes) {
+      // Ember smear behind a dash (only when it's a real, invulnerable dash).
       const back = { x: pp.x - p.dash.dir.x * 10, y: pp.y - p.dash.dir.y * 10 };
       this.fx.poly(proj([...groundCircle(back, 4, 8)])).fill({ color: SATAN.ember, alpha: 0.35 });
     }
@@ -335,6 +335,13 @@ export class Scene {
     const pf = Math.min(1, e.posture / def.posture.max);
     const pw = Math.round(w * pf);
     if (pw > 0) this.fx.rect(x + Math.round((w - pw) / 2), y + 3, pw, 2).fill(pf > 0.8 ? 0xffffff : HEAVEN.gold2);
+    if (e.phase === 'recoil') {
+      // Riposte opening: pulsing hellfire ring at the feet (red = Satan's opening).
+      const k = (e.phaseFrame % 10) / 10;
+      const rr = 10 + 4 * k;
+      this.fx.ellipse(Math.round(sp.x), Math.round(sp.y), rr, rr * 0.5).stroke({ width: 1, color: SATAN.hellfire, alpha: 1 - k * 0.6 });
+      this.fx.ellipse(Math.round(sp.x), Math.round(sp.y), 9, 4.5).stroke({ width: 1, color: SATAN.ember, alpha: 0.8 });
+    }
     if (e.phase === 'broken') {
       // Deathblow opening: the red diamond (red = Satan's opening).
       const bx = Math.round(sp.x);
@@ -399,6 +406,7 @@ export class Scene {
 
 function dominionPose(e: Enemy): DominionPose {
   if (e.phase === 'broken') return 'broken';
+  if (e.phase === 'recoil') return 'recoil';
   if (e.attack === 'bash' && (e.phase === 'active' || e.phase === 'recover')) return 'bash';
   if (e.attack === 'judgement' && e.phase === 'active') return 'lunge';
   if (e.phase === 'windup') return e.attack === 'bash' ? 'guard' : 'drawBack';

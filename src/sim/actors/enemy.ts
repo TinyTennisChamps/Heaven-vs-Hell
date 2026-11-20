@@ -78,6 +78,12 @@ export function updateEnemy(world: World, e: Enemy, cfg: SimConfig, think: Think
   let lungeDelta: Vec2 = { x: 0, y: 0 };
 
   switch (e.phase) {
+    case 'recoil':
+      if (e.phaseFrame >= cfg.combat.riposte.frames) {
+        setPhase(e, 'idle');
+        e.cooldown = Math.round(def.cooldownMin * 0.5);
+      }
+      break;
     case 'broken':
       if (e.phaseFrame >= def.brokenFrames) {
         // Survived the opening: recover with posture partly restored.

@@ -21,7 +21,7 @@ export function drawDummy(g: Graphics, flash: boolean): void {
   g.rect(7, -27, 3, 2).fill(c(HEAVEN.gold3));
 }
 
-export type DominionPose = 'guard' | 'drawBack' | 'thrust' | 'bash' | 'lunge' | 'broken';
+export type DominionPose = 'guard' | 'drawBack' | 'thrust' | 'bash' | 'lunge' | 'recoil' | 'broken';
 
 /**
  * Dominion: faceless helm with one open eye, tower shield, spear.
@@ -33,8 +33,8 @@ export function drawDominion(g: Graphics, pose: DominionPose, flash: boolean, sh
   const line = flash ? 0xffffff : ANGEL.angelLine;
   const st = { width: 1, color: line, alignment: 1 } as const;
   g.clear();
-  const crouch = pose === 'broken' ? 4 : pose === 'thrust' || pose === 'lunge' ? 1 : 0;
-  const lean = pose === 'thrust' || pose === 'lunge' ? 2 : pose === 'drawBack' ? -2 : pose === 'bash' ? 3 : 0;
+  const crouch = pose === 'broken' ? 4 : pose === 'thrust' || pose === 'lunge' || pose === 'recoil' ? 1 : 0;
+  const lean = pose === 'thrust' || pose === 'lunge' ? 2 : pose === 'drawBack' ? -2 : pose === 'bash' ? 3 : pose === 'recoil' ? -4 : 0;
   const y = (v: number) => v + crouch;
 
   // Small wings behind.
@@ -46,6 +46,11 @@ export function drawDominion(g: Graphics, pose: DominionPose, flash: boolean, sh
     const sy = y(-17);
     const len = 30;
     const ext = pose === 'thrust' || pose === 'lunge' ? 14 : pose === 'drawBack' ? -4 : 0;
+    if (pose === 'recoil') {
+      // Spear knocked up and back by the deflect.
+      g.moveTo(sx - 6, y(-12)).lineTo(sx + 10, y(-38)).stroke({ width: 1, color: c(HEAVEN.stoneDark) });
+      return;
+    }
     if (pose === 'guard' || pose === 'bash') {
       // Held upright behind the shield, like the Shieldwalk pose.
       g.rect(sx + 5, y(-36), 1, 34).fill(c(HEAVEN.stoneDark));
@@ -79,7 +84,8 @@ export function drawDominion(g: Graphics, pose: DominionPose, flash: boolean, sh
 
   // Tower shield in front (an eye on it, gold cross).
   if (pose !== 'broken') {
-    const sx = pose === 'bash' ? 9 + lean : pose === 'thrust' || pose === 'lunge' ? 2 + lean : 5 + lean;
+    // Recoil: shield flung wide to the back — the opening.
+    const sx = pose === 'bash' ? 9 + lean : pose === 'thrust' || pose === 'lunge' ? 2 + lean : pose === 'recoil' ? -14 + lean : 5 + lean;
     const fill = shieldFlash ? JUDGEMENT : c(ANGEL.pearl);
     g.rect(sx, y(-28), 6, 25).fill(fill).stroke(st);
     g.rect(sx + 2, y(-25), 2, 19).fill(c(HEAVEN.gold2));

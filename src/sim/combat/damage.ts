@@ -3,7 +3,7 @@ import type { EnemyAttackDef, SimConfig } from '../config';
 import { emit, type Enemy, type PlayerState, type World } from '../world';
 
 export function isPlayerInvulnerable(p: PlayerState, cfg: SimConfig): boolean {
-  if (!p.dash) return false;
+  if (!p.dash || !p.dash.iframes) return false;
   return p.dash.frame >= cfg.player.dash.iFrameStart && p.dash.frame <= cfg.player.dash.iFrameEnd;
 }
 
@@ -77,16 +77,18 @@ export function hitEnemy(world: World, e: Enemy, from: Vec2, dir: Vec2, spec: Hi
     return 'shield';
   }
 
-  e.hp -= spec.healthDamage;
+  const riposte = e.phase === 'recoil';
+  const r = cfg.combat.riposte;
+  e.hp -= spec.healthDamage * (riposte ? r.healthMul : 1);
   e.knock = { x: dir.x * spec.knockback, y: dir.y * spec.knockback };
   world.stats.hitsLanded++;
-  startHitstop(world, spec.hitstop, spec.shake, cfg);
-  emit(world, { type: 'hit', pos: { ...e.pos }, dir: { ...dir }, strong: !!spec.strong });
+  startHitstop(world, spec.hitstop + (riposte ? 2 : 0), spec.shake * (riposte ? 1.4 : 1), cfg);
+  emit(world, { type: 'hit', pos: { ...e.pos }, dir: { ...dir }, strong: !!spec.strong || riposte, riposte });
   if (e.hp <= 0) {
     killEnemy(world, e);
     return 'hit';
   }
-  addEnemyPosture(world, e, spec.postureDamage, cfg);
+  addEnemyPosture(world, e, spec.postureDamage * (riposte ? r.postureMul : 1), cfg);
   return 'hit';
 }
 
@@ -134,6 +136,13 @@ export function resolveOnPlayer(world: World, attacker: Enemy, atk: EnemyAttackD
     const kb = perfect ? c.parry.perfectRecoil : c.parry.recoil;
     attacker.knock = { x: -dir.x * kb, y: -dir.y * kb };
     addEnemyPosture(world, attacker, atk.postureDamage * (perfect ? c.parry.perfectAttackerPostureMul : c.parry.attackerPostureMul), cfg);
+    if (perfect && attacker.phase !== 'broken' && attacker.phase !== 'down') {
+      // Riposte: a perfect read staggers the attacker and opens it up.
+      attacker.phase = 'recoil';
+      attacker.phaseFrame = 0;
+      attacker.attack = null;
+      emit(world, { type: 'riposteOpen', pos: { ...attacker.pos } });
+    }
     return perfect ? 'perfect' : 'deflect';
   }
 

@@ -300,3 +300,75 @@ describe('Dominion shield', () => {
     expect(e.phase).toBe('broken');
   });
 });
+
+describe('riposte (perfect-parry reward)', () => {
+  it('a perfect deflect staggers the attacker; a normal deflect does not', () => {
+    const H = hitTickFor('swing');
+    const perfect = scenarioFor('swing', H - 1);
+    expect(perfect.e.phase === 'recoil' || perfect.sawRecoil).toBe(true);
+    const normal = scenarioFor('swing', H - 6);
+    expect(normal.sawRecoil).toBe(false);
+  });
+
+  it('slashes during the stagger bypass the shield and deal multiplied posture and health', () => {
+    const { w, e } = duel('dominion');
+    e.phase = 'recoil';
+    e.phaseFrame = 0;
+    step(w, input({ press: ['slash'], aim: aimAt(e) }), cfg);
+    run(w, cfg, 8, () => input({ aim: aimAt(e) }));
+    const d = cfg.attacks.slash1!;
+    const r = cfg.combat.riposte;
+    expect(e.hp).toBe(cfg.enemies.dominion!.health - d.healthDamage * r.healthMul);
+    expect(e.posture).toBeCloseTo(d.postureDamage * r.postureMul, 5);
+  });
+
+  it('the stagger ends after riposte.frames and the enemy recovers', () => {
+    const { w, e } = duel('dominion');
+    e.phase = 'recoil';
+    e.phaseFrame = 0;
+    run(w, cfg, cfg.combat.riposte.frames + 1);
+    expect(e.phase).toBe('idle');
+  });
+
+  function hitTickFor(attack: string): number {
+    const { w, e } = duel('dummy');
+    startEnemyAttack(w, e, attack, cfg);
+    for (let t = 0; t < 80; t++) {
+      step(w, input({ aim: aimAt(e) }), cfg);
+      if (w.stats.hitsTaken > 0) return t;
+    }
+    throw new Error('never hit');
+  }
+  function scenarioFor(attack: string, pressAt: number) {
+    const { w, e } = duel('dummy');
+    startEnemyAttack(w, e, attack, cfg);
+    let sawRecoil = false;
+    for (let t = 0; t < 80; t++) {
+      step(w, input({ press: t === pressAt ? ['parry'] : [], aim: aimAt(e) }), cfg);
+      if (e.phase === 'recoil') sawRecoil = true;
+    }
+    return { w, e, sawRecoil };
+  }
+});
+
+describe('dash anti-spam', () => {
+  it('a dash chained within spamWindowFrames of the last one has no i-frames', () => {
+    const w = testWorld(cfg, { withDummy: false });
+    w.player.pos = { x: 60, y: 100 };
+    step(w, input({ press: ['dash'], move: { x: 1, y: 0 } }), cfg);
+    expect(w.player.dash!.iframes).toBe(true);
+    run(w, cfg, cfg.player.dash.frames + cfg.player.dash.endLag, () => input({ move: { x: 1, y: 0 } }));
+    step(w, input({ press: ['dash'], move: { x: 0, y: 1 } }), cfg);
+    expect(w.player.dash).not.toBeNull();
+    expect(w.player.dash!.iframes).toBe(false);
+  });
+
+  it('waiting out the window restores the i-frames', () => {
+    const w = testWorld(cfg, { withDummy: false });
+    w.player.pos = { x: 60, y: 100 };
+    step(w, input({ press: ['dash'], move: { x: 1, y: 0 } }), cfg);
+    run(w, cfg, cfg.player.dash.frames + cfg.player.dash.spamWindowFrames + 2);
+    step(w, input({ press: ['dash'], move: { x: 0, y: 1 } }), cfg);
+    expect(w.player.dash!.iframes).toBe(true);
+  });
+});

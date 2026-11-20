@@ -48,5 +48,10 @@
   "autoFace": {
     "enabled": true,
     "range": 90
+  },
+  "riposte": {
+    "frames": 30,
+    "healthMul": 2,
+    "postureMul": 3
   }
 }

@@ -131,6 +131,7 @@ export function updatePlayer(world: World, inp: PlayerInput, aim: Vec2 | null, c
   if (p.comboTimer > 0) p.comboTimer--;
   if (p.hurtStun > 0) p.hurtStun--;
   if (p.dashEndLag > 0) p.dashEndLag--;
+  if (!p.dash && p.sinceDash < 9999) p.sinceDash++;
   if (p.blockStun > 0) p.blockStun--;
   if (p.parryPenalty > 0) p.parryPenalty--;
   if (p.broken > 0) {
@@ -152,9 +153,11 @@ export function updatePlayer(world: World, inp: PlayerInput, aim: Vec2 | null, c
     p.action = null;
     p.parry = null;
     p.guarding = false;
-    p.dash = { frame: 0, dir: { ...dir } };
+    // Anti-spam: chaining dashes back-to-back loses the i-frames.
+    const iframes = p.sinceDash > dashCfg.spamWindowFrames;
+    p.dash = { frame: 0, dir: { ...dir }, iframes };
     p.vel = { x: 0, y: 0 };
-    emit(world, { type: 'dash', pos: { ...p.pos }, dir: { ...dir } });
+    emit(world, { type: 'dash', pos: { ...p.pos }, dir: { ...dir }, tired: !iframes });
   }
   if (buf.has('parry') && canParry(p, cfg)) {
     buf.consume('parry');
@@ -212,6 +215,7 @@ export function updatePlayer(world: World, inp: PlayerInput, aim: Vec2 | null, c
     p.facing = { ...d.dir };
     if (d.frame >= n) {
       p.dash = null;
+      p.sinceDash = 0;
       p.dashEndLag = dashCfg.endLag;
       const exit = cfg.player.maxSpeed * dashCfg.exitSpeedMul;
       p.vel = { x: d.dir.x * exit, y: d.dir.y * exit };

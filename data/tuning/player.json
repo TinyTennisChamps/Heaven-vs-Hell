@@ -18,6 +18,7 @@
     "iFrameEnd": 9,
     "endLag": 3,
     "endLagSpeedMul": 0.4,
-    "exitSpeedMul": 0.5
+    "exitSpeedMul": 0.5,
+    "spamWindowFrames": 18
   }
 }

@@ -61,6 +61,17 @@ Satan is trapped in Heaven and cuts his way down through its layers to get home.
   - It shield-bashes up close, and counter-bashes after absorbing 3 hits.
   - It has an occasional Judgement lunge.
 
+## Parry reward pass (after M3 playtest)
+**The problem:** dash-and-slash beat parrying. Dashing was nearly free, and getting behind the Dominion was easy.
+
+**The fixes the user chose:**
+- **Riposte:** a perfect deflect staggers the attacker for 30 frames. During the stagger its shield is down, and Satan's hits deal ×2 health and ×3 posture. A normal deflect doesn't stagger.
+- **Dash anti-spam:** a dash started within 18 frames of the previous one ending has no i-frames, and shows grey dust instead of embers. There's still no stamina bar.
+
+**Measured** (`tests/balance.test.ts`: scripted bots, 10 seeds, against a Dominion): parrying kills **2.14×** faster than dash-and-slash, at the "Balanced" target. The test fails if the ratio drifts outside 1.6–2.8×.
+
+**Still open:** the dash-and-slash bot takes almost no damage (about 3 HP), because the Dominion turns too slowly to punish flanking. The "enemies punish flanking" fix was offered but not chosen yet.
+
 ## Rage Vials (7, flat additive, every stat ≤ +20%)
 | L1 | L2 |
 |---|---|

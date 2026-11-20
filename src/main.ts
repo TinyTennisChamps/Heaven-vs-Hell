@@ -164,6 +164,7 @@ function spawnEffects(world: World, scene: Scene): void {
     switch (ev.type) {
       case 'hit': {
         const d = groundToScreen(ev.dir.x, ev.dir.y);
+        if (ev.riposte) scene.sparks.spawn(s.x, s.y - 12, false, Math.atan2(d.y, d.x));
         P.burst(s.x, s.y - 12, { count: ev.strong ? 16 : 9, colors: [0xffffff, SATAN.ember, SATAN.hellfire, HEAVEN.gold1], speed: ev.strong ? 140 : 100, life: 0.28, dirX: d.x, dirY: d.y, spread: 1.6 });
         P.burst(s.x, s.y - 12, { count: 6, colors: [ANGEL.pearl, ANGEL.white], speed: 50, life: 0.35 });
         break;
@@ -202,7 +203,12 @@ function spawnEffects(world: World, scene: Scene): void {
         break;
       }
       case 'dash':
-        P.burst(s.x, s.y, { count: 7, colors: [HEAVEN.marble, HEAVEN.stone], speed: 40, life: 0.3, size: 1 });
+        // A spammed dash (no i-frames) kicks up grey dust and no embers.
+        if (ev.tired) P.burst(s.x, s.y, { count: 5, colors: [HEAVEN.stoneDark, ANGEL.silver2], speed: 25, life: 0.35, size: 1 });
+        else P.burst(s.x, s.y, { count: 7, colors: [HEAVEN.marble, HEAVEN.stone, SATAN.ember], speed: 40, life: 0.3, size: 1 });
+        break;
+      case 'riposteOpen':
+        P.burst(s.x, s.y - 4, { count: 10, colors: [SATAN.ember, SATAN.hellfire], speed: 60, life: 0.35 });
         break;
       case 'enemyDown':
         P.burst(s.x, s.y - 12, { count: 30, colors: [ANGEL.white, ANGEL.pearl, HEAVEN.gold2, ANGEL.lilac], speed: 120, life: 0.6 });
