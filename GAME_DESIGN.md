@@ -162,6 +162,7 @@ Decisions confirmed with the user on 2026-11-20:
 - After each room, two gates offer two different rooms. The icons are a sword (combat), crossed swords (hard), a chalice (rest) and a horn (the end, Gabriel).
 - From `restFrom` (2) rooms on, one gate may be the rest room. If it was skipped, it's the only gate before the end.
 - HP and pips carry over. Posture resets.
+- **Gate heal** (user request, after the M5 review): each gate you walk through heals 15% of max HP (`rooms.roomHealFrac`), shown as a gold burst on arrival. A 4-room run gets about +60 HP from gates, plus the font's 40%.
 - Hard rooms have no extra reward yet. M6 puts the locked vial cages in them.
 
 **Death:**

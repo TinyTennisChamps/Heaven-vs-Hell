@@ -249,6 +249,8 @@ export interface RoomTuning {
   fontRadius: number;
   /** Rest font heal, fraction of max health. */
   restHealFrac: number;
+  /** Heal on walking through a gate into the next room, fraction of max health. */
+  roomHealFrac: number;
   /** Ticks after Satan falls before the run can end. */
   deathFrames: number;
 }

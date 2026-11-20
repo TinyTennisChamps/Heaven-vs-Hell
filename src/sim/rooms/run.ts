@@ -1,5 +1,5 @@
 import { createRng, nextFloat, nextInt, type RngState } from '../../core/rng';
-import type { LevelDef, RoomDef } from '../config';
+import type { LevelDef, RoomDef, SimConfig } from '../config';
 import type { Carry } from '../world';
 
 /**
@@ -54,6 +54,12 @@ export function startRun(level: LevelDef, rooms: Record<string, RoomDef>, seed: 
   };
   run.options = planExits(run, level, rooms);
   return run;
+}
+
+/** What Satan carries through a gate: a small heal (roomHealFrac), pips as they are. */
+export function carryThroughGate(hp: number, pips: number, cfg: SimConfig): Carry {
+  const max = cfg.player.maxHealth;
+  return { hp: Math.min(max, hp + Math.round(max * cfg.rooms.roomHealFrac)), pips };
 }
 
 /** The current room is cleared and Satan took exit `i`, carrying `carry` forward. */

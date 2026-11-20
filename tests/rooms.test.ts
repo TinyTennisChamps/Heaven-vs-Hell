@@ -4,7 +4,7 @@ import path from 'node:path';
 import type { LevelDef, RoomDef } from '../src/sim/config';
 import { killEnemy } from '../src/sim/combat/damage';
 import { findSpot } from '../src/sim/rooms/roomRunner';
-import { startRun, takeExit } from '../src/sim/rooms/run';
+import { carryThroughGate, startRun, takeExit } from '../src/sim/rooms/run';
 import { startEnemyAttack } from '../src/sim/actors/enemy';
 import { step } from '../src/sim/step';
 import { createWorld, isValidSpot, type World } from '../src/sim/world';
@@ -114,6 +114,22 @@ describe('room runner', () => {
     run(w, cfg, 3);
     expect(w.player.hp).toBe(10);
     expect(w.roomRun.cleared).toBe(true); // nothing to fight, doors open
+  });
+});
+
+describe('gate heal', () => {
+  it('going through a gate heals a little (roomHealFrac), capped at max, pips unchanged', () => {
+    const heal = Math.round(cfg.player.maxHealth * cfg.rooms.roomHealFrac);
+    expect(heal).toBeGreaterThan(0);
+    expect(carryThroughGate(40, 2, cfg)).toEqual({ hp: 40 + heal, pips: 2 });
+    expect(carryThroughGate(cfg.player.maxHealth - 1, 5, cfg).hp).toBe(cfg.player.maxHealth);
+  });
+
+  it('the next room starts with the healed health', () => {
+    const r = startRun(level, rooms, 4, { hp: 100, pips: 5 });
+    takeExit(r, 0, level, rooms, carryThroughGate(30, 3, cfg));
+    const w = createWorld(rooms[r.current]!, cfg, r.roomSeed, r.carry);
+    expect(w.player.hp).toBe(30 + Math.round(cfg.player.maxHealth * cfg.rooms.roomHealFrac));
   });
 });
 

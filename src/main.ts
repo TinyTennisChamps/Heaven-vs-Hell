@@ -14,7 +14,7 @@ import { loadAtlas } from './render/atlas';
 import type { AnimConfig } from './render/animSync';
 import { attackDef, attackPhase } from './sim/actors/player';
 import type { LevelDef, RoomDef, SimConfig } from './sim/config';
-import { startRun, takeExit, type RunState } from './sim/rooms/run';
+import { carryThroughGate, startRun, takeExit, type RunState } from './sim/rooms/run';
 import { step } from './sim/step';
 import { createWorld, spawnEnemyAt, type World } from './sim/world';
 import { Screens } from './ui/screens';
@@ -84,6 +84,8 @@ async function boot() {
   /** Sim paused (menus, transitions, end screens). */
   let frozen = true;
   let endShown = false;
+  /** The gate just taken healed Satan: show it as he arrives. */
+  let healedOnEntry = false;
 
   const legend = document.createElement('div');
   legend.className = 'legend';
@@ -161,6 +163,8 @@ async function boot() {
     world = createWorld(room, cfg, run.roomSeed, run.carry);
     world.flags.respawn = false;
     world.roomRun.exitCount = run.options.length;
+    if (healedOnEntry) world.events.push({ type: 'restHeal', pos: { ...world.player.pos } });
+    healedOnEntry = false;
     const s = new Scene(world, satanAtlas, anim);
     s.doorKinds = run.options.map((o) => o.kind);
     setScene(s);
@@ -205,7 +209,8 @@ async function boot() {
     if (world.roomRun.exit !== null) {
       frozen = true;
       endShown = true;
-      const opt = takeExit(run, world.roomRun.exit, level, rooms, { hp: p.hp, pips: p.pips });
+      const opt = takeExit(run, world.roomRun.exit, level, rooms, carryThroughGate(p.hp, p.pips, cfg));
+      healedOnEntry = run.carry.hp > p.hp;
       if (run.finished || opt.kind === 'end') {
         screens.showCleared(level.name, { rooms: run.visited.length, hp: p.hp, max: cfg.player.maxHealth });
       } else {
