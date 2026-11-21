@@ -347,13 +347,13 @@
         "delay": 30
       },
       {
-        "file": "schwing",
-        "vol": 0.45,
+        "file": "gore_tear",
+        "vol": 0.7,
         "pitch": [
-          0.9,
-          0.95
+          0.85,
+          0.9
         ],
-        "delay": 80
+        "delay": 60
       }
     ]
   },
@@ -445,16 +445,94 @@
     ]
   },
   "enemyDown": {
-    "layers": [
-      {
-        "file": "vanish",
-        "vol": 0.45,
-        "pitch": [
-          1.0,
-          1.2
-        ],
-        "delay": 0
-      }
+    "variants": [
+      [
+        {
+          "file": "gore_a",
+          "vol": 0.85,
+          "pitch": [
+            0.92,
+            1.02
+          ],
+          "delay": 0
+        },
+        {
+          "file": "gore_wet",
+          "vol": 0.5,
+          "pitch": [
+            0.9,
+            1.0
+          ],
+          "delay": 40
+        },
+        {
+          "file": "body_fall",
+          "vol": 0.45,
+          "pitch": [
+            0.85,
+            0.95
+          ],
+          "delay": 170
+        }
+      ],
+      [
+        {
+          "file": "gore_b",
+          "vol": 0.85,
+          "pitch": [
+            0.9,
+            1.0
+          ],
+          "delay": 0
+        },
+        {
+          "file": "gore_tear",
+          "vol": 0.45,
+          "pitch": [
+            0.95,
+            1.05
+          ],
+          "delay": 30
+        },
+        {
+          "file": "body_fall",
+          "vol": 0.45,
+          "pitch": [
+            0.8,
+            0.9
+          ],
+          "delay": 180
+        }
+      ],
+      [
+        {
+          "file": "gore_c",
+          "vol": 0.9,
+          "pitch": [
+            0.88,
+            0.98
+          ],
+          "delay": 0
+        },
+        {
+          "file": "gore_wet",
+          "vol": 0.45,
+          "pitch": [
+            0.85,
+            0.95
+          ],
+          "delay": 25
+        },
+        {
+          "file": "body_fall",
+          "vol": 0.45,
+          "pitch": [
+            0.85,
+            0.95
+          ],
+          "delay": 160
+        }
+      ]
     ]
   },
   "spawnIn": {
@@ -881,22 +959,22 @@
   "vialGained": {
     "layers": [
       {
-        "file": "ring_bright",
-        "vol": 0.6,
+        "file": "vial_rise",
+        "vol": 0.75,
         "pitch": [
-          1.4,
-          1.45
+          1.0,
+          1.0
         ],
         "delay": 0
       },
       {
-        "file": "choir_shot",
-        "vol": 0.4,
+        "file": "vial_tada",
+        "vol": 0.85,
         "pitch": [
-          1.1,
-          1.15
+          1.0,
+          1.0
         ],
-        "delay": 60
+        "delay": 330
       }
     ]
   },
@@ -960,6 +1038,19 @@
         "pitch": [
           0.78,
           0.8
+        ],
+        "delay": 0
+      }
+    ]
+  },
+  "cageOpen": {
+    "layers": [
+      {
+        "file": "cage_harp",
+        "vol": 0.6,
+        "pitch": [
+          1.0,
+          1.0
         ],
         "delay": 0
       }

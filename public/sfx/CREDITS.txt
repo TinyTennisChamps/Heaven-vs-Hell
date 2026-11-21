@@ -39,3 +39,12 @@ choir_dark.mp3: "Dark Choir 01.wav" by Exsomniel is marked with CC0 1.0. To view
 choir_chord.mp3: "Choir of Voices - Single Chord" by bone666138 is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/.
 choir_shot.mp3: "Choir One-Shot" by majoranman is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/.
 bell.mp3: "Deep Church Bell" by ZoshP is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/.
+gore_a.mp3: "Impact with gore 6.wav" by JarredGibb is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/.
+gore_b.mp3: "Impact with gore 5.wav" by JarredGibb is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/.
+gore_c.mp3: "Meaty Splosh" by magnuswaker is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/.
+gore_tear.mp3: "Gore Rend" by magnuswaker is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/.
+gore_wet.mp3: "Wet Impact" by Kastenfrosch is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/.
+body_fall.mp3: "Body falling on the ground 1" by ihitokage is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/.
+vial_rise.mp3: "Harp harpo orchestral key glissando pitch up positive ui interface.wav" by ryusa is licensed under CC BY 4.0. To view a copy of this license, visit https://creativecommons.org/licenses/by/4.0/.
+vial_tada.mp3: "Tada Fanfare A" by plasterbrain is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/.
+cage_harp.mp3: "harp glissando" by PhonosUPF is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/.
