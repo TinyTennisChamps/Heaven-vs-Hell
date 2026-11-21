@@ -1,10 +1,10 @@
 {
   "max": 100,
   "gain": {
-    "kill": 8,
-    "deathblow": 15,
-    "perfectParry": 4,
-    "hitTaken": 6
+    "kill": 4.0,
+    "deathblow": 7.5,
+    "perfectParry": 2.0,
+    "hitTaken": 3.0
   },
   "transformFrames": 20,
   "durationFrames": 240,

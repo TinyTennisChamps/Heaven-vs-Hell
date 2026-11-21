@@ -350,6 +350,11 @@ With the ramp, a hard room taken as your 3rd room costs the bot about 60 HP (bal
 - Claws do 10/10/16 damage and 8/8/14 posture.
 - Roar: 6 damage, 14 posture, a 35 px radius, a 4.2 s cooldown and 176 knockback. It no longer one-shots a cherub; a cherub survives it on 2 HP.
 
+## Rage meter fills half as fast (user request)
+- Every gain is halved: kill +4, deathblow +7.5 more, perfect parry +2, hit taken +3.
+- Filling the meter from empty takes about twice the fighting it used to.
+- Carry-over is unchanged: at most 40 starts a run.
+
 ## Rage Vials (original plan: 7, flat additive, every stat ≤ +20%)
 | L1 | L2 |
 |---|---|
