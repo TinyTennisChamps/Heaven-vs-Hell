@@ -1,7 +1,7 @@
 import { SIM_DT } from '../core/loop';
 import { normalize, type Vec2 } from '../core/math';
 import type { ProjectileSpec, SimConfig } from './config';
-import { addPlayerPosture, damagePlayer, gainPips, gainRage, rageHit, hitEnemy, inFrontCone, isPlayerInvulnerable, startHitstop } from './combat/damage';
+import { addPlayerPosture, rageDefends, damagePlayer, gainPips, gainRage, rageHit, hitEnemy, inFrontCone, isPlayerInvulnerable, startHitstop } from './combat/damage';
 import { moveAndSlide } from './physics/collide';
 import { playerRadius, raging } from './stats';
 import { emit, type Projectile, type World } from './world';
@@ -102,8 +102,7 @@ function hitPlayerAt(world: World, p: Projectile, at: Vec2, cfg: SimConfig): boo
   const from = { x: at.x - dir.x * 12, y: at.y - dir.y * 12 };
   p.pos = { ...at };
 
-  const rageBlock = raging(pl) && pl.broken === 0 && pl.guarding && inFrontCone(pl.pos, pl.facing, from, c.block.coneDeg);
-  if (raging(pl) && !rageBlock) {
+  if (raging(pl) && !rageDefends(pl, from, false, false, cfg)) {
     rageHit(world, p.healthDamage, dir, p.hitstop, p.shake, cfg);
     end(world, p);
     return true;

@@ -405,19 +405,6 @@
       }
     ]
   },
-  "roar": {
-    "layers": [
-      {
-        "file": "roar",
-        "vol": 0.9,
-        "pitch": [
-          0.9,
-          1.0
-        ],
-        "delay": 0
-      }
-    ]
-  },
   "rageStart": {
     "layers": [
       {

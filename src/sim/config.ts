@@ -417,8 +417,6 @@ export interface RageTuning {
   damageTakenMul: number;
   radiusMul: number;
   speedMul: number;
-  /** RMB in Rage: a burst around Satan. */
-  roar: { cooldownFrames: number; radius: number; healthDamage: number; postureDamage: number; knockback: number; hitstop: number; shake: number };
   /** Next run starts with min(max, meterMul * meter at death + perDeath * deaths in a row). */
   carryOver: { max: number; meterMul: number; perDeath: number };
 }

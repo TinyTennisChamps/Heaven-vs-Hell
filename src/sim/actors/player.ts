@@ -157,7 +157,6 @@ export function updatePlayer(world: World, inp: PlayerInput, aim: Vec2 | null, c
   }
 
   if (p.hitFlash > 0) p.hitFlash--;
-  if (p.roarCd > 0) p.roarCd--;
   p.recentBlocks *= 0.995; // ~3 s half-life
 
   // --- Rage: R with a full meter transforms (from anything but death). ---
@@ -225,15 +224,9 @@ export function updatePlayer(world: World, inp: PlayerInput, aim: Vec2 | null, c
     p.vel = { x: 0, y: 0 };
     emit(world, { type: 'dash', pos: { ...p.pos }, dir: { ...dir } });
   }
-  if (raging(p) && buf.has('parry')) {
-    // Rage: tapping RMB roars (no parry in Rage); holding it blocks.
-    if (p.roarCd === 0 && !p.dash && !locked(p)) {
-      buf.consume('parry');
-      roar(world, cfg);
-    } else if (p.roarCd > 0) buf.consume('parry');
-  }
   if (raging(p) && buf.has('throw')) buf.consume('throw'); // no throwing in Rage
-  if (!raging(p) && buf.has('parry') && canParry(p, cfg)) {
+  // RMB parries the same way in Rage as out of it.
+  if (buf.has('parry') && canParry(p, cfg)) {
     buf.consume('parry');
     // Re-pressing during a window that hasn't deflected anything is mashing.
     if (p.parry && !p.parry.deflected) p.parryPenalty = c.parry.whiffPenaltyFrames;
@@ -283,7 +276,7 @@ export function updatePlayer(world: World, inp: PlayerInput, aim: Vec2 | null, c
   }
   // Block is live the instant RMB is held (no gap after the parry window);
   // during the window a deflect still takes priority.
-  // Holding RMB blocks — in Rage too (a tap there roars; hold on to keep blocking).
+  // Rage too: a tap deflects, a hold blocks.
   p.guarding = inp.guardHeld && !p.dash && !p.action && !locked(p);
   if (p.parry || p.guarding) {
     // Guard faces the incoming attack, not the cursor: parrying is about timing.
@@ -424,22 +417,4 @@ export function updatePlayer(world: World, inp: PlayerInput, aim: Vec2 | null, c
       p.vel.y -= vn * r.ny;
     }
   }
-}
-
-/** Rage RMB: a hellfire burst around Satan — knocks back, hits posture, ignores shields, burns arrows. */
-function roar(world: World, cfg: SimConfig): void {
-  const p = world.player;
-  const R = cfg.rage.roar;
-  p.roarCd = R.cooldownFrames;
-  p.action = null;
-  for (const e of world.enemies) {
-    if (e.phase === 'down' || e.arrive > 0) continue;
-    const d = Math.hypot(e.pos.x - p.pos.x, e.pos.y - p.pos.y);
-    if (d > R.radius + e.radius) continue;
-    const dir = d > 1e-6 ? { x: (e.pos.x - p.pos.x) / d, y: (e.pos.y - p.pos.y) / d } : { x: 1, y: 0 };
-    hitEnemy(world, e, p.pos, dir, { ...R, strong: true, ignoreShield: true }, cfg);
-  }
-  world.projectiles = world.projectiles.filter((pr) => pr.owner === 'player' || Math.hypot(pr.pos.x - p.pos.x, pr.pos.y - p.pos.y) > R.radius);
-  startHitstop(world, R.hitstop, R.shake, cfg);
-  emit(world, { type: 'roar', pos: { ...p.pos } });
 }

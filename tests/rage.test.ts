@@ -128,21 +128,6 @@ describe('Rage form', () => {
     expect(w.player.action?.key).toBe('claw1');
   });
 
-  it('RMB roars: hits everything nearby (shields too), then goes on cooldown', () => {
-    const w = enraged(['dominion', 'dummy']);
-    const [dom, dum] = w.enemies;
-    dom!.pos = { x: 125, y: 120 };
-    dom!.facing = { x: -1, y: 0 }; // shield toward Satan
-    dum!.pos = { x: 85, y: 120 };
-    step(w, input({ press: ['parry'] }), cfg);
-    expect(dom!.hp).toBe(cfg.enemies.dominion!.health - R.roar.healthDamage);
-    expect(dum!.hp).toBe(cfg.enemies.dummy!.health - R.roar.healthDamage);
-    expect(w.player.parry).toBeNull();
-    run(w, cfg, 5);
-    step(w, input({ press: ['parry'] }), cfg);
-    expect(dom!.hp).toBe(cfg.enemies.dominion!.health - R.roar.healthDamage); // cooling down
-  });
-
   it('each kill in Rage extends it and heals', () => {
     const w = enraged();
     w.player.hp = 50;
@@ -250,13 +235,13 @@ describe('Rage Vials', () => {
   });
 });
 
-describe('blocking in Rage', () => {
+describe('blocking and parrying in Rage', () => {
   it('holding RMB in Rage blocks a hit from the front: no damage, normal posture cost', () => {
     const w = enraged();
     const e = w.enemies[0]!;
     e.facing = { x: -1, y: 0 };
     const hp = w.player.hp;
-    run(w, cfg, R.roar.cooldownFrames + 5, () => input({ hold: ['parry'], aim: { ...e.pos } })); // first press roars; keep holding
+    run(w, cfg, 20, () => input({ hold: ['parry'], aim: { ...e.pos } })); // past the deflect window: now just blocking
     w.player.posture = 0;
     startEnemyAttack(w, e, 'swing', cfg);
     run(w, cfg, 60, () => input({ hold: ['parry'], aim: { ...e.pos } }));
@@ -273,5 +258,74 @@ describe('blocking in Rage', () => {
     startEnemyAttack(w, e, 'swing', cfg);
     run(w, cfg, 60, () => input({ aim: { ...e.pos } }));
     expect(w.player.hp).toBe(hp - Math.round(cfg.enemies.dummy!.attacks.swing!.healthDamage * R.damageTakenMul));
+  });
+
+  it('a perfect parry works in Rage: no damage, the attacker recoils', () => {
+    const w = enraged();
+    const e = w.enemies[0]!;
+    e.facing = { x: -1, y: 0 };
+    const hp = w.player.hp;
+    const wind = cfg.enemies.dummy!.attacks.swing!.windup;
+    startEnemyAttack(w, e, 'swing', cfg);
+    let recoiled = false;
+    for (let t = 0; t < 40; t++) {
+      step(w, input({ press: t === wind - 1 ? ['parry'] : [], aim: { ...e.pos } }), cfg);
+      if (e.phase === 'recoil') recoiled = true;
+    }
+    expect(w.stats.deflects).toBe(1);
+    expect(w.stats.perfects).toBe(1);
+    expect(recoiled).toBe(true);
+    expect(w.player.hp).toBe(hp);
+    expect(w.stats.hitsTaken).toBe(0);
+  });
+
+  it('a late (non-perfect) deflect also works in Rage', () => {
+    const w = enraged();
+    const e = w.enemies[0]!;
+    e.facing = { x: -1, y: 0 };
+    const hp = w.player.hp;
+    const wind = cfg.enemies.dummy!.attacks.swing!.windup;
+    startEnemyAttack(w, e, 'swing', cfg);
+    const pressAt = wind - cfg.combat.parry.perfectFrames - 2;
+    for (let t = 0; t < 40; t++) step(w, input({ press: t === pressAt ? ['parry'] : [], aim: { ...e.pos } }), cfg);
+    expect(w.stats.deflects).toBe(1);
+    expect(w.stats.perfects).toBe(0);
+    expect(w.player.hp).toBe(hp);
+  });
+
+  it('an arrow tapped in Rage is deflected back at the archer', () => {
+    const shoot = (pressAt: number) => {
+      const w = enraged(['archer']);
+      const e = w.enemies[0]!;
+      e.pos = { x: 190, y: 120 };
+      e.facing = { x: -1, y: 0 };
+      const hp = w.player.hp;
+      startEnemyAttack(w, e, 'shot', cfg);
+      let hitAt = -1;
+      for (let t = 0; t < 160; t++) {
+        step(w, input({ press: t === pressAt ? ['parry'] : [], aim: { ...e.pos } }), cfg);
+        if (hitAt < 0 && w.player.hp < hp) hitAt = t;
+      }
+      return { w, e, hitAt };
+    };
+    const dry = shoot(-1);
+    expect(dry.hitAt).toBeGreaterThan(0); // hyper armour took it
+    const { w, e } = shoot(dry.hitAt - 1);
+    expect(w.stats.deflects).toBe(1);
+    expect(e.hp).toBeLessThan(cfg.enemies.archer!.health);
+  });
+
+  it('a Judgement attack still goes through a Rage parry (hyper armour takes it)', () => {
+    // The Principality's Sweep: a true unblockable (the Dominion's charge is deflectable by design).
+    const w = enraged(['zealot']);
+    const e = w.enemies[0]!;
+    e.facing = { x: -1, y: 0 };
+    const hp = w.player.hp;
+    const wind = cfg.enemies.zealot!.attacks.sweep!.windup;
+    startEnemyAttack(w, e, 'sweep', cfg);
+    for (let t = 0; t < 60; t++) step(w, input({ press: t === wind - 1 ? ['parry'] : [], aim: { ...e.pos } }), cfg);
+    expect(w.stats.deflects).toBe(0);
+    expect(w.player.hp).toBeLessThan(hp);
+    expect(w.player.hurtStun).toBe(0);
   });
 });

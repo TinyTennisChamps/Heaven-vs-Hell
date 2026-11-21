@@ -105,8 +105,6 @@ export interface PlayerState {
   rageForm: number;
   /** Invulnerable transform ticks remaining. */
   rageTransform: number;
-  /** Rage roar (RMB) cooldown ticks. */
-  roarCd: number;
 }
 
 /** A vial in the room: behind a cracked rim spot, or in a cage that opens on clear. */
@@ -218,7 +216,6 @@ export type SimEvent =
   | { type: 'rageFull'; pos: Vec2 }
   | { type: 'rageStart'; pos: Vec2 }
   | { type: 'rageEnd'; pos: Vec2 }
-  | { type: 'roar'; pos: Vec2 }
   | { type: 'crackHit'; pos: Vec2 }
   | { type: 'crackBroken'; pos: Vec2 }
   | { type: 'cageOpen'; pos: Vec2 }
@@ -377,7 +374,6 @@ export function createWorld(room: RoomDef, cfg: SimConfig, seed = 1, carry?: Car
       rage: carry?.rage ?? 0,
       rageForm: 0,
       rageTransform: 0,
-      roarCd: 0,
     },
     enemies: [],
     projectiles: [],

@@ -65,12 +65,6 @@ export class Scene {
   private fontG = new Graphics();
   /** Where each exit door leads (icons above them); null hides icons (training). */
   doorKinds: DoorKind[] | null = null;
-  private roarRings: { pos: Vec2; age: number }[] = [];
-
-  /** Expanding hellfire ring for the Rage roar (ground position). */
-  roarRing(pos: Vec2): void {
-    this.roarRings.push({ pos: { ...pos }, age: 0 });
-  }
 
   /** Debug layer toggles (F8). Gameplay layers can't be switched off. */
   layers = { decoration: true, lighting: true, parallax: true, ambient: true, hazards: false, readability: false, hud: true };
@@ -296,7 +290,7 @@ export class Scene {
     }
   }
 
-  /** A brief light where something happened (hits, parries, the roar). Ground position. */
+  /** A brief light where something happened (hits, parries, Rage). Ground position. */
   lightFlash(pos: Vec2, color: number, strong = false): void {
     const L = this.biome.lighting.flash;
     const s = groundToScreen(pos.x, pos.y);
@@ -440,14 +434,6 @@ export class Scene {
         }
       }
     }
-    // Roar rings.
-    for (const r of this.roarRings) {
-      r.age++;
-      const k = r.age / 16;
-      const rad = 8 + (cfg.rage.roar.radius - 8) * Math.min(1, k * 1.4);
-      this.fx.poly(proj(groundCircle(r.pos, rad, 24), 2)).stroke({ width: 2, color: k < 0.5 ? SATAN.eyeGlow : SATAN.hellfire, alpha: 1 - k });
-    }
-    this.roarRings = this.roarRings.filter((r) => r.age < 16);
     this.drawPickups(world);
 
     // Facing marker: a small hellfire arc on the floor where Satan points.

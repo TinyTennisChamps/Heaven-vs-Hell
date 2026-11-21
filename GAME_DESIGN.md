@@ -198,7 +198,7 @@ So a full run costs a decent player about 70 of 140 effective HP. The guard rail
 ## M6: Rage and Rage Vials
 Decisions confirmed with the user on 2026-11-20:
 - Hyper armour at half damage.
-- RMB is a hellfire roar.
+- RMB was a hellfire roar. *(Removed on 2026-11-21 at the user's request: RMB now parries and blocks in Rage, see "Parrying and blocking in Rage".)*
 - A hard room's cage opens when the room is cleared.
 - The hidden vial is opened by slashing a cracked rim 3 times.
 
@@ -223,12 +223,9 @@ Decisions confirmed with the user on 2026-11-20:
 **In the form:**
 - **Size and speed:** Satan is drawn ×1.25 with a hellfire aura and embers. His collider is ×1.3 and he moves ×1.1 faster.
 - **Claws:** LMB is the claw combo (`claw1`–`claw3` in `attacks/satan.json`, reusing the slash art). Claws are faster, wider and hit harder, with three raking streaks.
-- **Roar (RMB):**
-  - A 44 px burst with a 2 s cooldown.
-  - 8 damage, enough to kill a cherub, plus 30 posture and a big knockback.
-  - It ignores shields and burns enemy arrows in its radius.
+- **RMB:** parries and blocks exactly as outside Rage (the roar was removed).
 - **Hyper armour:** hits deal 50% damage, never stagger or knock back, never add posture, and don't interrupt the claws.
-- **Disabled:** parry, block and throw.
+- **Disabled:** throw.
 - **Deathblows** still work.
 
 **Carry-over:**
@@ -458,7 +455,7 @@ Decisions:
 **Shared engine:**
 - Biomes (`data/biomes/*.json`).
 - `RoomArt`: floors, edges, walls by kind, props.
-- `Lighting`: darkness over the floor and walls only, so gameplay is never darkened; stepped light holes; at most 16 lights; flashes on hits, parries, the roar, deathblows and room clears.
+- `Lighting`: darkness over the floor and walls only, so gameplay is never darkened; stepped light holes; at most 16 lights; flashes on hits, parries, Rage, deathblows and room clears.
 - `Parallax` (at most 4 layers), `Ambient` (at most 120 particles), `Grade` (tint and a stepped vignette, no filters).
 - Title cards, the room-clear moment (24f at half speed, a flare and stings), door icons (combat, hard, **elite**, rest, **set-piece** bell, **secret** eye, boss, end).
 - The music director (explore, combat and boss layers on the beat; ambience, reverb, footsteps, stings; all silent hooks).
@@ -565,10 +562,10 @@ Create `data/rooms/<level>/<id>.json`:
 - **Vial unlock** (user request: "like a Zelda chest opening"): a rising harp glissando that peaks on A, straight into an A-major "ta-da" fanfare (fixed pitch so the two stay in key). It's our own combination of two library sounds, not Zelda's melody. A cage opening plays a shorter harp run.
 - **M** mutes. Music is still silent hooks.
 
-## Blocking in Rage (user request)
-- Holding RMB in Rage now blocks. It costs normal posture, and a posture break is still possible.
-- A tap still roars when the roar is ready; keep holding after the roar to block.
-- Blows that get past the block meet the usual Rage hyper armour.
+## Parrying and blocking in Rage (user request)
+- **The roar is gone.** RMB in Rage works exactly as it does outside it: a tap deflects (perfect deflects, ripostes and reflected arrows included) and a hold blocks at normal posture cost.
+- Anything the parry or guard doesn't catch (no press, the wrong angle, a true Judgement) meets the usual Rage hyper armour. `rageDefends()` in `combat/damage.ts` decides this for melee and projectiles.
+- A perfect parry in Rage still gives a pip but doesn't fill the meter (it can't fill while raging).
 
 ## Rage Vials (original plan: 7, flat additive, every stat ≤ +20%)
 | L1 | L2 |

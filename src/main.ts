@@ -461,7 +461,6 @@ async function boot() {
           scene.lightFlash(ev.pos, HEAVEN.gold1, ev.perfect);
           break;
         case 'deathblow':
-        case 'roar':
         case 'rageStart':
           scene.lightFlash(ev.pos, SATAN.hellfire, true);
           break;
@@ -649,10 +648,6 @@ function spawnEffects(world: World, scene: Scene): void {
         break;
       case 'rageEnd':
         P.burst(s.x, s.y - 14, { count: 18, colors: [SATAN.cloak2, SATAN.blood, SATAN.ember], speed: 60, life: 0.6 });
-        break;
-      case 'roar':
-        scene.roarRing(ev.pos);
-        P.burst(s.x, s.y - 10, { count: 36, colors: [SATAN.hellfire, SATAN.ember, SATAN.eyeGlow], speed: 200, life: 0.4, drag: 0.85 });
         break;
       case 'blockFail':
         // Guarding a Judgement does nothing: a dull grey burst says so.

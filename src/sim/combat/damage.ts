@@ -29,8 +29,6 @@ export interface HitSpec {
   hitstop: number;
   shake: number;
   strong?: boolean;
-  /** Ignores shields (the Rage roar bursts all round). */
-  ignoreShield?: boolean;
 }
 
 // ---------------------------------------------------------------- enemies
@@ -116,7 +114,7 @@ export function hitEnemy(world: World, e: Enemy, from: Vec2, dir: Vec2, spec: Hi
   e.hitFlash = cfg.combat.hitFlashFrames;
   e.sinceHit = 0;
 
-  if (!spec.ignoreShield && def.shieldArcDeg > 0 && shieldUp(e) && inFrontCone(e.pos, e.facing, from, def.shieldArcDeg)) {
+  if (def.shieldArcDeg > 0 && shieldUp(e) && inFrontCone(e.pos, e.facing, from, def.shieldArcDeg)) {
     e.blockedHits++;
     e.shieldFlash = 6;
     e.hitFlash = 0;
@@ -186,6 +184,15 @@ export function addPlayerPosture(world: World, amount: number, cfg: SimConfig): 
   }
 }
 
+/** In Rage, does Satan's parry or guard catch an attack from `from`? (Otherwise hyper armour takes it.) */
+export function rageDefends(p: PlayerState, from: Vec2, judgement: boolean, deflectable: boolean, cfg: SimConfig): boolean {
+  if (p.broken > 0) return false;
+  const c = cfg.combat;
+  const deflect = !!p.parry && !p.parry.deflected && p.parry.frame <= p.parry.window && (!judgement || deflectable) && inFrontCone(p.pos, p.facing, from, c.parry.coneDeg);
+  const block = !judgement && p.guarding && inFrontCone(p.pos, p.facing, from, c.block.coneDeg);
+  return deflect || block;
+}
+
 /**
  * An enemy attack reaches Satan. Resolution order:
  *   i-frames -> judgement (skips guard; `deflectable` ones still allow the deflect) -> deflect window -> block cone -> hit.
@@ -196,9 +203,8 @@ export function resolveOnPlayer(world: World, attacker: Enemy, baseAtk: EnemyAtt
   if (isPlayerInvulnerable(p, cfg)) return 'evaded';
   const c = cfg.combat;
   const dir = normalize({ x: p.pos.x - attacker.pos.x, y: p.pos.y - attacker.pos.y });
-  // Rage: a held guard still blocks (normal posture cost); anything else meets hyper armour.
-  const rageBlock = raging(p) && !atk.judgement && p.broken === 0 && p.guarding && inFrontCone(p.pos, p.facing, attacker.pos, cfg.combat.block.coneDeg);
-  if (raging(p) && !rageBlock) {
+  // Rage: a live deflect or a held guard works as normal; anything else meets hyper armour.
+  if (raging(p) && !rageDefends(p, attacker.pos, !!atk.judgement, !!atk.deflectable, cfg)) {
     rageHit(world, atk.healthDamage, dir, atk.hitstop, atk.shake, cfg);
     return 'hit';
   }

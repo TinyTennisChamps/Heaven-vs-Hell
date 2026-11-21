@@ -10,7 +10,7 @@ export const MAX_LIGHTS = 16;
  * back walls (never Satan, enemies or telegraphs, which stay full-bright) and
  * each light "erases" a stepped radial hole in it, so pools of light read as
  * crisp bands, not blur. A faint additive glow adds colour on top.
- * Transient flashes (hits, parries, the roar) briefly light the room.
+ * Transient flashes (hits, parries, Rage) briefly light the room.
  */
 export class Lighting {
   /** Screen-sized darkness, placed in the world layer above the floor. */

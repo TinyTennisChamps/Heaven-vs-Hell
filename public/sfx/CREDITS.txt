@@ -22,7 +22,6 @@ stab.mp3: "Sword stab 2" by ihitokage is marked with CC0 1.0. To view the terms,
 schwing.mp3: "Schwing 1" by magnuswaker is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/.
 dash.mp3: "Swipe Whoosh" by qubodup is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/.
 enemy_swing.mp3: "Melee Combat Whoosh" by EminYILDIRIM is licensed under CC BY 4.0. To view a copy of this license, visit https://creativecommons.org/licenses/by/4.0/.
-roar.mp3: "Scary Monster Roar #2" by NicknameLarry is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/.
 rage_transform.mp3: "Low Monster Roar" by Robson220pl is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/.
 bolt.mp3: "Fire Magic Whoosh" by EminYILDIRIM is licensed under CC BY 4.0. To view a copy of this license, visit https://creativecommons.org/licenses/by/4.0/.
 wings_light.mp3: "Light Wing Flap" by TurboFool is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/.
