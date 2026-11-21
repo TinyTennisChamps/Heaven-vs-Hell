@@ -388,7 +388,7 @@ Decisions:
 - Sound hooks: `telegraph:<enemy>:<attack>` (e.g. `telegraph:watcher:laser` is the charge hum), plus `stagger`, `blockFail` and `flinch`.
 
 **The Watcher** (`data/enemies/watcher.json`, `src/sim/actors/watcher.ts`, Training key 7): a floating eye with golden wings, a flyer.
-- 50 HP (5 slashes), 60 posture, light knockback, ×2 posture from bolts and from its own reflected lasers.
+- 100 HP (about 10 slashes; raised from 50 at the user's request), 60 posture, light knockback, ×2 posture from bolts and from its own reflected lasers.
 - It orbits Satan at 110–160 px and retreats fast inside 70 px.
 
 | Attack | Windup | Active | Recovery | Damage / posture | Notes |
