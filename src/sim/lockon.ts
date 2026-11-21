@@ -73,5 +73,6 @@ export function updateLock(w: World, input: InputFrame, cfg: SimConfig): void {
   const t = lockTarget(w);
   // Unlocked: the nearest non-swarmer is the focus (cherubs run their own pool).
   const near = byDistance(w, Infinity);
-  w.focusId = t ? t.id : ((near.find((e) => !cfg.enemies[e.type]?.swarm) ?? near[0])?.id ?? null);
+  // An elite always takes the duel when present; then the nearest non-swarmer.
+  w.focusId = t ? t.id : ((near.find((e) => cfg.enemies[e.type]?.elite) ?? near.find((e) => !cfg.enemies[e.type]?.swarm) ?? near[0])?.id ?? null);
 }

@@ -169,6 +169,20 @@ export interface EnemyAttackDef {
   leap?: { frames: number; maxDist: number; homeFrac: number; height: number };
   /** Parrying doesn't stagger it (no riposte opening); the string keeps coming. */
   relentless?: boolean;
+  /** Movement at the start of the windup: a sidestep (angleDeg ±, randomSide picks the side), a backstep (angle 180) or a pull-back. */
+  preStep?: { px: number; angleDeg: number; frames: number; randomSide?: boolean };
+  /** A movement-only "attack" (sidestep, wing-dash): no hitbox, never counts as busy. */
+  noHit?: boolean;
+  /** Super-armour: Satan's hits still hurt and build posture but cause no knockback or flinch. A posture break still ends it. */
+  superArmor?: boolean;
+  /** Overrides what a deflect does to the attacker: posture added, and a stagger (riposte window) on any deflect. */
+  onDeflect?: { posture: number; perfectPosture: number; recoilFrames: number };
+  /** Fire `count` projectiles, `interval` ticks apart, starting on the first active tick (aim locked). */
+  volley?: { count: number; interval: number };
+  /** After this attack (or its string) recovers, it can't be used again for [min, max] ticks. */
+  cooldownAfter?: [number, number];
+  /** Ranged pool: doesn't gate melee enemies; at most one ranged-pool attack is telegraphed in a room at once. */
+  rangedPool?: boolean;
   /** Visual kind of the projectile (default 'arrow'). */
   projectileKind?: 'arrow' | 'laser';
   /** On the first active tick, call in reinforcements instead of striking. */
@@ -201,6 +215,25 @@ export interface EnemyDef {
   /** Flanking punish: after Satan spends `afterFrames` behind the shield within `range`, spin (once per cooldown). */
   flankSpin?: { afterFrames: number; range: number; cooldownFrames: number };
   posture: PostureTuning;
+  /** Elites (one per room) are preferred as the focus when Satan isn't locked on. */
+  elite?: boolean;
+  /** Flies over low cover (hedges, fountains); still blocked by pillars and the arena edge. */
+  flying?: boolean;
+  /** A short hit-reaction when not in super-armour, then immunity so it can't be stun-locked. */
+  flinchFrames?: number;
+  flinchImmuneFrames?: number;
+  /** Posture multiplier for its own projectiles deflected back into it. */
+  reflectPostureMul?: number;
+  /** Knockback taken multiplier (light floaters). */
+  knockbackMul?: number;
+  /** Render: telegraph colour (e.g. the Watcher's iris), CSS hex. */
+  telegraphColor?: string;
+  /** Name shown in the Training Court and debug overlay. */
+  displayName?: string;
+  /** Sprite height (px), for health bars and markers above it. */
+  height?: number;
+  /** Per-type AI tuning values (ranges, trigger counts, weights). */
+  ai?: Record<string, number>;
   /** Bosses: hand-tuned (no level scaling), a big HUD bar, and `segments` health bars. */
   boss?: boolean;
   /** Display name for the boss bar. */

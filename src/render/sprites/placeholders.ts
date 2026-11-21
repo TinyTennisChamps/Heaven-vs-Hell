@@ -260,3 +260,61 @@ export function drawGabriel(g: Graphics, pose: GabrielPose, flash: boolean): voi
     g.poly([sx + lean, sy - 2, sx + 7 + lean, sy - 1, sx + lean, sy + 2]).fill(c(HEAVEN.gold1)).stroke({ width: 1, color: c(HEAVEN.gold3), alignment: 1 });
   }
 }
+
+export type WatcherPose = 'idle' | 'charge' | 'fire' | 'biteWindup' | 'bite' | 'jammed' | 'grounded';
+
+/**
+ * Watcher ("Grigori"): one great eye — pearl sclera, pale-blue iris, black
+ * slit — on golden wings. For the laser the iris (only the iris) turns the
+ * telegraph colour. For the chomp the slit splits vertically into a toothed
+ * maw and the eye swells. Origin = ground point below it; `lift` raises it.
+ * Asset slots: idle, hover_move, laser_charge, laser_fire, laser_recover,
+ * bite_windup, bite_lunge, bite_recover, hurt, stagger, grounded, death.
+ */
+export function drawWatcher(g: Graphics, pose: WatcherPose, flash: boolean, lift: number, flap: number, irisTelegraph: number): void {
+  const c = (col: number) => (flash ? 0xffffff : col);
+  const line = flash ? 0xffffff : ANGEL.angelLine;
+  const st = { width: 1, color: line, alignment: 1 } as const;
+  g.clear();
+  const grounded = pose === 'grounded';
+  const R = pose === 'bite' || pose === 'jammed' ? 19 : pose === 'charge' || pose === 'fire' ? 16 : 14; // swells 1.3x to bite
+  const cy = grounded ? -R + 2 : -30 - lift;
+  // Wings: slow flap idle, flared wide to attack, drooped when grounded.
+  const flare = pose === 'charge' || pose === 'fire' || pose === 'biteWindup' || pose === 'bite' ? -8 : 0;
+  const wy = grounded ? 8 : flap + flare;
+  for (const s of [-1, 1]) {
+    const x0 = s * (R - 3);
+    g.poly([x0, cy - 4, s * (R + 16), cy - 14 + wy, s * (R + 22), cy - 2 + wy, s * (R + 12), cy + 8 + wy * 0.5, x0, cy + 6]).fill(c(HEAVEN.gold2)).stroke(st);
+    g.moveTo(x0 + s * 4, cy - 2).lineTo(s * (R + 16), cy - 10 + wy).stroke({ width: 1, color: c(HEAVEN.gold1) });
+    g.moveTo(x0 + s * 4, cy + 3).lineTo(s * (R + 13), cy + 4 + wy * 0.7).stroke({ width: 1, color: c(HEAVEN.gold3) });
+  }
+  if (pose === 'bite' || pose === 'biteWindup' || pose === 'jammed') {
+    // The eye splits open vertically into a maw: dark throat, white teeth on both lips.
+    const open = pose === 'biteWindup' ? 0.55 : 1;
+    g.circle(0, cy, R).fill(c(ANGEL.pearl)).stroke(st);
+    const mw = R * 0.95 * open;
+    g.ellipse(0, cy, mw, R * 0.9).fill(flash ? 0xffffff : ANGEL.void);
+    if (!flash) {
+      g.ellipse(0, cy + 2, mw * 0.6, R * 0.6).fill(0x1c1a2c);
+      for (let i = -3; i <= 3; i++) {
+        const ty = cy + i * (R * 0.24);
+        const half = Math.sqrt(Math.max(0, 1 - (i * 0.27) ** 2)) * mw;
+        g.poly([-half, ty - 2, -half + 4, ty, -half, ty + 2]).fill(0xffffff);
+        g.poly([half, ty - 2, half - 4, ty, half, ty + 2]).fill(0xffffff);
+      }
+    }
+    return;
+  }
+  // Eyeball.
+  g.circle(0, cy, R).fill(c(ANGEL.pearl)).stroke(st);
+  g.circle(-R * 0.35, cy - R * 0.4, R * 0.25).fill({ color: 0xffffff, alpha: 0.7 });
+  if (grounded) {
+    // Eye shut: a lid line and lashes.
+    g.moveTo(-R + 2, cy).lineTo(R - 2, cy).stroke({ width: 2, color: c(ANGEL.angelLine) });
+    for (let i = -2; i <= 2; i++) g.moveTo(i * 4, cy).lineTo(i * 5, cy + 3).stroke({ width: 1, color: c(ANGEL.angelLine) });
+    return;
+  }
+  const iris = pose === 'charge' || pose === 'fire' ? irisTelegraph : ANGEL.sky2;
+  g.circle(1, cy, R * 0.5).fill(c(iris)).stroke({ width: 1, color: c(ANGEL.angelLine), alignment: 1 });
+  if (!flash) g.rect(0, cy - R * 0.4, 2, R * 0.8).fill(ANGEL.void);
+}

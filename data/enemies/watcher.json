@@ -1,0 +1,102 @@
+{
+  "displayName": "Grigori",
+  "health": 50,
+  "radius": 10,
+  "height": 60,
+  "speed": 70,
+  "turnRateDeg": 10,
+  "attackRange": 200,
+  "preferredRange": 135,
+  "cooldownMin": 40,
+  "cooldownMax": 70,
+  "respawnFrames": 120,
+  "brokenFrames": 150,
+  "shieldArcDeg": 0,
+  "shieldPostureMul": 0,
+  "flying": true,
+  "knockbackMul": 0.4,
+  "throwPostureMul": 2,
+  "reflectPostureMul": 2,
+  "telegraphColor": "#ff4a3d",
+  "ai": {
+    "rangeMin": 110,
+    "rangeMax": 160,
+    "retreatRange": 70,
+    "retreatSpeed": 110,
+    "laserMinRange": 90,
+    "biteRange": 48,
+    "biteCloseTicks": 20,
+    "biteMeleeHits": 2
+  },
+  "posture": {
+    "max": 60,
+    "regenDelay": 70,
+    "regenPerSec": 12,
+    "lowHealthMul": 0.5
+  },
+  "attacks": {
+    "laser": {
+      "range": 200,
+      "windup": 40,
+      "trackUntil": 26,
+      "active": 21,
+      "recovery": 30,
+      "healthDamage": 12,
+      "postureDamage": 14,
+      "knockback": 120,
+      "hitstop": 3,
+      "shake": 1.5,
+      "hitbox": {
+        "radius": 1,
+        "angleDeg": 1,
+        "offset": 0
+      },
+      "projectile": {
+        "speed": 300,
+        "radius": 3,
+        "lifeFrames": 60
+      },
+      "projectileKind": "laser",
+      "volley": {
+        "count": 3,
+        "interval": 10
+      },
+      "cooldownAfter": [
+        150,
+        210
+      ],
+      "rangedPool": true
+    },
+    "chomp": {
+      "range": 56,
+      "windup": 26,
+      "trackUntil": 20,
+      "active": 6,
+      "recovery": 28,
+      "healthDamage": 22,
+      "postureDamage": 30,
+      "knockback": 240,
+      "hitstop": 6,
+      "shake": 3,
+      "hitbox": {
+        "radius": 20,
+        "angleDeg": 100,
+        "offset": 6
+      },
+      "lunge": {
+        "px": 44,
+        "overFrames": 6
+      },
+      "preStep": {
+        "px": 8,
+        "angleDeg": 180,
+        "frames": 6
+      },
+      "onDeflect": {
+        "posture": 45,
+        "perfectPosture": 60,
+        "recoilFrames": 70
+      }
+    }
+  }
+}

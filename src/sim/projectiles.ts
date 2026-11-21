@@ -20,6 +20,7 @@ export function spawnProjectile(
   dir: Vec2,
   spec: ProjectileSpec,
   dmg: { healthDamage: number; postureDamage: number; knockback: number; hitstop: number; shake: number },
+  gates = true,
 ): Projectile {
   const d = normalize(dir);
   const p: Projectile = {
@@ -34,6 +35,7 @@ export function spawnProjectile(
     life: spec.lifeFrames,
     ...dmg,
     reflected: false,
+    gates,
     perfect: false,
   };
   world.projectiles.push(p);
@@ -42,7 +44,7 @@ export function spawnProjectile(
 
 /** True while an enemy's arrow is in the air (counts as an attack in flight). `exceptShooter` ignores that enemy's own arrows. */
 export function enemyArrowInFlight(world: World, exceptShooter?: number): boolean {
-  return world.projectiles.some((p) => p.owner !== 'player' && p.owner !== exceptShooter);
+  return world.projectiles.some((p) => p.owner !== 'player' && p.owner !== exceptShooter && p.gates);
 }
 
 function end(world: World, p: Projectile): void {
@@ -82,7 +84,8 @@ function hitEnemiesAt(world: World, p: Projectile, at: Vec2, cfg: SimConfig): bo
     const dir = normalize(p.vel);
     const from = { x: at.x - dir.x * 12, y: at.y - dir.y * 12 };
     const def = cfg.enemies[e.type]!;
-    const postureMul = p.kind === 'bolt' ? (def.throwPostureMul ?? 1) : 1;
+    // Satan's bolts hurt floaters' posture extra; their own deflected shots too.
+    const postureMul = p.kind === 'bolt' ? (def.throwPostureMul ?? 1) : p.reflected && p.shooter === e.id ? (def.reflectPostureMul ?? 1) : 1;
     hitEnemy(world, e, from, dir, { healthDamage: p.healthDamage, postureDamage: p.postureDamage * postureMul, knockback: p.knockback, hitstop: p.hitstop, shake: p.shake, strong: p.perfect }, cfg);
     end(world, p);
     return true;
@@ -106,9 +109,9 @@ function hitPlayerAt(world: World, p: Projectile, at: Vec2, cfg: SimConfig): boo
   }
 
   // Deflect: send it back at the archer.
-  if (pl.broken === 0 && pl.parry && pl.parry.frame <= pl.parry.window && inFrontCone(pl.pos, pl.facing, from, c.parry.coneDeg)) {
+  if (pl.broken === 0 && pl.parry && !pl.parry.deflected && pl.parry.frame <= pl.parry.window && inFrontCone(pl.pos, pl.facing, from, c.parry.coneDeg)) {
     const perfect = pl.parry.frame <= c.parry.perfectFrames;
-    pl.parry.deflected = true;
+    pl.parry.deflected = true; // spent: one press, one deflect
     pl.parryPenalty = 0;
     world.stats.deflects++;
     if (perfect) {

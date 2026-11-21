@@ -24,6 +24,8 @@ export interface AttackState {
 export interface Projectile {
   id: number;
   kind: 'bolt' | 'arrow' | 'laser';
+  /** Does this projectile hold other enemies' attacks while in flight? (false for ranged-pool shots) */
+  gates: boolean;
   /** 'player' or the id of the enemy that fired it. A reflected arrow becomes Satan's. */
   owner: 'player' | number;
   /** Enemy that originally shot it (reflections fly back at them). */
@@ -91,6 +93,8 @@ export interface PlayerState {
   lockId: number | null;
   /** Ticks Q has been held since a press while locked (-1 = not measuring). */
   lockHold: number;
+  /** Decaying count of recent blocks (enemies read it: the Zealot sweeps a turtle). */
+  recentBlocks: number;
   /** Health reached 0 (and the world isn't immortal). */
   dead: boolean;
   /** Rage meter, 0..rage.max. Full = R transforms. */
@@ -116,7 +120,7 @@ export interface Pickup {
   taken: boolean;
 }
 
-export type EnemyPhase = 'idle' | 'windup' | 'active' | 'recover' | 'recoil' | 'broken' | 'down' | 'rally';
+export type EnemyPhase = 'idle' | 'windup' | 'active' | 'recover' | 'recoil' | 'broken' | 'down' | 'rally' | 'flinch';
 
 export interface Enemy {
   id: number;
@@ -162,6 +166,18 @@ export interface Enemy {
   windupLen: number;
   /** Bosses: health segments left (1 = last). Each one ends in a deathblow/kill. */
   segments: number;
+  /** Length of the current recoil (stagger) phase. */
+  recoilLen: number;
+  /** Ticks Satan has stayed within close range (Watcher bite trigger). */
+  closeTicks: number;
+  /** Melee hits taken since the last bite (Watcher bite trigger). */
+  meleeHits: number;
+  /** Ticks of flinch immunity left. */
+  flinchImmune: number;
+  /** Per-attack cooldowns (cooldownAfter). */
+  cds: Record<string, number>;
+  /** Side chosen for the current attack's pre-step (±1). */
+  stepSide: number;
   /** Leap attacks: take-off point and (homing, then locked) landing point. */
   leapFrom: Vec2;
   leapTo: Vec2;
@@ -175,7 +191,7 @@ export type SimEvent =
   | { type: 'dash'; pos: Vec2; dir: Vec2 }
   | { type: 'dashReady'; pos: Vec2 }
   | { type: 'enemyDown'; pos: Vec2 }
-  | { type: 'telegraph'; pos: Vec2; judgement: boolean }
+  | { type: 'telegraph'; pos: Vec2; judgement: boolean; attack?: string; enemy?: string }
   | { type: 'deflect'; pos: Vec2; dir: Vec2; perfect: boolean }
   | { type: 'block'; pos: Vec2; dir: Vec2 }
   | { type: 'shieldBlock'; pos: Vec2; dir: Vec2 }
@@ -207,7 +223,10 @@ export type SimEvent =
   | { type: 'bossPhase'; pos: Vec2; phase: number }
   | { type: 'summon'; pos: Vec2 }
   | { type: 'interrupt'; pos: Vec2 }
-  | { type: 'leapLand'; pos: Vec2 };
+  | { type: 'leapLand'; pos: Vec2 }
+  | { type: 'blockFail'; pos: Vec2 }
+  | { type: 'flinch'; pos: Vec2 }
+  | { type: 'stagger'; pos: Vec2 };
 
 /** Level/room difficulty applied to enemies as they spawn (bosses use their own data). */
 export interface EnemyScale {
@@ -254,6 +273,8 @@ export interface World {
   rng: RngState;
   room: RoomDef;
   segs: Seg[];
+  /** Only the tall walls (pillars) + the arena edge: what flying enemies collide with. */
+  tallSegs: Seg[];
   /** Screen-space bounding box of the room (for camera clamping). */
   screenBox: { minX: number; minY: number; maxX: number; maxY: number };
   buffer: InputBuffer;
@@ -284,6 +305,7 @@ export interface World {
 
 export function createWorld(room: RoomDef, cfg: SimConfig, seed = 1, carry?: Carry, pickups: Pickup[] = [], scale: EnemyScale = { health: 1, posture: 1, damage: 1 }): World {
   const segs = [...segmentsFromPolygon(room.bounds), ...room.walls.flatMap((w) => segmentsFromPolygon(w))];
+  const tallSegs = [...segmentsFromPolygon(room.bounds), ...room.walls.filter((_, i) => (room.wallKinds?.[i] ?? 'pillar') === 'pillar').flatMap((w) => segmentsFromPolygon(w))];
   const pts = room.bounds.map(([x, y]) => groundToScreen(x, y));
   const screenBox = {
     minX: Math.min(...pts.map((p) => p.x)),
@@ -299,6 +321,7 @@ export function createWorld(room: RoomDef, cfg: SimConfig, seed = 1, carry?: Car
     rng: createRng(seed),
     room,
     segs,
+    tallSegs,
     screenBox,
     buffer: new InputBuffer({}, cfg.feel.inputBufferFrames),
     hitstop: 0,
@@ -329,6 +352,7 @@ export function createWorld(room: RoomDef, cfg: SimConfig, seed = 1, carry?: Car
       broken: 0,
       lockId: null,
       lockHold: -1,
+      recentBlocks: 0,
       pips: carry ? carry.pips : cfg.player.throw.maxPips,
       pipProgress: 0,
       dead: false,
@@ -392,6 +416,12 @@ export function spawnEnemy(world: World, cfg: SimConfig, type: string, at: Vec2)
     dmgMul: sc.damage,
     windupLen: 0,
     segments: d.segments ?? 1,
+    recoilLen: 0,
+    closeTicks: 0,
+    meleeHits: 0,
+    flinchImmune: 0,
+    cds: {},
+    stepSide: 1,
     leapFrom: { ...at },
     leapTo: { ...at },
     spawn: { ...at },

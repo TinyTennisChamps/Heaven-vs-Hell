@@ -11,7 +11,7 @@ import type { Enemy, World } from '../sim/world';
 import { ANGEL, GARDEN, HEAVEN, JUDGEMENT, SATAN } from './palette';
 import { Particles } from './particles';
 import { Sparks } from './sparks';
-import { drawArcher, drawCherub, drawDominion, drawDummy, drawGabriel, type ArcherPose, type CherubPose, type DominionPose, type GabrielPose } from './sprites/placeholders';
+import { drawArcher, drawCherub, drawDominion, drawDummy, drawGabriel, drawWatcher, type ArcherPose, type CherubPose, type DominionPose, type GabrielPose, type WatcherPose } from './sprites/placeholders';
 import type { DoorKind } from '../sim/rooms/run';
 import type { WallKind } from '../sim/config';
 import { maxHp, maxPips, maxPosture, playerRadius } from '../sim/stats';
@@ -504,7 +504,8 @@ export class Scene {
       this.place(s, ep, groundToScreen(faceDir.x, faceDir.y).x < 0);
       // The last flashLeadFrames of a windup blink white: "it's coming now" —
       // early enough that reacting to it still lands inside the parry window.
-      const tele = !!atk && e.phase === 'windup' && e.phaseFrame > e.windupLen - cfg.combat.telegraph.flashLeadFrames && Math.floor(e.phaseFrame / 3) % 2 === 0;
+      // Ranged windups don't flash (you parry the shot when it arrives, not when it's fired).
+      const tele = !!atk && !atk.projectile && e.phase === 'windup' && e.phaseFrame > e.windupLen - cfg.combat.telegraph.flashLeadFrames && Math.floor(e.phaseFrame / 3) % 2 === 0;
       const flash = e.hitFlash > 0 || tele;
       // Spawning in: descend from the light and fade up.
       const arriving = e.arrive > 0 ? e.arrive / Math.max(1, cfg.rooms.arriveFrames) : 0;
@@ -514,7 +515,13 @@ export class Scene {
         const sp = groundToScreen(ep.x, ep.y);
         this.telegraphs.rect(Math.round(sp.x) - 3, Math.round(sp.y) - 90, 7, 90).fill({ color: HEAVEN.gold1, alpha: 0.35 * arriving });
       }
-      if (e.type === 'gabriel') {
+      if (e.type === 'watcher') {
+        const pose = watcherPose(e);
+        const lift = pose === 'grounded' ? 0 : Math.round(2 * Math.sin(world.tick * 0.07 + e.id));
+        const flap = Math.round(3 * Math.sin(world.tick * 0.12 + e.id));
+        const iris = parseInt((cfg.enemies.watcher?.telegraphColor ?? '#ff4a3d').replace('#', ''), 16);
+        this.redraw(s, `${pose}${flash}${lift}${flap}${iris}`, () => drawWatcher(s!.body, pose, flash, lift, flap, iris));
+      } else if (e.type === 'gabriel') {
         const pose = gabrielPose(e);
         // Leap: lifted on an arc above his (moving) shadow; a ring marks where he'll land.
         const L = atk?.leap;
@@ -549,7 +556,7 @@ export class Scene {
       this.enemyTelegraph(e, cfg, ep);
       const edef = cfg.enemies[e.type];
       // Cherubs: no bars (one hit kills). Bosses: the big bar at the bottom of the screen.
-      if (!edef?.noPosture && !edef?.boss) this.enemyBars(e, ep);
+      if (!edef?.noPosture && !edef?.boss) this.enemyBars(e, ep, e.phase === 'broken' && edef?.flying ? 40 : (edef?.height ?? 40));
       if (world.player.lockId === e.id) this.lockMarker(ep, world.tick);
     }
     for (const [id, s] of this.enemySprites) {
@@ -569,12 +576,13 @@ export class Scene {
       const tx = (-v.x / vl) * len;
       const ty = (-v.y / vl) * len;
       const x = Math.round(sp.x);
-      const y = Math.round(sp.y - 12);
+      const y = Math.round(sp.y - (pr.kind === 'laser' ? 28 : 12)); // lasers fly at eye/hand height
       const satans = pr.owner === 'player';
       // Angels' arrows are pale light; anything Satan owns (bolts, reflected arrows) burns red.
       const tail = satans ? (pr.perfect ? SATAN.eyeGlow : SATAN.ember) : pr.kind === 'laser' ? HEAVEN.gold1 : ANGEL.sky2;
       const core = satans ? (pr.kind === 'bolt' ? SATAN.hellfire : pr.perfect ? 0xffffff : SATAN.hellfire) : 0xffffff;
       // Two-tone streak: wide coloured tail with a bright inner line, then a solid head.
+      if (pr.kind === 'laser' && !satans) this.fx.moveTo(x, y).lineTo(x + tx, y + ty).stroke({ width: 5, color: ANGEL.sky, alpha: 0.4 }); // pale-blue edge
       this.fx.moveTo(x, y).lineTo(x + tx, y + ty).stroke({ width: 3, color: tail, alpha: 0.55 });
       this.fx.moveTo(x, y).lineTo(x + tx * 0.6, y + ty * 0.6).stroke({ width: 1, color: core, alpha: 0.95 });
       this.fx.rect(x - 1, y - 1, 3, 3).fill(core);
@@ -619,7 +627,9 @@ export class Scene {
         const len = Math.min(atk.range, 130);
         const a = groundToScreen(e.pos.x + e.attackDir.x * 8, e.pos.y + e.attackDir.y * 8);
         const b = groundToScreen(e.pos.x + e.attackDir.x * len, e.pos.y + e.attackDir.y * len);
-        this.telegraphs.moveTo(a.x, a.y - 12).lineTo(b.x, b.y - 12).stroke({ width: 1, color: ANGEL.lilac, alpha: 0.15 + 0.6 * t });
+        const locked = e.phaseFrame > atk.trackUntil; // aim is set: sidestep now
+        const h = cfg.enemies[e.type]?.height ? 30 : 12;
+        this.telegraphs.moveTo(a.x, a.y - h).lineTo(b.x, b.y - h).stroke({ width: locked ? 2 : 1, color: locked ? 0xffffff : ANGEL.lilac, alpha: locked ? 0.85 : 0.15 + 0.5 * t });
       }
       return;
     }
@@ -689,11 +699,11 @@ export class Scene {
     g.rect(x, y - 1, 1, 3).fill(HEAVEN.gold3);
   }
 
-  private enemyBars(e: Enemy, ground: Vec2): void {
+  private enemyBars(e: Enemy, ground: Vec2, height = 40): void {
     const sp = groundToScreen(ground.x, ground.y);
     const w = 22;
     const x = Math.round(sp.x - w / 2);
-    const y = Math.round(sp.y - 40);
+    const y = Math.round(sp.y - height);
     // Health: pearl. Posture: centre-fill gold, white when nearly broken.
     this.fx.rect(x - 1, y - 1, w + 2, 7).fill(ANGEL.void);
     this.fx.rect(x, y, Math.round((w * e.hp) / e.maxHp), 2).fill(ANGEL.pearl);
@@ -854,6 +864,14 @@ function doorIcon(g: Graphics, kind: DoorKind, x: number, y: number, open: boole
       px(3, -3, 2, 6);
       break;
   }
+}
+
+function watcherPose(e: Enemy): WatcherPose {
+  if (e.phase === 'broken') return 'grounded';
+  if (e.phase === 'recoil') return 'jammed';
+  if (e.attack === 'chomp') return e.phase === 'windup' ? 'biteWindup' : e.phase === 'active' ? 'bite' : 'idle';
+  if (e.attack === 'laser') return e.phase === 'windup' ? 'charge' : e.phase === 'active' ? 'fire' : 'idle';
+  return 'idle';
 }
 
 function gabrielPose(e: Enemy): GabrielPose {

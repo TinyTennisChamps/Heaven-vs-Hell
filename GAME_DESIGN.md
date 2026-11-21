@@ -355,6 +355,53 @@ With the ramp, a hard room taken as your 3rd room costs the bot about 60 HP (bal
 - Filling the meter from empty takes about twice the fighting it used to.
 - Carry-over is unchanged: at most 40 starts a run.
 
+## Watcher ("Grigori") and shared enemy systems (user prompts; plan approved 2026-11-20)
+Decisions:
+- Parrying is now **one press = one deflect**, everywhere.
+- The laser telegraph is a **red iris**, as requested.
+- The new enemies are **Training Court only** for now.
+- I **stop for review after each enemy**.
+
+**One press = one deflect:**
+- After a successful deflect, that parry is spent: it stays up for the rest of its window, so timing and animation are unchanged, but it can't deflect a second hit.
+- Pressing again is never penalised.
+- Multi-hit strings (Gabriel's blades and lances, the Zealot's Flurry) now need a press per hit.
+- The balance benchmark is unchanged at 2.02×.
+
+**New shared, data-driven systems** (later enemies can use them):
+- `superArmor`: hits land but cause no knockback or flinch.
+- `flinchFrames` / `flinchImmuneFrames`: a short hit-reaction that can't stun-lock.
+- `preStep`: sidesteps, backsteps and pull-backs during the windup.
+- `noHit` movement moves.
+- `onDeflect {posture, perfectPosture, recoilFrames}`: any deflect can stagger.
+- `volley`, `cooldownAfter`.
+- `rangedPool`: these shots don't stop melee enemies attacking, and only one ranged telegraph is allowed in a room at once.
+- `elite`: preferred as the focus.
+- `flying`: flies over hedges and fountains but not pillars (`world.tallSegs`).
+- `reflectPostureMul`, `knockbackMul`, `telegraphColor`, `displayName`, `height`, and an `ai` value bag.
+- A `blockFail` event: holding guard against a Judgement gives a grey burst.
+- `player.recentBlocks`.
+
+**Debug and sound:**
+- F5 pauses, F6 steps one tick, F7 runs at ¼ speed.
+- The overlay shows each enemy's name, attack, frame/windup, health and posture against their maxes, and cooldowns.
+- Sound hooks: `telegraph:<enemy>:<attack>` (e.g. `telegraph:watcher:laser` is the charge hum), plus `stagger`, `blockFail` and `flinch`.
+
+**The Watcher** (`data/enemies/watcher.json`, `src/sim/actors/watcher.ts`, Training key 7): a floating eye with golden wings, a flyer.
+- 50 HP (5 slashes), 60 posture, light knockback, ×2 posture from bolts and from its own reflected lasers.
+- It orbits Satan at 110–160 px and retreats fast inside 70 px.
+
+| Attack | Windup | Active | Recovery | Damage / posture | Notes |
+|---|---|---|---|---|---|
+| Laser volley (90–200 px) | 40. The aim tracks to f26, then locks and the line turns white. | 3 lasers at f1, f11 and f21, 300 px/s, drawn white-gold with a pale-blue edge | 30 | 12 / 14 | Blockable. A deflect reflects the laser into the eye. Cooldown 150–210f. Ranged pool. |
+| Chomp | 26: pulls back 8 px, then the eye splits into a toothed maw | 6: a 44 px lunge, the eye swells ×1.3 | 28 | 22 / 30 | Blockable. A deflect gives +45 posture (perfect +60, an instant break) and a 70f jaws-open stagger, which is a riposte window. A dash passes through. |
+
+- **Chomp trigger:** Satan within 48 px for 20 ticks, or 2 melee hits taken.
+- **Posture break:** the eye shuts and it drops to the ground ("grounded") for the deathblow.
+- **Telegraph flash:** ranged windups no longer use the generic white flash; the red iris and the aim line locking are the tells. The chomp still flashes.
+
+**Tests** (`tests/watcher.test.ts`, 13): volley count, aim lock-in, block, one press = one deflect, reflect posture, chomp parry → stagger → break → deathblow, perfect parry breaks it, dash through the lunge, block cost, both chomp triggers, a single ranged telegraph, lasers not stopping a Dominion, flight over a hedge but not a pillar, and the minimum telegraph rule.
+
 ## Rage Vials (original plan: 7, flat additive, every stat ≤ +20%)
 | L1 | L2 |
 |---|---|

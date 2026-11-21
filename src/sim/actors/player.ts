@@ -158,6 +158,7 @@ export function updatePlayer(world: World, inp: PlayerInput, aim: Vec2 | null, c
 
   if (p.hitFlash > 0) p.hitFlash--;
   if (p.roarCd > 0) p.roarCd--;
+  p.recentBlocks *= 0.995; // ~3 s half-life
 
   // --- Rage: R with a full meter transforms (from anything but death). ---
   if (buf.has('rage')) {
@@ -351,6 +352,7 @@ export function updatePlayer(world: World, inp: PlayerInput, aim: Vec2 | null, c
             if (a.hitIds.includes(e.id) || e.phase === 'down') continue;
             if (arcHitsCircle(p.pos, a.dir, def.hitbox, e.pos, e.radius)) {
               a.hitIds.push(e.id);
+              e.meleeHits++;
               const postureDamage = def.postureDamage * (a.key.startsWith('slash') ? 1 + world.mods.slashPosture : 1);
               if (hitEnemy(world, e, p.pos, a.dir, { ...def, postureDamage, strong: a.step === 3 }, cfg) === 'hit') meleeHitLanded(world, cfg);
             }

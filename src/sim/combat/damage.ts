@@ -130,7 +130,11 @@ export function hitEnemy(world: World, e: Enemy, from: Vec2, dir: Vec2, spec: Hi
   const riposte = e.phase === 'recoil';
   const r = cfg.combat.riposte;
   e.hp -= spec.healthDamage * (riposte ? r.healthMul : 1);
-  e.knock = { x: dir.x * spec.knockback, y: dir.y * spec.knockback };
+  const curAtk = e.attack ? def.attacks[e.attack] : undefined;
+  const armored = !!curAtk?.superArmor && (e.phase === 'windup' || e.phase === 'active' || e.phase === 'recover');
+  // Super-armour: no knockback; otherwise light floaters take less.
+  const kb = armored ? 0 : spec.knockback * (def.knockbackMul ?? 1);
+  e.knock = { x: dir.x * kb, y: dir.y * kb };
   world.stats.hitsLanded++;
   startHitstop(world, spec.hitstop + (riposte ? 2 : 0), spec.shake * (riposte ? 1.4 : 1), cfg);
   emit(world, { type: 'hit', pos: { ...e.pos }, dir: { ...dir }, strong: !!spec.strong || riposte, riposte });
@@ -141,6 +145,14 @@ export function hitEnemy(world: World, e: Enemy, from: Vec2, dir: Vec2, spec: Hi
   // Interruptible windups (Gabriel's Horn Call): a hit cancels them and staggers.
   const atk = e.attack ? def.attacks[e.attack] : undefined;
   const interrupted = e.phase === 'windup' && !!atk?.interruptible;
+  // Flinch: a short hit-reaction out of super-armour, then immunity (no stun-lock).
+  if (!interrupted && !armored && def.flinchFrames && e.flinchImmune <= 0 && (e.phase === 'idle' || e.phase === 'windup' || e.phase === 'recover')) {
+    e.phase = 'flinch';
+    e.phaseFrame = 0;
+    e.attack = null;
+    e.flinchImmune = def.flinchImmuneFrames ?? 40;
+    emit(world, { type: 'flinch', pos: { ...e.pos } });
+  }
   if (interrupted) {
     // A plain stagger (not a riposte opening): the call is cut off, posture takes double.
     e.phase = 'idle';
@@ -191,9 +203,10 @@ export function resolveOnPlayer(world: World, attacker: Enemy, baseAtk: EnemyAtt
   const canDeflect = (!atk.judgement || !!atk.deflectable) && p.broken === 0;
 
   // Deflect: any tick inside the window, attacker in front.
-  if (canDeflect && p.parry && p.parry.frame <= p.parry.window && inFrontCone(p.pos, p.facing, attacker.pos, c.parry.coneDeg)) {
+  // One press, one deflect: a parry that already deflected something is spent.
+  if (canDeflect && p.parry && !p.parry.deflected && p.parry.frame <= p.parry.window && inFrontCone(p.pos, p.facing, attacker.pos, c.parry.coneDeg)) {
     const perfect = p.parry.frame <= c.parry.perfectFrames;
-    p.parry.deflected = true;
+    p.parry.deflected = true; // spent: the next hit needs its own press (re-pressing is never penalised)
     p.parryPenalty = 0;
     world.stats.deflects++;
     if (perfect) {
@@ -207,20 +220,28 @@ export function resolveOnPlayer(world: World, attacker: Enemy, baseAtk: EnemyAtt
     // The attacker is knocked back by the deflect — harder on a perfect one.
     const kb = perfect ? c.parry.perfectRecoil : c.parry.recoil;
     attacker.knock = { x: -dir.x * kb, y: -dir.y * kb };
-    addEnemyPosture(world, attacker, atk.postureDamage * (perfect ? c.parry.perfectAttackerPostureMul : c.parry.attackerPostureMul), cfg);
-    if (perfect && !atk.relentless && attacker.phase !== 'broken' && attacker.phase !== 'down') {
-      // Riposte: a perfect read staggers the attacker and opens it up.
+    const od = atk.onDeflect;
+    const posture = od ? (perfect ? od.perfectPosture : od.posture) : atk.postureDamage * (perfect ? c.parry.perfectAttackerPostureMul : c.parry.attackerPostureMul);
+    addEnemyPosture(world, attacker, posture, cfg);
+    if ((perfect || od) && !atk.relentless && attacker.phase !== 'broken' && attacker.phase !== 'down') {
+      // Riposte: a perfect read (or any deflect of an onDeflect attack) staggers the attacker and opens it up.
       attacker.phase = 'recoil';
       attacker.phaseFrame = 0;
       attacker.attack = null;
+      attacker.recoilLen = od ? od.recoilFrames : cfg.combat.riposte.frames;
       emit(world, { type: 'riposteOpen', pos: { ...attacker.pos } });
+      if (od) emit(world, { type: 'stagger', pos: { ...attacker.pos } });
     }
     return perfect ? 'perfect' : 'deflect';
   }
 
+  // A Judgement into a raised guard: make the failure obvious (thud, grey sparks).
+  if (!canGuard && atk.judgement && (p.guarding || p.parry)) emit(world, { type: 'blockFail', pos: { ...p.pos } });
+
   // Block: guard held, attacker inside the front cone.
   if (canGuard && p.guarding && inFrontCone(p.pos, p.facing, attacker.pos, c.block.coneDeg)) {
     p.blockStun = c.block.stunFrames;
+    p.recentBlocks += 1;
     p.knock = { x: dir.x * c.block.knockback, y: dir.y * c.block.knockback };
     startHitstop(world, c.block.hitstop, atk.shake * 0.5, cfg);
     emit(world, { type: 'block', pos: { x: (p.pos.x + attacker.pos.x) / 2, y: (p.pos.y + attacker.pos.y) / 2 }, dir });

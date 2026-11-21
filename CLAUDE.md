@@ -4,7 +4,7 @@ Pixel-art action roguelike. TypeScript + Vite + PixiJS v8 (render only) with a c
 
 ## Commands
 Node comes from nvm and is not on the default PATH, so run `source ~/.nvm/nvm.sh && nvm use 22` first.
-- `npm run dev`: the game at http://localhost:5173. It opens on the title screen. **Begin Descent** starts an L1 run, **Training Court** opens the spawn sandbox (keys 1–4 spawn, 6 spawns Gabriel, 0 clears, 5 fills Rage), and **Esc** returns to the title. **F1** toggles the debug overlay (hitboxes, states, frame counters) and the tuning panel. **F2** cycles the render-rate cap (display / 30 / 60 / 144). **F3** toggles enemy attacks. **F4** resets the Training Court.
+- `npm run dev`: the game at http://localhost:5173. It opens on the title screen. **Begin Descent** starts an L1 run, **Training Court** opens the spawn sandbox (keys 1–4 spawn, 6 Gabriel, 7 the Watcher, 0 clears, 5 fills Rage), and **Esc** returns to the title. **F1** toggles the debug overlay (hitboxes, states, frame counters) and the tuning panel. **F2** cycles the render-rate cap (display / 30 / 60 / 144). **F3** toggles enemy attacks. **F4** resets the Training Court. **F5** pauses the sim, **F6** steps one tick while paused, and **F7** toggles ¼-speed slow motion.
 - In dev builds `window.__hvh` exposes `world`, `mode`, `run`, `begin()`, `training()`, `reenter()` and `toPage(gx, gy)` for scripted play-testing. Headless Chrome needs `--enable-gpu --use-angle=metal` to get WebGL on this Mac.
 - `npm test`: Vitest (sim only). `npm run typecheck`, `npm run build`, and `npm run check` (typecheck + tests).
 

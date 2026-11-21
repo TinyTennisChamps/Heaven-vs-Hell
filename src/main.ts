@@ -27,7 +27,7 @@ const cfg: SimConfig = {
   combat: getData('tuning/combat'),
   camera: getData('tuning/camera'),
   attacks: getData('attacks/satan'),
-  enemies: { dummy: getData('enemies/dummy'), dominion: getData('enemies/dominion'), archer: getData('enemies/archer'), cherub: getData('enemies/cherub'), gabriel: getData('enemies/gabriel') },
+  enemies: { dummy: getData('enemies/dummy'), dominion: getData('enemies/dominion'), archer: getData('enemies/archer'), cherub: getData('enemies/cherub'), gabriel: getData('enemies/gabriel'), watcher: getData('enemies/watcher') },
   rooms: getData('tuning/rooms'),
   rage: getData('tuning/rage'),
   vials: getData('vials'),
@@ -110,6 +110,7 @@ async function boot() {
     ['Digit3', 'archer', 'Archer'],
     ['Digit4', 'cherub', 'Cherub'],
     ['Digit6', 'gabriel', 'Gabriel'],
+    ['Digit7', 'watcher', 'Grigori (Watcher)'],
   ];
   const fillRage = () => {
     world.player.rage = cfg.rage.max;
@@ -288,6 +289,7 @@ async function boot() {
   }
 
   // --- Debug toggles ---
+  const timeCtl = { paused: false, slow: false, stepOnce: false };
   const renderCaps = [0, 30, 60, 144];
   let capIdx = 0;
   let debug = false;
@@ -300,6 +302,15 @@ async function boot() {
     } else if (e.code === 'F2') {
       e.preventDefault();
       capIdx = (capIdx + 1) % renderCaps.length;
+    } else if (e.code === 'F5') {
+      e.preventDefault();
+      timeCtl.paused = !timeCtl.paused;
+    } else if (e.code === 'F6') {
+      e.preventDefault();
+      if (timeCtl.paused) timeCtl.stepOnce = true;
+    } else if (e.code === 'F7') {
+      e.preventDefault();
+      timeCtl.slow = !timeCtl.slow;
     } else if (e.code === 'F3') {
       e.preventDefault();
       world.flags.dummyAttacks = !world.flags.dummyAttacks;
@@ -339,7 +350,14 @@ async function boot() {
 
     const elapsed = (now - last) / 1000;
     last = now;
-    const { steps, alpha } = loop.advance(elapsed);
+    // Debug time controls: F5 pause, F6 step one tick while paused, F7 quarter speed.
+    const adv = loop.advance(timeCtl.paused ? 0 : timeCtl.slow ? elapsed * 0.25 : elapsed);
+    let steps = adv.steps;
+    const alpha = timeCtl.paused ? 1 : adv.alpha;
+    if (timeCtl.paused && timeCtl.stepOnce) {
+      steps = 1;
+      timeCtl.stepOnce = false;
+    }
 
     if (!scene) {
       titleScene.update(now / 1000);
@@ -397,6 +415,7 @@ async function boot() {
       overlay.set('tick', world.tick);
       overlay.set('steps/frame', steps);
       overlay.set('render cap (F2)', cap ? `${cap} Hz` : 'display');
+      overlay.set('time (F5 pause / F6 step / F7 slow)', timeCtl.paused ? 'PAUSED' : timeCtl.slow ? '¼ speed' : 'normal');
       overlay.set('hitstop', world.hitstop);
       overlay.set('player', `hp ${p.hp}  speed ${Math.hypot(p.vel.x, p.vel.y).toFixed(0)}${p.dead ? '  DEAD' : ''}`);
       overlay.set('action', act);
@@ -412,7 +431,12 @@ async function boot() {
       const rr = world.roomRun;
       overlay.set('room', `${world.room.id} wave ${rr.wave}/${world.room.waves?.length ?? 0} t${rr.timer}${rr.cleared ? ' CLEARED' : ''} exits ${rr.exitCount}`);
       if (run) overlay.set('run', `${run.visited.join(' > ')} | combat ${run.combatDone} rest ${run.restTaken ? 'y' : 'n'} | next ${run.options.map((o) => o.kind).join('/')}`);
-      for (const e of world.enemies) overlay.set(`${e.type}#${e.id}`, `${e.phase}${e.attack ? `:${e.attack}` : ''} f${e.phaseFrame} hp ${e.hp} pos ${e.posture.toFixed(0)}`);
+      for (const e of world.enemies) {
+        const name = cfg.enemies[e.type]?.displayName ?? e.type;
+        const wind = e.phase === 'windup' ? `/${e.windupLen}` : '';
+        const cds = Object.entries(e.cds).filter(([, v]) => v > 0).map(([k, v]) => `${k} cd ${v}`).join(' ');
+        overlay.set(`${name}#${e.id}`, `${e.phase}${e.attack ? `:${e.attack}` : ''} f${e.phaseFrame}${wind} hp ${e.hp}/${e.maxHp} pos ${e.posture.toFixed(0)}/${e.postureMax.toFixed(0)}${cds ? ' ' + cds : ''}`);
+      }
       overlay.set('hits landed/taken', `${world.stats.hitsLanded} / ${world.stats.hitsTaken}`);
       overlay.set('deflects (perfect) / deathblows', `${world.stats.deflects} (${world.stats.perfects}) / ${world.stats.deathblows}`);
     }
@@ -428,6 +452,8 @@ function spawnEffects(world: World, scene: Scene): void {
   for (const ev of world.events) {
     const s = groundToScreen(ev.pos.x, ev.pos.y);
     sfx(ev.type);
+    // Named hooks for specific attacks, e.g. "telegraph:watcher:laser" (the charge hum), "telegraph:watcher:chomp" (bite sting).
+    if (ev.type === 'telegraph' && ev.enemy && ev.attack) sfx(`telegraph:${ev.enemy}:${ev.attack}`);
     switch (ev.type) {
       case 'hit': {
         const d = groundToScreen(ev.dir.x, ev.dir.y);
@@ -522,6 +548,16 @@ function spawnEffects(world: World, scene: Scene): void {
       case 'roar':
         scene.roarRing(ev.pos);
         P.burst(s.x, s.y - 10, { count: 36, colors: [SATAN.hellfire, SATAN.ember, SATAN.eyeGlow], speed: 200, life: 0.4, drag: 0.85 });
+        break;
+      case 'blockFail':
+        // Guarding a Judgement does nothing: a dull grey burst says so.
+        P.burst(s.x, s.y - 14, { count: 10, colors: [HEAVEN.stoneDark, ANGEL.silver2, ANGEL.angelLine], speed: 60, life: 0.35 });
+        break;
+      case 'stagger':
+        P.burst(s.x, s.y - 24, { count: 16, colors: [0xffffff, HEAVEN.gold1, ANGEL.sky], speed: 90, life: 0.45 });
+        break;
+      case 'flinch':
+        P.burst(s.x, s.y - 18, { count: 4, colors: [0xffffff, ANGEL.pearl], speed: 40, life: 0.2 });
         break;
       case 'leapLand':
         P.burst(s.x, s.y - 2, { count: 26, colors: [HEAVEN.marble, HEAVEN.stone, HEAVEN.gold1, 0xffffff], speed: 120, life: 0.45 });

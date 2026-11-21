@@ -44,9 +44,10 @@ export function startEnemyAttack(world: World, e: Enemy, key: string, cfg: SimCo
   e.swingHit = false;
   e.engage = false;
   e.attackDir = { ...e.facing };
+  e.stepSide = atk.preStep?.randomSide ? (nextFloat(world.rng) < 0.5 ? -1 : 1) : 1;
   e.windupLen = atk.windup + (atk.windupJitter ? nextInt(world.rng, 0, atk.windupJitter + 1) : 0);
   setPhase(e, 'windup');
-  emit(world, { type: 'telegraph', pos: { ...e.pos }, judgement: !!atk.judgement });
+  emit(world, { type: 'telegraph', pos: { ...e.pos }, judgement: !!atk.judgement, attack: key, enemy: e.type });
 }
 
 export function updateEnemy(world: World, e: Enemy, cfg: SimConfig, think: Think): void {
@@ -56,6 +57,8 @@ export function updateEnemy(world: World, e: Enemy, cfg: SimConfig, think: Think
   if (e.shieldFlash > 0) e.shieldFlash--;
   if (e.cooldown > 0) e.cooldown--;
   if (e.specialCooldown > 0) e.specialCooldown--;
+  if (e.flinchImmune > 0) e.flinchImmune--;
+  for (const k in e.cds) if (e.cds[k]! > 0) e.cds[k]!--;
   e.phaseFrame++;
 
   if (e.arrive > 0) {
@@ -98,8 +101,14 @@ export function updateEnemy(world: World, e: Enemy, cfg: SimConfig, think: Think
         e.cooldown = 20;
       }
       break;
+    case 'flinch':
+      if (e.phaseFrame >= (def.flinchFrames ?? 8)) {
+        setPhase(e, 'idle');
+        e.cooldown = Math.max(e.cooldown, 10);
+      }
+      break;
     case 'recoil':
-      if (e.phaseFrame >= cfg.combat.riposte.frames) {
+      if (e.phaseFrame >= (e.recoilLen || cfg.combat.riposte.frames)) {
         setPhase(e, 'idle');
         e.cooldown = Math.round(def.cooldownMin * 0.5);
       }
@@ -121,7 +130,12 @@ export function updateEnemy(world: World, e: Enemy, cfg: SimConfig, think: Think
       turnToward(e, toP, flanked ? (def.flankTurnRateDeg ?? def.turnRateDeg) : def.turnRateDeg);
       const plan = think(world, e, def, cfg);
       move = plan.move;
-      if (def.swarm) {
+      const planned = plan.attack ? def.attacks[plan.attack] : undefined;
+      if (planned?.rangedPool || planned?.noHit) {
+        // Ranged pool: free of the focus rule, but only one ranged telegraph in the room at once.
+        // Movement-only moves (sidestep, wing-dash) are always allowed.
+        if (planned.rangedPool && world.enemies.some((o) => o.id !== e.id && (o.phase === 'windup' || o.phase === 'active') && enemyAttack(cfg, o)?.rangedPool)) plan.attack = null;
+      } else if (def.swarm) {
         // Swarmers have their own pool: up to swarmMax lunge at once, regardless of focus.
         e.engage = false;
         if (plan.attack && swarmAttacking(world, cfg) >= cfg.combat.groups.swarmMax) {
@@ -151,6 +165,12 @@ export function updateEnemy(world: World, e: Enemy, cfg: SimConfig, think: Think
     }
     case 'windup': {
       const atk = enemyAttack(cfg, e)!;
+      if (atk.preStep && e.phaseFrame <= atk.preStep.frames) {
+        // Step before the strike: sideways (cross-step), back (backstep) or a pull-back.
+        const a = angleOf(e.attackDir) + atk.preStep.angleDeg * DEG * e.stepSide;
+        const s = atk.preStep.px / Math.max(1, atk.preStep.frames);
+        lungeDelta = { x: Math.cos(a) * s, y: Math.sin(a) * s };
+      }
       if (e.phaseFrame <= atk.trackUntil) {
         turnToward(e, toP, Math.max(def.turnRateDeg, 8));
         e.attackDir = { ...e.facing };
@@ -195,12 +215,17 @@ export function updateEnemy(world: World, e: Enemy, cfg: SimConfig, think: Think
           summon(world, e, atk.summon, cfg);
         }
       } else if (atk.projectile) {
-        if (!e.swingHit) {
+        // One shot on the first active tick, or a volley `interval` ticks apart (aim locked).
+        const v = atk.volley ?? { count: 1, interval: 1 };
+        const k = (e.phaseFrame - 1) / v.interval;
+        if (Number.isInteger(k) && k < v.count) {
           e.swingHit = true;
           const from = { x: e.pos.x + e.attackDir.x * (e.radius + 4), y: e.pos.y + e.attackDir.y * (e.radius + 4) };
-          spawnProjectile(world, atk.projectileKind ?? 'arrow', e.id, from, e.attackDir, atk.projectile, scaledAttack(atk, e.dmgMul));
+          spawnProjectile(world, atk.projectileKind ?? 'arrow', e.id, from, e.attackDir, atk.projectile, scaledAttack(atk, e.dmgMul), !atk.rangedPool);
           emit(world, { type: 'arrowLoosed', pos: from });
         }
+      } else if (atk.noHit) {
+        // Movement only.
       } else if (!e.swingHit && arcHitsCircle(e.pos, e.attackDir, atk.hitbox, p.pos, playerRadius(world, cfg))) {
         const out = resolveOnPlayer(world, e, atk, cfg);
         if (out !== 'evaded') e.swingHit = true;
@@ -211,6 +236,7 @@ export function updateEnemy(world: World, e: Enemy, cfg: SimConfig, think: Think
     case 'recover': {
       const atk = enemyAttack(cfg, e)!;
       if (e.phaseFrame >= atk.recovery) {
+        if (atk.cooldownAfter) e.cds[e.attack!] = Math.round(nextRange(world.rng, atk.cooldownAfter[0], atk.cooldownAfter[1]));
         e.attack = null;
         setPhase(e, 'idle');
         e.cooldown = Math.round(nextRange(world.rng, def.cooldownMin, def.cooldownMax));
@@ -256,9 +282,12 @@ function summon(world: World, e: Enemy, s: NonNullable<EnemyAttackDef['summon']>
   emit(world, { type: 'summon', pos: { ...e.pos } });
 }
 
-/** A non-swarm enemy with an attack in flight (swarm lunges run in their own pool). */
+/** A non-swarm enemy with a melee attack in flight (swarm lunges, ranged-pool shots and pure movement don't count). */
 function isBusy(o: Enemy, cfg: SimConfig): boolean {
-  return (o.phase === 'windup' || o.phase === 'active') && !cfg.enemies[o.type]!.swarm;
+  if (o.phase !== 'windup' && o.phase !== 'active') return false;
+  if (cfg.enemies[o.type]!.swarm) return false;
+  const a = enemyAttack(cfg, o);
+  return !a?.rangedPool && !a?.noHit;
 }
 
 function swarmAttacking(world: World, cfg: SimConfig): number {
@@ -310,7 +339,8 @@ function moveBody(world: World, e: Enemy, vel: Vec2, cfg: SimConfig, extra: Vec2
   e.knock.y *= cfg.combat.knockbackFriction;
   if (Math.hypot(e.knock.x, e.knock.y) < 2) e.knock = { x: 0, y: 0 };
   e.vel = { ...vel };
-  const r = moveAndSlide(e.pos.x, e.pos.y, dx, dy, e.radius, world.segs);
+  // Flyers drift over low cover; everything else collides with every wall.
+  const r = moveAndSlide(e.pos.x, e.pos.y, dx, dy, e.radius, cfg.enemies[e.type]!.flying ? world.tallSegs : world.segs);
   e.pos.x = r.x;
   e.pos.y = r.y;
   const moved = Math.hypot(e.pos.x - before.x, e.pos.y - before.y);
