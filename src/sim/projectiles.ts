@@ -102,7 +102,8 @@ function hitPlayerAt(world: World, p: Projectile, at: Vec2, cfg: SimConfig): boo
   const from = { x: at.x - dir.x * 12, y: at.y - dir.y * 12 };
   p.pos = { ...at };
 
-  if (raging(pl)) {
+  const rageBlock = raging(pl) && pl.broken === 0 && pl.guarding && inFrontCone(pl.pos, pl.facing, from, c.block.coneDeg);
+  if (raging(pl) && !rageBlock) {
     rageHit(world, p.healthDamage, dir, p.hitstop, p.shake, cfg);
     end(world, p);
     return true;

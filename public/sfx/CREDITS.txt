@@ -1,0 +1,41 @@
+Heaven vs Hell — sound effect credits
+All sounds come from Openverse (freesound.org), licensed CC0, CC BY 4.0/3.0 or public domain.
+Changes made: every file was trimmed, faded, converted to mono MP3 and peak-normalized (-3 dBTP);
+in game they are layered, pitch-varied and mixed at different volumes.
+
+swing_heavy.mp3: "Sword Swing B - Strong 02.wav" by Glaneur de sons is licensed under CC BY 4.0. To view a copy of this license, visit https://creativecommons.org/licenses/by/4.0/.
+swing_a.mp3: "Sword Swing B - Medium 07.wav" by Glaneur de sons is licensed under CC BY 4.0. To view a copy of this license, visit https://creativecommons.org/licenses/by/4.0/.
+swing_b.mp3: "Sword Swing B - Medium 09.wav" by Glaneur de sons is licensed under CC BY 4.0. To view a copy of this license, visit https://creativecommons.org/licenses/by/4.0/.
+swing_fast.mp3: "Fast Sword Swing Sound" by qubodup is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/.
+deflect.mp3: "Sword Clash" by loudernoises is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/.
+deflect_perfect.mp3: "Epic Sword Clash" by CTCollab is licensed under CC BY 3.0. To view a copy of this license, visit https://creativecommons.org/licenses/by/3.0/.
+ring_bright.mp3: "knife cling" by sgarrison2127 is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/.
+ring_metal.mp3: "Metal ringing hits" by jorickhoofd is licensed under CC BY 4.0. To view a copy of this license, visit https://creativecommons.org/licenses/by/4.0/.
+hit_flesh1.mp3: "Tyrael - Sword Hit Flesh - 02.wav" by SoundFlakes is licensed under CC BY 4.0. To view a copy of this license, visit https://creativecommons.org/licenses/by/4.0/.
+hit_flesh2.mp3: "Tyrael - Sword Hit Flesh - 01.wav" by SoundFlakes is licensed under CC BY 4.0. To view a copy of this license, visit https://creativecommons.org/licenses/by/4.0/.
+hit_flesh3.mp3: "Tyrael - Sword Hit Flesh - 03.wav" by SoundFlakes is licensed under CC BY 4.0. To view a copy of this license, visit https://creativecommons.org/licenses/by/4.0/.
+hit_heavy.mp3: "Sword Hit Heavy" by EminYILDIRIM is licensed under CC BY 4.0. To view a copy of this license, visit https://creativecommons.org/licenses/by/4.0/.
+hurt.mp3: "Sword hits the body.wav" by vdovitsky is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/.
+block.mp3: "Block - [Rpg] 1" by colorsCrimsonTears is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/.
+shield_bash.mp3: "Shield Bash Impact" by Hybrid_V is licensed under CC BY 4.0. To view a copy of this license, visit https://creativecommons.org/licenses/by/4.0/.
+stab.mp3: "Sword stab 2" by ihitokage is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/.
+schwing.mp3: "Schwing 1" by magnuswaker is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/.
+dash.mp3: "Swipe Whoosh" by qubodup is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/.
+enemy_swing.mp3: "Melee Combat Whoosh" by EminYILDIRIM is licensed under CC BY 4.0. To view a copy of this license, visit https://creativecommons.org/licenses/by/4.0/.
+roar.mp3: "Scary Monster Roar #2" by NicknameLarry is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/.
+rage_transform.mp3: "Low Monster Roar" by Robson220pl is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/.
+bolt.mp3: "Fire Magic Whoosh" by EminYILDIRIM is licensed under CC BY 4.0. To view a copy of this license, visit https://creativecommons.org/licenses/by/4.0/.
+wings_light.mp3: "Light Wing Flap" by TurboFool is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/.
+wings_heavy.mp3: "Wing Flap Heavy (prototype).mp3" by GearArcanaNo37 is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/.
+bow.mp3: "bow01.wav" by Erdie is licensed under CC BY 4.0. To view a copy of this license, visit https://creativecommons.org/licenses/by/4.0/.
+laser.mp3: "Laser short.wav" by Defunct3 is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/.
+growl.mp3: "Beast 1" by stevenmaertens is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/.
+crunch.mp3: "Horror / Zombie - Biting on bones" by Breviceps is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/.
+glass_big.mp3: "Glass Shattering and Falling" by 221Beimesche is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/.
+glass_hit.mp3: "glass-shattering-hit_01.ogg" by C_Rogers is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/.
+vanish.mp3: "Magic disappearing/appearing" by Tetoszka is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/.
+choir_horn.mp3: "Haaaa Epiphany Choir" by daalvinz is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/.
+choir_dark.mp3: "Dark Choir 01.wav" by Exsomniel is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/.
+choir_chord.mp3: "Choir of Voices - Single Chord" by bone666138 is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/.
+choir_shot.mp3: "Choir One-Shot" by majoranman is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/.
+bell.mp3: "Deep Church Bell" by ZoshP is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/.

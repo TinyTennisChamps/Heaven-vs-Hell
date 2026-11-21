@@ -207,7 +207,8 @@ export type SimEvent =
   | { type: 'pipGained'; pos: Vec2 }
   | { type: 'projectileEnd'; pos: Vec2; kind: 'bolt' | 'arrow' | 'laser'; reflected: boolean }
   | { type: 'reflect'; pos: Vec2; perfect: boolean }
-  | { type: 'arrowLoosed'; pos: Vec2 }
+  | { type: 'arrowLoosed'; pos: Vec2; kind?: 'arrow' | 'laser' | 'bolt' }
+  | { type: 'enemySwing'; pos: Vec2; enemy: string; attack: string }
   | { type: 'lockOn'; pos: Vec2 }
   | { type: 'lockOff'; pos: Vec2 }
   | { type: 'playerDied'; pos: Vec2 }

@@ -16,6 +16,8 @@ import { attackDef, attackPhase } from './sim/actors/player';
 import type { BiomeDef, EnemyDef, LevelDef, RoomDef, SimConfig } from './sim/config';
 import { LayersPanel } from './debug/layersPanel';
 import { MusicDirector } from './audio/music';
+import { AudioEngine, type CueBook } from './audio/engine';
+import { playEventSound } from './audio/cues';
 import { carryThroughGate, rageCarryOver, roomPickups, roomScale, startRun, takeExit, type RunState } from './sim/rooms/run';
 import { maxHp } from './sim/stats';
 import { step } from './sim/step';
@@ -94,6 +96,10 @@ async function boot() {
   const biomeOf = (l: LevelDef) => cfg.biomes![l.biome]!;
   const layersPanel = new LayersPanel(root);
   const music = new MusicDirector();
+  // Sound effects (Openverse CC0 / CC BY; credits in public/sfx/CREDITS.txt). M mutes.
+  const audio = new AudioEngine(getData<CueBook>('audio/cues'));
+  void audio.load(import.meta.env.BASE_URL);
+  const audioLog: string[] = [];
   const satanAtlas = await loadAtlas(`${import.meta.env.BASE_URL}sprites/satan.json`);
   const anim = getData<AnimConfig>('anim/satan');
   const titleScene = new TitleScene(satanAtlas);
@@ -318,6 +324,7 @@ async function boot() {
         return run;
       },
       begin: beginRun,
+      audio,
       /** Jump straight into any room (room gallery). */
       gallery: (id: string) => beginGallery(id),
       /** Rebuild the current run room (e.g. after editing run.hiddenRoom in a script). */
@@ -347,6 +354,9 @@ async function boot() {
     } else if (e.code === 'F2') {
       e.preventDefault();
       capIdx = (capIdx + 1) % renderCaps.length;
+    } else if (e.code === 'KeyM') {
+      audio.muted = !audio.muted;
+      screens.toast(audio.muted ? 'Sound off' : 'Sound on', 'M toggles sound');
     } else if (e.code === 'F8') {
       e.preventDefault();
       layersPanel.toggle();
@@ -473,6 +483,11 @@ async function boot() {
       }
     }
     scene.frameDt = elapsed;
+    for (const ev of world.events) {
+      playEventSound(audio, ev, world, cfg);
+      if (import.meta.env.DEV) audioLog.push(ev.type);
+    }
+    if (audioLog.length > 200) audioLog.splice(0, audioLog.length - 200);
     // F8 → hud off: hide every HUD element (does the room still read on its own?).
     const hudOn = layersPanel.flags.hud;
     legend.style.visibility = hudOn ? '' : 'hidden';

@@ -138,7 +138,13 @@ export class Screens {
     const stats = document.createElement('div');
     stats.className = 'meta';
     stats.textContent = info.runs > 0 ? `Runs ${info.runs} · Falls ${info.deaths}` : 'Enter to begin';
-    t.append(h, sub, menu, stats);
+    // CC BY sounds must be credited where players can see it.
+    const credits = document.createElement('a');
+    credits.className = 'credits-link';
+    credits.href = `${import.meta.env.BASE_URL}sfx/CREDITS.txt`;
+    credits.target = '_blank';
+    credits.textContent = 'Sound credits (Openverse · CC0 / CC BY)';
+    t.append(h, sub, menu, stats, credits);
     if (info.gallery?.length) {
       // Dev: room gallery — jump into any room.
       const g = document.createElement('div');

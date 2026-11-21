@@ -226,7 +226,7 @@ export function updatePlayer(world: World, inp: PlayerInput, aim: Vec2 | null, c
     emit(world, { type: 'dash', pos: { ...p.pos }, dir: { ...dir } });
   }
   if (raging(p) && buf.has('parry')) {
-    // Rage: RMB is the hellfire roar (parry and block are gone).
+    // Rage: tapping RMB roars (no parry in Rage); holding it blocks.
     if (p.roarCd === 0 && !p.dash && !locked(p)) {
       buf.consume('parry');
       roar(world, cfg);
@@ -283,7 +283,8 @@ export function updatePlayer(world: World, inp: PlayerInput, aim: Vec2 | null, c
   }
   // Block is live the instant RMB is held (no gap after the parry window);
   // during the window a deflect still takes priority.
-  p.guarding = inp.guardHeld && !p.dash && !p.action && !locked(p) && !raging(p);
+  // Holding RMB blocks — in Rage too (a tap there roars; hold on to keep blocking).
+  p.guarding = inp.guardHeld && !p.dash && !p.action && !locked(p);
   if (p.parry || p.guarding) {
     // Guard faces the incoming attack, not the cursor: parrying is about timing.
     const threat = c.autoFace.enabled ? imminentThreat(world, cfg) : null;

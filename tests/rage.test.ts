@@ -249,3 +249,29 @@ describe('Rage Vials', () => {
     expect(w.vials).toEqual(['l1_locked']);
   });
 });
+
+describe('blocking in Rage', () => {
+  it('holding RMB in Rage blocks a hit from the front: no damage, normal posture cost', () => {
+    const w = enraged();
+    const e = w.enemies[0]!;
+    e.facing = { x: -1, y: 0 };
+    const hp = w.player.hp;
+    run(w, cfg, R.roar.cooldownFrames + 5, () => input({ hold: ['parry'], aim: { ...e.pos } })); // first press roars; keep holding
+    w.player.posture = 0;
+    startEnemyAttack(w, e, 'swing', cfg);
+    run(w, cfg, 60, () => input({ hold: ['parry'], aim: { ...e.pos } }));
+    expect(w.player.hp).toBe(hp);
+    expect(w.stats.hitsTaken).toBe(0);
+    expect(w.player.posture).toBeGreaterThan(0);
+  });
+
+  it('without the block, Rage hyper armour still applies', () => {
+    const w = enraged();
+    const e = w.enemies[0]!;
+    e.facing = { x: -1, y: 0 };
+    const hp = w.player.hp;
+    startEnemyAttack(w, e, 'swing', cfg);
+    run(w, cfg, 60, () => input({ aim: { ...e.pos } }));
+    expect(w.player.hp).toBe(hp - Math.round(cfg.enemies.dummy!.attacks.swing!.healthDamage * R.damageTakenMul));
+  });
+});

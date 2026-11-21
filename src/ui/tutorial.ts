@@ -43,7 +43,7 @@ const STEPS: Step[] = [
   },
   {
     id: 'rageForm',
-    text: 'In Rage: LMB claws · RMB hellfire roar · kills feed the flame',
+    text: 'In Rage: LMB claws · RMB roar (hold to block) · kills feed the flame',
     show: (w) => w.player.rageForm > 0,
     done: (w) => has(w, 'roar'),
   },

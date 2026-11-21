@@ -421,3 +421,9 @@ canvas {
   background: rgba(42, 40, 64, 0.75);
   color: #f4eedf;
 }
+
+.screen .credits-link {
+  color: #7a5e2a;
+  font-size: 11px;
+  opacity: 0.8;
+}

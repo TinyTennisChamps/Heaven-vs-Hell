@@ -171,7 +171,8 @@ export type HitOutcome = 'evaded' | 'perfect' | 'deflect' | 'block' | 'hit';
 
 export function addPlayerPosture(world: World, amount: number, cfg: SimConfig): void {
   const p = world.player;
-  if (p.broken > 0 || raging(p)) return; // Rage: hyper armour, no posture
+  // Hits in Rage never reach here (hyper armour); blocking in Rage costs posture as usual.
+  if (p.broken > 0) return;
   const max = maxPosture(world, cfg);
   p.posture = Math.min(max, p.posture + amount);
   p.sinceHit = 0;
@@ -195,7 +196,9 @@ export function resolveOnPlayer(world: World, attacker: Enemy, baseAtk: EnemyAtt
   if (isPlayerInvulnerable(p, cfg)) return 'evaded';
   const c = cfg.combat;
   const dir = normalize({ x: p.pos.x - attacker.pos.x, y: p.pos.y - attacker.pos.y });
-  if (raging(p)) {
+  // Rage: a held guard still blocks (normal posture cost); anything else meets hyper armour.
+  const rageBlock = raging(p) && !atk.judgement && p.broken === 0 && p.guarding && inFrontCone(p.pos, p.facing, attacker.pos, cfg.combat.block.coneDeg);
+  if (raging(p) && !rageBlock) {
     rageHit(world, atk.healthDamage, dir, atk.hitstop, atk.shake, cfg);
     return 'hit';
   }

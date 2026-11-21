@@ -545,6 +545,29 @@ Create `data/rooms/<level>/<id>.json`:
 - no pool sits on a spawn or doorway;
 - props stay within budget.
 
+## Sound effects (user request: "the parry sound must be extremely satisfying, Sekiro-like")
+- **Sources:**
+  - 36 real recordings from Openverse (freesound; CC0 or CC BY), found with the `openverse-sfx` skill using one search per sound kind.
+  - Trimmed, faded and peak-normalized to −3 dBTP by measurement, then saved as `public/sfx/*.mp3` (492 KB).
+  - Credits are in `public/sfx/CREDITS.txt`, linked from the title screen (CC BY requires it).
+- **Cues:** `data/audio/cues.json` maps each event to layered sounds (volume, random pitch range, delay), with variants for repeats. There's a voice cap (24) and a per-cue cooldown (35 ms). It's tunable in F1.
+- **The deflect:** a sharp steel clash with a ringing tail.
+- **The perfect deflect:** a bigger clash, a bright ringing note, a deep thump an octave down and a late "shing".
+- **Satan:** three swing variants plus a heavy finisher swing and fast Rage claws. Hits use random flesh variants, with heavy hits for strong blows and ripostes, and deathblows get a stab, thump and shing.
+- **Enemies:**
+  - A swing sound per type (the Principality's is high and fast, the Dominion's low, the cherubs' wings), bow and laser shots.
+  - Grigori's growl on the windup, and a crunch on the bite.
+  - A dark-choir "danger" stab on every unblockable attack (Sekiro's warning cue).
+  - Gabriel's horn call as a choir swell, and Raphael's Rite as a choir chord.
+  - Deaths vanish into light, and posture breaks shatter like glass.
+- **World:** a cathedral bell for the bell tolls (pitched up for the warning), the shattering rose window, room-clear and vial chimes.
+- **M** mutes. Music is still silent hooks.
+
+## Blocking in Rage (user request)
+- Holding RMB in Rage now blocks. It costs normal posture, and a posture break is still possible.
+- A tap still roars when the roar is ready; keep holding after the roar to block.
+- Blows that get past the block meet the usual Rage hyper armour.
+
 ## Rage Vials (original plan: 7, flat additive, every stat ≤ +20%)
 | L1 | L2 |
 |---|---|

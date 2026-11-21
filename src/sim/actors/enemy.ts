@@ -190,6 +190,8 @@ export function updateEnemy(world: World, e: Enemy, cfg: SimConfig, think: Think
     }
     case 'active': {
       const atk = enemyAttack(cfg, e)!;
+      // The moment a melee strike comes out (sound cue).
+      if (e.phaseFrame === 1 && !atk.projectile && !atk.summon && !atk.selfHeal && !atk.noHit) emit(world, { type: 'enemySwing', pos: { ...e.pos }, enemy: e.type, attack: e.attack! });
       if (atk.lunge) {
         const n = Math.max(1, atk.lunge.overFrames);
         const f = Math.min(e.phaseFrame, n);
@@ -235,7 +237,7 @@ export function updateEnemy(world: World, e: Enemy, cfg: SimConfig, think: Think
           e.swingHit = true;
           const from = { x: e.pos.x + e.attackDir.x * (e.radius + 4), y: e.pos.y + e.attackDir.y * (e.radius + 4) };
           spawnProjectile(world, atk.projectileKind ?? 'arrow', e.id, from, e.attackDir, atk.projectile, scaledAttack(atk, e.dmgMul), !atk.rangedPool);
-          emit(world, { type: 'arrowLoosed', pos: from });
+          emit(world, { type: 'arrowLoosed', pos: from, kind: atk.projectileKind ?? 'arrow' });
         }
       } else if (atk.noHit) {
         // Movement only.
