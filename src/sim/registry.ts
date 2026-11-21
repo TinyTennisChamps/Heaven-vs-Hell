@@ -4,6 +4,7 @@ import { thinkDominion } from './actors/dominion';
 import { thinkDummy } from './actors/dummy';
 import { thinkGabriel } from './actors/gabriel';
 import { thinkWatcher } from './actors/watcher';
+import { thinkZealot } from './actors/zealot';
 import type { Think } from './actors/enemy';
 
 /**
@@ -17,4 +18,5 @@ export const ENEMY_THINK: Record<string, Think> = {
   cherub: thinkCherub,
   gabriel: thinkGabriel,
   watcher: thinkWatcher,
+  zealot: thinkZealot,
 };

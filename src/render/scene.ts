@@ -11,7 +11,7 @@ import type { Enemy, World } from '../sim/world';
 import { ANGEL, GARDEN, HEAVEN, JUDGEMENT, SATAN } from './palette';
 import { Particles } from './particles';
 import { Sparks } from './sparks';
-import { drawArcher, drawCherub, drawDominion, drawDummy, drawGabriel, drawWatcher, type ArcherPose, type CherubPose, type DominionPose, type GabrielPose, type WatcherPose } from './sprites/placeholders';
+import { drawArcher, drawCherub, drawDominion, drawDummy, drawGabriel, drawWatcher, drawZealot, type ArcherPose, type CherubPose, type DominionPose, type GabrielPose, type WatcherPose, type ZealotPose } from './sprites/placeholders';
 import type { DoorKind } from '../sim/rooms/run';
 import type { WallKind } from '../sim/config';
 import { maxHp, maxPips, maxPosture, playerRadius } from '../sim/stats';
@@ -505,7 +505,7 @@ export class Scene {
       // The last flashLeadFrames of a windup blink white: "it's coming now" —
       // early enough that reacting to it still lands inside the parry window.
       // Ranged windups don't flash (you parry the shot when it arrives, not when it's fired).
-      const tele = !!atk && !atk.projectile && e.phase === 'windup' && e.phaseFrame > e.windupLen - cfg.combat.telegraph.flashLeadFrames && Math.floor(e.phaseFrame / 3) % 2 === 0;
+      const tele = !!atk && !atk.projectile && !atk.noHit && e.phase === 'windup' && e.phaseFrame > e.windupLen - cfg.combat.telegraph.flashLeadFrames && Math.floor(e.phaseFrame / 3) % 2 === 0;
       const flash = e.hitFlash > 0 || tele;
       // Spawning in: descend from the light and fade up.
       const arriving = e.arrive > 0 ? e.arrive / Math.max(1, cfg.rooms.arriveFrames) : 0;
@@ -515,7 +515,11 @@ export class Scene {
         const sp = groundToScreen(ep.x, ep.y);
         this.telegraphs.rect(Math.round(sp.x) - 3, Math.round(sp.y) - 90, 7, 90).fill({ color: HEAVEN.gold1, alpha: 0.35 * arriving });
       }
-      if (e.type === 'watcher') {
+      if (e.type === 'zealot') {
+        const pose = zealotPose(e);
+        const sway = Math.floor(world.tick / 4);
+        this.redraw(s, `${pose}${flash}${sway}`, () => drawZealot(s!.body, pose, flash, sway * 4));
+      } else if (e.type === 'watcher') {
         const pose = watcherPose(e);
         const lift = pose === 'grounded' ? 0 : Math.round(2 * Math.sin(world.tick * 0.07 + e.id));
         const flap = Math.round(3 * Math.sin(world.tick * 0.12 + e.id));
@@ -635,6 +639,8 @@ export class Scene {
     }
     // Leap: the landing ring is drawn during the flight (see the Gabriel branch); nothing at his feet.
     if (atk.leap) return;
+    // Movement-only moves (sidestep, wing-dash) aren't attacks: no telegraph.
+    if (atk.noHit) return;
     if (atk.summon) {
       // Horn Call: rings spilling from the trumpet; strike him to cut it short.
       const sp = groundToScreen(ep.x, ep.y);
@@ -652,6 +658,15 @@ export class Scene {
       const sp = groundToScreen(ep.x, ep.y);
       if (e.phase === 'active' || Math.floor(e.phaseFrame / 4) % 2 === 0) this.glyph(sp.x, sp.y - 70);
       if (e.phase === 'active') this.fx.poly(proj(groundCircle(e.pos, atk.hitbox.radius, 32), 2)).fill({ color: JUDGEMENT, alpha: 0.8 });
+      return;
+    }
+    if (atk.judgement && atk.hitbox.angleDeg > 90) {
+      // A wide Judgement (the Zealot's Sweep): a white-gold crescent filling in, plus the glyph.
+      this.telegraphs.poly(proj(arcPoly(e.pos, e.attackDir, atk.hitbox, 0, 1, 0.55))).fill({ color: JUDGEMENT, alpha: 0.15 + 0.45 * t });
+      this.telegraphs.poly(proj(arcPoly(e.pos, e.attackDir, atk.hitbox, 0, 1, 0.55))).stroke({ width: 1, color: HEAVEN.gold2, alpha: 0.9 });
+      const sp = groundToScreen(ep.x, ep.y);
+      if (e.phase === 'active' || Math.floor(e.phaseFrame / 4) % 2 === 0) this.glyph(sp.x, sp.y - 66);
+      if (e.phase === 'active') this.fx.poly(proj(arcPoly(e.pos, e.attackDir, atk.hitbox, 0, 1, 0.75), 4)).fill({ color: JUDGEMENT, alpha: 0.85 });
       return;
     }
     if (atk.judgement) {
@@ -864,6 +879,24 @@ function doorIcon(g: Graphics, kind: DoorKind, x: number, y: number, open: boole
       px(3, -3, 2, 6);
       break;
   }
+}
+
+function zealotPose(e: Enemy): ZealotPose {
+  if (e.phase === 'broken') return 'broken';
+  if (e.phase === 'recoil') return 'stagger';
+  if (e.phase === 'flinch') return 'flinch';
+  const k = e.attack ?? '';
+  if (!k) return 'idle';
+  if (k === 'sidestep') return 'sidestep';
+  if (k === 'wingdash') return 'wingDash';
+  if (k === 'sweep') return e.phase === 'windup' ? 'sweepWindup' : 'sweep';
+  if (k === 'thrust') return e.phase === 'windup' ? 'glint' : 'thrust';
+  if (k === 'flurry1' && e.phase === 'windup') return 'glint';
+  // Alternate swings through a string; wind up on the opposite side.
+  const n = Number(k.replace(/\D/g, '')) || 1;
+  const a = n % 2 === 1;
+  if (e.phase === 'windup') return a ? 'slashB' : 'slashA';
+  return a ? 'slashA' : 'slashB';
 }
 
 function watcherPose(e: Enemy): WatcherPose {

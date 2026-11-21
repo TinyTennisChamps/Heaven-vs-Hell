@@ -404,6 +404,40 @@ Decisions:
 
 **Tests** (`tests/watcher.test.ts`, 13): volley count, aim lock-in, block, one press = one deflect, reflect posture, chomp parry → stagger → break → deathblow, perfect parry breaks it, dash through the lunge, block cost, both chomp triggers, a single ranged telegraph, lasers not stopping a Dominion, flight over a hedge but not a pillar, and the minimum telegraph rule.
 
+## The Zealot ("Principality"), elite duellist (user prompt; plan approved 2026-11-20)
+- **Data:** `data/enemies/zealot.json` and `src/sim/actors/zealot.ts`. Training key 8.
+- **Stats:**
+  - `elite`, so she takes the duel and other enemies hold back.
+  - 60 HP (about 6 slashes; the prompt said 4, see the pushback in the plan), 70 posture recovering fast (delay 40, 30/s).
+  - 190 px/s, circling at 52 px.
+  - Flinch 8f with 40f immunity: only while circling or recovering, never mid-attack.
+- **Every attack has super-armour:** a started attack is committed. Hits still deal damage and posture, but cause no knockback or flinch.
+- The Flurry and Cross-step are also `relentless`: a parry, even a perfect one, doesn't end the string. Only a posture break does.
+
+| Attack | Windups | Active | Recovery | Damage / posture | Notes |
+|---|---|---|---|---|---|
+| Flurry | 16 (glint), 8, 8, 10, 14 | 3 each | 3 between hits, 30 at the end | 8/10 per hit, 12/16 for the last | Each hit tracks until 3f before committing, with a 6 px lunge. Deflects give about +14, perfect +22, so 3–4 deflects break her. |
+| Cross-step | 18, 12, 12 | 3 | 3, 3, 28 | 9 / 12 | An 18 px random-side sidestep (70°) before hits 2 and 3 |
+| Thrust dash | 14 | 10, a 90 px lunge | 26 | 14 / 22 | Parryable and blockable; connects about 6f into the lunge |
+| Sweep (Judgement) | 28, wings flared, white-gold crescent and glyph | 6: 240°, 62 px | 36 | 18 / 0 | Can't be blocked or parried (blocking gives the `blockFail` thud). Dash through it. 3–5 s cooldown. |
+| Normal attacks: slash, double slash, backstep slash, sidestrike | 14–16 | 3 | 18–20 | 9 / 12 | — |
+| Sidestep / wing-dash | 6 / 3 | – | – | – | Movement only: 14 px / 90 px with a feather burst |
+
+**AI:**
+- She circles at speed and never acts beyond 200 px.
+- She wing-dashes in from beyond 110 px.
+- At mid-range she uses the thrust.
+- Close up she makes a weighted pick: flurry 3, cross 2, normal 3, sweep 1, with the sweep weight going up by 0.6 for each recent block, so a turtling player draws the Sweep.
+- She throws in occasional sidesteps during cooldowns.
+
+**Benchmark** (`tests/zealot.test.ts`, 16 tests):
+- A parrier kills her in **3.5 s taking 0 damage**; a trader takes 3.8 s and **33 damage**.
+- Before every attack got super-armour, trading won (3.4 s for 27 damage, against 6.7 s for 71). Slashing her cancelled her own attacks.
+
+**Changed for everyone:**
+- A deflect no longer knocks back a super-armoured attacker, so the next hit stays in reach.
+- Flinch happens only while idle or recovering.
+
 ## Rage Vials (original plan: 7, flat additive, every stat ≤ +20%)
 | L1 | L2 |
 |---|---|

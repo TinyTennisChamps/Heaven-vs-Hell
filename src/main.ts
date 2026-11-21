@@ -27,7 +27,7 @@ const cfg: SimConfig = {
   combat: getData('tuning/combat'),
   camera: getData('tuning/camera'),
   attacks: getData('attacks/satan'),
-  enemies: { dummy: getData('enemies/dummy'), dominion: getData('enemies/dominion'), archer: getData('enemies/archer'), cherub: getData('enemies/cherub'), gabriel: getData('enemies/gabriel'), watcher: getData('enemies/watcher') },
+  enemies: { dummy: getData('enemies/dummy'), dominion: getData('enemies/dominion'), archer: getData('enemies/archer'), cherub: getData('enemies/cherub'), gabriel: getData('enemies/gabriel'), watcher: getData('enemies/watcher'), zealot: getData('enemies/zealot') },
   rooms: getData('tuning/rooms'),
   rage: getData('tuning/rage'),
   vials: getData('vials'),
@@ -111,6 +111,7 @@ async function boot() {
     ['Digit4', 'cherub', 'Cherub'],
     ['Digit6', 'gabriel', 'Gabriel'],
     ['Digit7', 'watcher', 'Grigori (Watcher)'],
+    ['Digit8', 'zealot', 'Principality (Zealot)'],
   ];
   const fillRage = () => {
     world.player.rage = cfg.rage.max;
@@ -508,8 +509,11 @@ function spawnEffects(world: World, scene: Scene): void {
       case 'enemyDown':
         P.burst(s.x, s.y - 12, { count: 30, colors: [ANGEL.white, ANGEL.pearl, HEAVEN.gold2, ANGEL.lilac], speed: 120, life: 0.6 });
         break;
-      case 'swing':
       case 'telegraph':
+        // Zealot wing-dash: a burst of feathers as the wings snap open.
+        if (ev.enemy === 'zealot' && ev.attack === 'wingdash') P.burst(s.x, s.y - 26, { count: 14, colors: [ANGEL.white, HEAVEN.gold1, ANGEL.pearl], speed: 90, life: 0.4 });
+        break;
+      case 'swing':
       case 'parryWhiff':
       case 'lockOn':
       case 'lockOff':

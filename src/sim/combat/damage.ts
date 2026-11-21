@@ -145,8 +145,8 @@ export function hitEnemy(world: World, e: Enemy, from: Vec2, dir: Vec2, spec: Hi
   // Interruptible windups (Gabriel's Horn Call): a hit cancels them and staggers.
   const atk = e.attack ? def.attacks[e.attack] : undefined;
   const interrupted = e.phase === 'windup' && !!atk?.interruptible;
-  // Flinch: a short hit-reaction out of super-armour, then immunity (no stun-lock).
-  if (!interrupted && !armored && def.flinchFrames && e.flinchImmune <= 0 && (e.phase === 'idle' || e.phase === 'windup' || e.phase === 'recover')) {
+  // Flinch: a short hit-reaction while circling or recovering (never mid-attack), then immunity (no stun-lock).
+  if (!interrupted && !armored && def.flinchFrames && e.flinchImmune <= 0 && (e.phase === 'idle' || e.phase === 'recover')) {
     e.phase = 'flinch';
     e.phaseFrame = 0;
     e.attack = null;
@@ -218,7 +218,8 @@ export function resolveOnPlayer(world: World, attacker: Enemy, baseAtk: EnemyAtt
     emit(world, { type: 'deflect', pos: { x: (p.pos.x + attacker.pos.x) / 2, y: (p.pos.y + attacker.pos.y) / 2 }, dir, perfect });
     addPlayerPosture(world, atk.postureDamage * (perfect ? c.parry.perfectSelfPostureMul : c.parry.selfPostureMul), cfg);
     // The attacker is knocked back by the deflect — harder on a perfect one.
-    const kb = perfect ? c.parry.perfectRecoil : c.parry.recoil;
+    // Super-armoured strings aren't pushed back by a deflect (the next hit stays in reach).
+    const kb = atk.superArmor ? 0 : perfect ? c.parry.perfectRecoil : c.parry.recoil;
     attacker.knock = { x: -dir.x * kb, y: -dir.y * kb };
     const od = atk.onDeflect;
     const posture = od ? (perfect ? od.perfectPosture : od.posture) : atk.postureDamage * (perfect ? c.parry.perfectAttackerPostureMul : c.parry.attackerPostureMul);

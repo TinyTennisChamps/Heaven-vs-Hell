@@ -1,0 +1,463 @@
+{
+  "displayName": "Principality",
+  "elite": true,
+  "health": 60,
+  "radius": 7,
+  "height": 56,
+  "speed": 190,
+  "turnRateDeg": 18,
+  "attackRange": 46,
+  "cooldownMin": 40,
+  "cooldownMax": 70,
+  "respawnFrames": 120,
+  "brokenFrames": 150,
+  "shieldArcDeg": 0,
+  "shieldPostureMul": 0,
+  "flinchFrames": 8,
+  "flinchImmuneFrames": 40,
+  "posture": {
+    "max": 70,
+    "regenDelay": 40,
+    "regenPerSec": 30,
+    "lowHealthMul": 0.6
+  },
+  "ai": {
+    "circleRange": 52,
+    "closeRange": 46,
+    "dashRange": 110,
+    "maxAttackDist": 200,
+    "sidestepChance": 0.02,
+    "wFlurry": 3,
+    "wCross": 2,
+    "wSweep": 1,
+    "wNormal": 3,
+    "wThrust": 3,
+    "sweepPerBlock": 0.6
+  },
+  "attacks": {
+    "flurry1": {
+      "range": 46,
+      "windup": 16,
+      "trackUntil": 13,
+      "active": 3,
+      "recovery": 3,
+      "healthDamage": 8,
+      "postureDamage": 10,
+      "knockback": 120,
+      "hitstop": 2,
+      "shake": 1.2,
+      "hitbox": {
+        "radius": 34,
+        "angleDeg": 110,
+        "offset": 4
+      },
+      "superArmor": true,
+      "lunge": {
+        "px": 6,
+        "overFrames": 3
+      },
+      "chain": {
+        "next": "flurry2",
+        "chance": 1
+      },
+      "relentless": true
+    },
+    "flurry2": {
+      "range": 46,
+      "windup": 8,
+      "trackUntil": 5,
+      "active": 3,
+      "recovery": 3,
+      "healthDamage": 8,
+      "postureDamage": 10,
+      "knockback": 120,
+      "hitstop": 2,
+      "shake": 1.2,
+      "hitbox": {
+        "radius": 34,
+        "angleDeg": 110,
+        "offset": 4
+      },
+      "superArmor": true,
+      "lunge": {
+        "px": 6,
+        "overFrames": 3
+      },
+      "chain": {
+        "next": "flurry3",
+        "chance": 1
+      },
+      "relentless": true
+    },
+    "flurry3": {
+      "range": 46,
+      "windup": 8,
+      "trackUntil": 5,
+      "active": 3,
+      "recovery": 3,
+      "healthDamage": 8,
+      "postureDamage": 10,
+      "knockback": 120,
+      "hitstop": 2,
+      "shake": 1.2,
+      "hitbox": {
+        "radius": 34,
+        "angleDeg": 110,
+        "offset": 4
+      },
+      "superArmor": true,
+      "lunge": {
+        "px": 6,
+        "overFrames": 3
+      },
+      "chain": {
+        "next": "flurry4",
+        "chance": 1
+      },
+      "relentless": true
+    },
+    "flurry4": {
+      "range": 46,
+      "windup": 10,
+      "trackUntil": 7,
+      "active": 3,
+      "recovery": 3,
+      "healthDamage": 8,
+      "postureDamage": 10,
+      "knockback": 120,
+      "hitstop": 2,
+      "shake": 1.2,
+      "hitbox": {
+        "radius": 34,
+        "angleDeg": 110,
+        "offset": 4
+      },
+      "superArmor": true,
+      "lunge": {
+        "px": 6,
+        "overFrames": 3
+      },
+      "chain": {
+        "next": "flurry5",
+        "chance": 1
+      },
+      "relentless": true
+    },
+    "flurry5": {
+      "range": 46,
+      "windup": 14,
+      "trackUntil": 11,
+      "active": 3,
+      "recovery": 30,
+      "healthDamage": 12,
+      "postureDamage": 16,
+      "knockback": 200,
+      "hitstop": 4,
+      "shake": 2,
+      "hitbox": {
+        "radius": 34,
+        "angleDeg": 110,
+        "offset": 4
+      },
+      "superArmor": true,
+      "lunge": {
+        "px": 6,
+        "overFrames": 3
+      },
+      "relentless": true
+    },
+    "cross1": {
+      "range": 46,
+      "windup": 18,
+      "trackUntil": 15,
+      "active": 3,
+      "recovery": 3,
+      "healthDamage": 9,
+      "postureDamage": 12,
+      "knockback": 140,
+      "hitstop": 3,
+      "shake": 1.4,
+      "hitbox": {
+        "radius": 34,
+        "angleDeg": 110,
+        "offset": 4
+      },
+      "superArmor": true,
+      "lunge": {
+        "px": 6,
+        "overFrames": 3
+      },
+      "chain": {
+        "next": "cross2",
+        "chance": 1
+      },
+      "relentless": true
+    },
+    "cross2": {
+      "range": 46,
+      "windup": 12,
+      "trackUntil": 9,
+      "active": 3,
+      "recovery": 3,
+      "healthDamage": 9,
+      "postureDamage": 12,
+      "knockback": 140,
+      "hitstop": 3,
+      "shake": 1.4,
+      "hitbox": {
+        "radius": 34,
+        "angleDeg": 110,
+        "offset": 4
+      },
+      "superArmor": true,
+      "lunge": {
+        "px": 6,
+        "overFrames": 3
+      },
+      "preStep": {
+        "px": 18,
+        "angleDeg": 70,
+        "frames": 6,
+        "randomSide": true
+      },
+      "chain": {
+        "next": "cross3",
+        "chance": 1
+      },
+      "relentless": true
+    },
+    "cross3": {
+      "range": 46,
+      "windup": 12,
+      "trackUntil": 9,
+      "active": 3,
+      "recovery": 28,
+      "healthDamage": 9,
+      "postureDamage": 12,
+      "knockback": 140,
+      "hitstop": 3,
+      "shake": 1.4,
+      "hitbox": {
+        "radius": 34,
+        "angleDeg": 110,
+        "offset": 4
+      },
+      "superArmor": true,
+      "lunge": {
+        "px": 6,
+        "overFrames": 3
+      },
+      "preStep": {
+        "px": 18,
+        "angleDeg": 70,
+        "frames": 6,
+        "randomSide": true
+      },
+      "relentless": true
+    },
+    "thrust": {
+      "range": 110,
+      "windup": 14,
+      "trackUntil": 10,
+      "active": 10,
+      "recovery": 26,
+      "healthDamage": 14,
+      "postureDamage": 22,
+      "knockback": 220,
+      "hitstop": 4,
+      "shake": 2,
+      "hitbox": {
+        "radius": 22,
+        "angleDeg": 40,
+        "offset": 6
+      },
+      "lunge": {
+        "px": 90,
+        "overFrames": 10
+      },
+      "superArmor": true
+    },
+    "sweep": {
+      "range": 56,
+      "windup": 28,
+      "trackUntil": 16,
+      "active": 6,
+      "recovery": 36,
+      "healthDamage": 18,
+      "postureDamage": 0,
+      "knockback": 260,
+      "hitstop": 5,
+      "shake": 3,
+      "hitbox": {
+        "radius": 62,
+        "angleDeg": 240,
+        "offset": 0
+      },
+      "judgement": true,
+      "cooldownAfter": [
+        180,
+        300
+      ],
+      "superArmor": true
+    },
+    "slash": {
+      "range": 46,
+      "windup": 14,
+      "trackUntil": 10,
+      "active": 3,
+      "recovery": 18,
+      "healthDamage": 9,
+      "postureDamage": 12,
+      "knockback": 140,
+      "hitstop": 3,
+      "shake": 1.4,
+      "hitbox": {
+        "radius": 34,
+        "angleDeg": 110,
+        "offset": 4
+      },
+      "superArmor": true
+    },
+    "dslash1": {
+      "range": 46,
+      "windup": 14,
+      "trackUntil": 10,
+      "active": 3,
+      "recovery": 3,
+      "healthDamage": 9,
+      "postureDamage": 12,
+      "knockback": 140,
+      "hitstop": 3,
+      "shake": 1.4,
+      "hitbox": {
+        "radius": 34,
+        "angleDeg": 110,
+        "offset": 4
+      },
+      "chain": {
+        "next": "dslash2",
+        "chance": 1
+      },
+      "superArmor": true
+    },
+    "dslash2": {
+      "range": 46,
+      "windup": 10,
+      "trackUntil": 7,
+      "active": 3,
+      "recovery": 20,
+      "healthDamage": 9,
+      "postureDamage": 12,
+      "knockback": 140,
+      "hitstop": 3,
+      "shake": 1.4,
+      "hitbox": {
+        "radius": 34,
+        "angleDeg": 110,
+        "offset": 4
+      },
+      "superArmor": true
+    },
+    "backslash": {
+      "range": 46,
+      "windup": 16,
+      "trackUntil": 12,
+      "active": 3,
+      "recovery": 18,
+      "healthDamage": 9,
+      "postureDamage": 12,
+      "knockback": 140,
+      "hitstop": 3,
+      "shake": 1.4,
+      "hitbox": {
+        "radius": 34,
+        "angleDeg": 110,
+        "offset": 4
+      },
+      "preStep": {
+        "px": 24,
+        "angleDeg": 180,
+        "frames": 8
+      },
+      "superArmor": true
+    },
+    "sidestrike": {
+      "range": 46,
+      "windup": 15,
+      "trackUntil": 11,
+      "active": 3,
+      "recovery": 18,
+      "healthDamage": 9,
+      "postureDamage": 12,
+      "knockback": 140,
+      "hitstop": 3,
+      "shake": 1.4,
+      "hitbox": {
+        "radius": 34,
+        "angleDeg": 110,
+        "offset": 4
+      },
+      "preStep": {
+        "px": 22,
+        "angleDeg": 80,
+        "frames": 6,
+        "randomSide": true
+      },
+      "superArmor": true
+    },
+    "sidestep": {
+      "range": 46,
+      "windup": 6,
+      "trackUntil": 0,
+      "active": 1,
+      "recovery": 4,
+      "healthDamage": 0,
+      "postureDamage": 0,
+      "knockback": 140,
+      "hitstop": 3,
+      "shake": 1.4,
+      "hitbox": {
+        "radius": 34,
+        "angleDeg": 110,
+        "offset": 4
+      },
+      "noHit": true,
+      "preStep": {
+        "px": 14,
+        "angleDeg": 90,
+        "frames": 6,
+        "randomSide": true
+      },
+      "cooldownAfter": [
+        30,
+        60
+      ]
+    },
+    "wingdash": {
+      "range": 200,
+      "windup": 3,
+      "trackUntil": 3,
+      "active": 10,
+      "recovery": 6,
+      "healthDamage": 0,
+      "postureDamage": 0,
+      "knockback": 140,
+      "hitstop": 3,
+      "shake": 1.4,
+      "hitbox": {
+        "radius": 34,
+        "angleDeg": 110,
+        "offset": 4
+      },
+      "noHit": true,
+      "lunge": {
+        "px": 90,
+        "overFrames": 10
+      },
+      "cooldownAfter": [
+        60,
+        120
+      ]
+    }
+  }
+}

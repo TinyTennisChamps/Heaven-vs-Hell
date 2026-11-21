@@ -318,3 +318,94 @@ export function drawWatcher(g: Graphics, pose: WatcherPose, flash: boolean, lift
   g.circle(1, cy, R * 0.5).fill(c(iris)).stroke({ width: 1, color: c(ANGEL.angelLine), alignment: 1 });
   if (!flash) g.rect(0, cy - R * 0.4, 2, R * 0.8).fill(ANGEL.void);
 }
+
+export type ZealotPose = 'idle' | 'sidestep' | 'wingDash' | 'glint' | 'slashA' | 'slashB' | 'thrust' | 'sweepWindup' | 'sweep' | 'stagger' | 'broken' | 'flinch';
+
+/**
+ * Zealot ("Principality"): the tallest, thinnest silhouette among the Host —
+ * ~50 px with the helm, ~16 px wide. Silver and pearl armour, soft-gold trim,
+ * a sash; a faceless helm with one vertical slit; a thin halo ring like a
+ * blade; ribbons of pale light for hair; sleek wings folded close at rest and
+ * snapping open to dash or strike; a long thin sword. No red anywhere.
+ * Asset slots: idle, run, sidestep, wing_dash, slash_a, slash_b, slash_c,
+ * combo_flurry, combo_crossstep, thrust, sweep_windup, sweep, recover, hurt,
+ * stagger, deathblow, death.
+ */
+export function drawZealot(g: Graphics, pose: ZealotPose, flash: boolean, t: number): void {
+  const c = (col: number) => (flash ? 0xffffff : col);
+  const line = flash ? 0xffffff : ANGEL.angelLine;
+  const st = { width: 1, color: line, alignment: 1 } as const;
+  g.clear();
+  const crouch = pose === 'broken' ? 8 : pose === 'sweepWindup' ? 5 : pose === 'sweep' || pose === 'thrust' ? 3 : 0;
+  const lean = pose === 'thrust' || pose === 'wingDash' ? 4 : pose === 'stagger' ? -4 : pose === 'slashA' ? 2 : pose === 'slashB' ? -1 : 0;
+  const y = (v: number) => v + crouch;
+  const open = pose !== 'idle' && pose !== 'broken' && pose !== 'stagger' && pose !== 'flinch';
+  const flare = pose === 'sweepWindup' || pose === 'sweep';
+
+  // Wings: folded slivers at rest; open and swept back to act; flared wide for the Sweep.
+  if (open) {
+    const span = flare ? 26 : 18;
+    const up = flare ? -10 : -4;
+    g.poly([-2 + lean, y(-36), -span + lean, y(-46) + up, -span - 4 + lean, y(-30), -8 + lean, y(-22)]).fill(c(ANGEL.white)).stroke(st);
+    g.poly([2 + lean, y(-36), span - 4 + lean, y(-48) + up, span + lean, y(-32), 6 + lean, y(-24)]).fill(c(HEAVEN.gold1)).stroke(st);
+  } else {
+    g.poly([-3 + lean, y(-38), -7 + lean, y(-44), -6 + lean, y(-18)]).fill(c(ANGEL.white)).stroke(st);
+  }
+  // Legs and body: long and slim.
+  g.rect(-3, y(-14), 2, 14).fill(c(ANGEL.silver2));
+  g.rect(1, y(-14), 2, 14).fill(c(ANGEL.silver2));
+  g.poly([-4 + lean, y(-14), 4 + lean, y(-14), 3 + lean, y(-36), -3 + lean, y(-36)]).fill(c(ANGEL.silver)).stroke(st);
+  g.rect(-1 + lean, y(-34), 2, 20).fill(c(ANGEL.pearl));
+  // Sash / tabard and gold trim.
+  g.poly([-3 + lean, y(-20), 3 + lean, y(-20), 2 + lean, y(-8), -1 + lean, y(-6)]).fill(c(ANGEL.pearl2));
+  g.rect(-4 + lean, y(-22), 8, 1).fill(c(HEAVEN.gold2));
+  // Helm: tall, faceless, one vertical slit.
+  const hx = lean;
+  const hy = y(-44);
+  g.rect(hx - 3, hy, 6, 8).fill(c(ANGEL.silver)).stroke(st);
+  if (!flash) g.rect(hx, hy + 2, 1, 5).fill(ANGEL.void);
+  g.rect(hx - 3, hy + 7, 6, 1).fill(c(HEAVEN.gold2));
+  // Halo: a thin ring floating behind like a blade.
+  g.ellipse(hx, hy - 3, 6, 1.5).stroke({ width: 1, color: flash ? 0xffffff : HEAVEN.gold1 });
+  // Ribbons of pale light instead of hair, trailing back.
+  const sway = Math.sin(t * 0.15) * 2;
+  g.moveTo(hx - 2, hy + 2).lineTo(hx - 9, hy + 6 + sway).stroke({ width: 1, color: c(ANGEL.sky), alpha: 0.8 });
+  g.moveTo(hx - 1, hy + 4).lineTo(hx - 8, hy + 11 - sway).stroke({ width: 1, color: c(ANGEL.sky), alpha: 0.6 });
+
+  if (pose === 'broken') {
+    g.moveTo(-12, -1).lineTo(16, -3).stroke({ width: 1, color: c(ANGEL.silver) });
+    return;
+  }
+  // The long thin sword.
+  const sx = hx + 4;
+  const sy = y(-24);
+  let tip: [number, number];
+  switch (pose) {
+    case 'glint':
+    case 'sweepWindup':
+      tip = [sx - 14, sy - 22];
+      break;
+    case 'slashA':
+      tip = [sx + 26, sy + 10];
+      break;
+    case 'slashB':
+      tip = [sx + 24, sy - 16];
+      break;
+    case 'thrust':
+    case 'wingDash':
+      tip = [sx + 30, sy - 2];
+      break;
+    case 'sweep':
+      tip = [sx + 22, sy + 20];
+      break;
+    default:
+      tip = [sx + 4, sy + 20];
+  }
+  g.moveTo(sx, sy).lineTo(tip[0], tip[1]).stroke({ width: 1, color: c(0xffffff) });
+  g.rect(sx - 2, sy - 1, 4, 2).fill(c(HEAVEN.gold2));
+  if (pose === 'glint' && !flash) {
+    // The blade glint before the Flurry: a white star at the tip.
+    const [gx, gy] = tip;
+    g.rect(gx - 3, gy, 7, 1).rect(gx, gy - 3, 1, 7).fill(0xffffff);
+  }
+}
