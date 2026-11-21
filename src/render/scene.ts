@@ -14,6 +14,7 @@ import { Sparks } from './sparks';
 import { drawArcher, drawCherub, drawDominion, drawDummy, type ArcherPose, type CherubPose, type DominionPose } from './sprites/placeholders';
 import type { DoorKind } from '../sim/rooms/run';
 import type { WallKind } from '../sim/config';
+import { maxHp, maxPips, maxPosture, playerRadius } from '../sim/stats';
 import { enemyAttack } from '../sim/actors/enemy';
 import { shieldUp } from '../sim/combat/damage';
 
@@ -96,6 +97,12 @@ export class Scene {
   private fontG = new Graphics();
   /** Where each exit door leads (icons above them); null hides icons (training). */
   doorKinds: DoorKind[] | null = null;
+  private roarRings: { pos: Vec2; age: number }[] = [];
+
+  /** Expanding hellfire ring for the Rage roar (ground position). */
+  roarRing(pos: Vec2): void {
+    this.roarRings.push({ pos: { ...pos }, age: 0 });
+  }
 
   constructor(
     world: World,
@@ -292,6 +299,65 @@ export class Scene {
     }
   }
 
+  /** Hidden-vial cracks (with a red glint), vial cages and revealed vials. */
+  private drawPickups(world: World): void {
+    const g = this.fx;
+    for (const q of world.pickups) {
+      const c = groundToScreen(q.at.x, q.at.y);
+      const cx = Math.round(c.x);
+      const cy = Math.round(c.y);
+      if (q.kind === 'crack') {
+        if (!q.open) {
+          // Cracked marble on the rim; more cracks per hit.
+          const lines: [number, number, number, number][] = [[-6, -1, 0, 1], [0, 1, 5, -1], [-2, 0, -4, 4], [2, 0, 4, 3], [-8, 2, -3, 3], [4, -2, 8, 1]];
+          for (let i = 0; i < 2 + q.hits * 2 && i < lines.length; i++) {
+            const [a, b, d, e] = lines[i]!;
+            g.moveTo(cx + a, cy + b).lineTo(cx + d, cy + e).stroke({ width: 1, color: HEAVEN.stoneDark });
+          }
+          // The red glint: a brief sparkle every ~1.5 s (red = Satan's item).
+          const t = world.tick % 90;
+          if (t < 10) {
+            const k = t < 5 ? t : 10 - t;
+            g.rect(cx - k, cy - 1, 2 * k + 1, 1).rect(cx, cy - 1 - k, 1, 2 * k + 1).fill({ color: SATAN.hellfire, alpha: 0.9 });
+            g.rect(cx, cy - 1, 1, 1).fill(0xffffff);
+          }
+        } else {
+          g.rect(cx - 5, cy - 1, 3, 2).rect(cx + 2, cy, 3, 2).rect(cx - 1, cy + 1, 2, 1).fill(HEAVEN.stone);
+        }
+      } else if (!q.open) {
+        // Gold cage: bars around the vial, a cap on top.
+        this.vial(world, q.vialAt, false);
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * Math.PI * 2;
+          const bx = Math.round(cx + Math.cos(a) * 8);
+          const by = Math.round(cy + Math.sin(a) * 4);
+          g.rect(bx, by - 20, 1, 20).fill(HEAVEN.gold2);
+        }
+        g.ellipse(cx, cy - 20, 8, 4).stroke({ width: 1, color: HEAVEN.gold3 }).fill({ color: HEAVEN.gold2, alpha: 0.6 });
+        g.ellipse(cx, cy, 8, 4).stroke({ width: 1, color: HEAVEN.gold3 });
+        continue;
+      } else {
+        g.ellipse(cx, cy, 8, 4).stroke({ width: 1, color: HEAVEN.gold3 });
+      }
+      if (q.open && !q.taken) this.vial(world, q.vialAt, true);
+    }
+  }
+
+  /** A Rage Vial: a red flask with an ember glow, bobbing when free. */
+  private vial(world: World, at: Vec2, free: boolean): void {
+    const g = this.fx;
+    const s = groundToScreen(at.x, at.y);
+    const bob = free ? Math.round(Math.sin(world.tick * 0.1) * 1.5) : 0;
+    const x = Math.round(s.x);
+    const y = Math.round(s.y) - 10 + bob;
+    if (free) g.ellipse(x, Math.round(s.y), 5, 2.5).fill({ color: SATAN.hellfire, alpha: 0.35 });
+    g.rect(x - 1, y - 6, 3, 2).fill(HEAVEN.gold2);
+    g.rect(x - 1, y - 4, 3, 2).fill(SATAN.cloak2);
+    g.circle(x, y + 1, 4).fill(SATAN.crimson).stroke({ width: 1, color: SATAN.cloak, alignment: 1 });
+    g.rect(x - 1, y - 1, 1, 2).fill(SATAN.eyeGlow);
+    g.rect(x - 2, y + 2, 5, 1).fill(SATAN.hellfire);
+  }
+
   /** The rest font glows until used. */
   private drawFont(world: World): void {
     const g = this.fontG;
@@ -340,6 +406,22 @@ export class Scene {
     // Fallen: Satan keels over and dims.
     this.player.rotation = p.dead ? (pick.facing === 'left' ? 1.4 : -1.4) : 0;
     this.player.tint = p.dead ? 0x8a7a80 : 0xffffff;
+    // Rage: the transform swells him in white-hot pulses; the form is larger and burns.
+    let scale = 1;
+    if (p.rageTransform > 0) {
+      const k = 1 - p.rageTransform / Math.max(1, cfg.rage.transformFrames);
+      scale = 1 + 0.25 * k;
+      if (Math.floor(p.rageTransform / 3) % 2 === 0) this.player.texture = tag.flash[fi]!;
+    } else if (p.rageForm > 0) {
+      scale = 1.25;
+      this.player.tint = Math.floor(world.tick / 6) % 2 === 0 ? 0xffb090 : 0xff9070;
+      const ending = p.rageForm < 90 && Math.floor(p.rageForm / 5) % 2 === 0; // last 1.5 s flickers
+      const auraR = 13 + Math.sin(world.tick * 0.3) * 1.5;
+      this.shadows.ellipse(Math.round(ps.x), Math.round(ps.y), auraR * 1.4, auraR * 0.7).fill({ color: SATAN.hellfire, alpha: ending ? 0.15 : 0.35 });
+      this.shadows.ellipse(Math.round(ps.x), Math.round(ps.y), auraR, auraR * 0.5).fill({ color: SATAN.ember, alpha: ending ? 0.2 : 0.4 });
+      if (world.tick % 3 === 0) this.particles.burst(ps.x + (Math.random() - 0.5) * 14, ps.y - 4 - Math.random() * 20, { count: 1, colors: [SATAN.ember, SATAN.hellfire, SATAN.eyeGlow], speed: 18, life: 0.5, dirX: 0, dirY: -1, spread: 0.8 });
+    }
+    this.player.scale.set((pick.facing === 'left' ? -1 : 1) * scale, scale);
     this.player.zIndex = pp.x + pp.y;
     this.shadow(pp, 8);
     if (p.dash) {
@@ -350,7 +432,20 @@ export class Scene {
 
     // Ground wake of the slash: the true hitbox shape on the floor (the sprite
     // carries the main smear), then breaking into streaks like the reference.
-    if (p.action && p.action.key !== 'deathblow') {
+    if (p.action && p.action.key.startsWith('claw')) {
+      // Rage claws: three raking streaks across the hitbox.
+      const d = attackDef(cfg, p.action.key);
+      const age = p.action.frame - d.startup;
+      if (age >= 1 && age <= d.active + 4) {
+        const prog = Math.min(1, age / d.active);
+        const fade = age > d.active ? 1 - (age - d.active) / 4 : 1;
+        const [from, to] = p.action.step === 2 ? [1 - prog, 1] : [0, prog];
+        for (const [k, col] of [[0.62, SATAN.crimson], [0.8, SATAN.hellfire], [0.98, SATAN.eyeGlow]] as const) {
+          const box = { ...d.hitbox, radius: d.hitbox.radius * k };
+          this.fx.poly(proj(arcPoly(p.pos, p.action.dir, box, from, to, 0.9), 3)).fill({ color: col, alpha: 0.85 * fade });
+        }
+      }
+    } else if (p.action && p.action.key !== 'deathblow') {
       const d = attackDef(cfg, p.action.key);
       const age = p.action.frame - d.startup;
       if (age >= 1 && age <= d.active) {
@@ -366,8 +461,18 @@ export class Scene {
         }
       }
     }
+    // Roar rings.
+    for (const r of this.roarRings) {
+      r.age++;
+      const k = r.age / 16;
+      const rad = 8 + (cfg.rage.roar.radius - 8) * Math.min(1, k * 1.4);
+      this.fx.poly(proj(groundCircle(r.pos, rad, 24), 2)).stroke({ width: 2, color: k < 0.5 ? SATAN.eyeGlow : SATAN.hellfire, alpha: 1 - k });
+    }
+    this.roarRings = this.roarRings.filter((r) => r.age < 16);
+    this.drawPickups(world);
+
     // Facing marker: a small hellfire arc on the floor where Satan points.
-    if (!p.dash && !p.parry && !p.guarding && p.broken === 0) {
+    if (!p.dash && !p.parry && !p.guarding && p.broken === 0 && !p.dead) {
       this.fx.poly(proj(arcPoly(pp, p.facing, { radius: 14, angleDeg: 50, offset: 0 }, 0, 1, 0.7))).fill({ color: SATAN.hellfire, alpha: 0.75 });
     }
     // Guard read: a thin hellfire arc while parry window is open, dim while blocking.
@@ -575,15 +680,46 @@ export class Scene {
     const w = 96;
     g.rect(x - 2, y - 2, w + 4, 9).fill(SATAN.cloak);
     g.rect(x, y, w, 5).fill(SATAN.lava);
-    g.rect(x, y, Math.round((w * p.hp) / cfg.player.maxHealth), 5).fill(SATAN.crimson);
-    g.rect(x, y, Math.round((w * p.hp) / cfg.player.maxHealth), 1).fill(SATAN.hellfire);
+    const hpMax = maxHp(world, cfg);
+    g.rect(x, y, Math.round((w * p.hp) / hpMax), 5).fill(SATAN.crimson);
+    g.rect(x, y, Math.round((w * p.hp) / hpMax), 1).fill(SATAN.hellfire);
+    // Rage meter under the pips: embers filling; full = pulsing hellfire with an R; in form = draining.
+    {
+      const ry = y + 16;
+      const R = cfg.rage;
+      const inForm = p.rageForm > 0 || p.rageTransform > 0;
+      const frac = inForm ? (p.rageTransform > 0 ? 1 : Math.min(1, p.rageForm / R.durationFrames)) : Math.min(1, p.rage / R.max);
+      const full = !inForm && p.rage >= R.max;
+      g.rect(x - 2, ry - 2, w + 4, 7).fill(SATAN.cloak);
+      g.rect(x, ry, w, 3).fill(SATAN.cloak2);
+      const pulse = Math.floor(world.tick / 8) % 2 === 0;
+      // Distinct from the crimson HP bar: ember while charging, white-gold burning down in form.
+      const col = inForm ? (pulse ? SATAN.eyeGlow : 0xffffff) : full ? (pulse ? SATAN.hellfire : SATAN.eyeGlow) : SATAN.ember;
+      if (frac > 0) g.rect(x, ry, Math.max(1, Math.round(w * frac)), 3).fill(col);
+      if (full) {
+        // A tiny pixel "R": the key to press.
+        const rx = x + w + 6;
+        const r0 = ry - 2;
+        g.rect(rx - 1, r0 - 1, 7, 9).fill(SATAN.cloak);
+        g.rect(rx, r0, 1, 7).rect(rx + 1, r0, 3, 1).rect(rx + 4, r0 + 1, 1, 2).rect(rx + 1, r0 + 3, 3, 1).rect(rx + 3, r0 + 4, 1, 1).rect(rx + 4, r0 + 5, 1, 2).fill(pulse ? SATAN.hellfire : SATAN.eyeGlow);
+      }
+    }
+    // Vials collected this run: little red flasks after the pips.
+    world.vials.forEach((_, i) => {
+      const vx = x + 26 + maxPips(world, cfg) * 8 + 4 + i * 7;
+      const vy = y + 10;
+      g.rect(vx, vy - 3, 2, 2).fill(HEAVEN.gold2);
+      g.rect(vx - 1, vy - 1, 4, 4).fill(SATAN.crimson).stroke({ width: 1, color: SATAN.cloak, alignment: 1 });
+      g.rect(vx, vy, 1, 1).fill(SATAN.eyeGlow);
+    });
     for (let i = 0; i < 3; i++) {
       const lit = p.action ? i < p.action.step : p.comboTimer > 0 && i < p.lastStep;
       g.rect(x + i * 6, y + 9, 4, 2).fill(lit ? SATAN.ember : SATAN.cloak2);
     }
     // Throw pips (E): little hellfire diamonds under the health bar.
     const blink = this.noPipsFlash > 0 && Math.floor(this.noPipsFlash * 20) % 2 === 0;
-    for (let i = 0; i < cfg.player.throw.maxPips; i++) {
+    const pipsMax = maxPips(world, cfg);
+    for (let i = 0; i < pipsMax; i++) {
       const px = x + 26 + i * 8;
       const py = y + 10;
       const full = i < p.pips;
@@ -593,7 +729,7 @@ export class Scene {
     const pw = 140;
     const px = Math.round(VIEW_W / 2 - pw / 2);
     const py = VIEW_H - 14;
-    const frac = Math.min(1, p.posture / cfg.player.posture.max);
+    const frac = Math.min(1, p.posture / maxPosture(world, cfg));
     g.rect(px - 2, py - 2, pw + 4, 7).fill(SATAN.cloak);
     g.rect(px, py, pw, 3).fill(SATAN.cloak2);
     const fw = Math.round(pw * frac);
@@ -610,7 +746,7 @@ export class Scene {
     }
     g.stroke({ width: 1, color: 0x00c0ff, alpha: 0.8 });
     const p = world.player;
-    g.poly(proj(groundCircle(p.pos, cfg.player.radius))).stroke({ width: 1, color: p.dash && p.dash.frame >= cfg.player.dash.iFrameStart && p.dash.frame <= cfg.player.dash.iFrameEnd ? 0xffff00 : 0x00ff66 });
+    g.poly(proj(groundCircle(p.pos, playerRadius(world, cfg)))).stroke({ width: 1, color: p.dash && p.dash.frame >= cfg.player.dash.iFrameStart && p.dash.frame <= cfg.player.dash.iFrameEnd ? 0xffff00 : 0x00ff66 });
     if (p.action) {
       const d = attackDef(cfg, p.action.key);
       if (attackPhase(p.action, d) === 'active') g.poly(proj(arcPoly(p.pos, p.action.dir, d.hitbox, 0, 1, 0))).stroke({ width: 1, color: 0xff00ff });

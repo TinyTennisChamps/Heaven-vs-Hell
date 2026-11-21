@@ -1,0 +1,30 @@
+{
+  "max": 100,
+  "gain": {
+    "kill": 8,
+    "deathblow": 15,
+    "perfectParry": 4,
+    "hitTaken": 6
+  },
+  "transformFrames": 20,
+  "durationFrames": 600,
+  "killExtendFrames": 60,
+  "killHeal": 5,
+  "damageTakenMul": 0.5,
+  "radiusMul": 1.3,
+  "speedMul": 1.1,
+  "roar": {
+    "cooldownFrames": 120,
+    "radius": 44,
+    "healthDamage": 8,
+    "postureDamage": 30,
+    "knockback": 280,
+    "hitstop": 5,
+    "shake": 3
+  },
+  "carryOver": {
+    "max": 40,
+    "meterMul": 0.5,
+    "perDeath": 5
+  }
+}

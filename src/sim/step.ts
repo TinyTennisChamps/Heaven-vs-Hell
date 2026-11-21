@@ -11,6 +11,7 @@ import { updateProjectiles } from './projectiles';
 import { updateCamera, updateShake } from './camera';
 import { moveAndSlide } from './physics/collide';
 import { updateRoom } from './rooms/roomRunner';
+import { playerRadius } from './stats';
 import type { World } from './world';
 
 /**
@@ -88,7 +89,7 @@ function separate(world: World, cfg: SimConfig): void {
   const k = cfg.combat.separationStrength;
   const p = world.player;
   const bodies: { pos: Vec2; r: number; ghost: boolean }[] = [
-    { pos: p.pos, r: cfg.player.radius, ghost: !!p.dash || !!(p.action && p.action.key === 'deathblow') },
+    { pos: p.pos, r: playerRadius(world, cfg), ghost: !!p.dash || !!(p.action && p.action.key === 'deathblow') },
     ...world.enemies.filter((e) => e.phase !== 'down').map((e) => ({ pos: e.pos, r: e.radius, ghost: false })),
   ];
   for (let i = 0; i < bodies.length; i++) {

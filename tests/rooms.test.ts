@@ -32,7 +32,7 @@ function roomWorld(id: string, seed = 3): World {
 /** Kill everything currently up, then tick until the room settles. */
 function clearRoom(w: World): void {
   for (let guard = 0; guard < 40 && !w.roomRun.cleared; guard++) {
-    for (const e of w.enemies) if (e.phase !== 'down') killEnemy(w, e);
+    for (const e of w.enemies) if (e.phase !== 'down') killEnemy(w, e, cfg);
     run(w, cfg, cfg.rooms.waveDelayFrames + cfg.rooms.firstWaveDelayFrames + 2);
   }
 }
@@ -118,16 +118,20 @@ describe('room runner', () => {
 });
 
 describe('gate heal', () => {
+  const at = (hp: number, pips: number) => {
+    const w = createWorld(rooms['l1/cloister']!, cfg, 1, { hp, pips });
+    return carryThroughGate(w, cfg);
+  };
   it('going through a gate heals a little (roomHealFrac), capped at max, pips unchanged', () => {
     const heal = Math.round(cfg.player.maxHealth * cfg.rooms.roomHealFrac);
     expect(heal).toBeGreaterThan(0);
-    expect(carryThroughGate(40, 2, cfg)).toEqual({ hp: 40 + heal, pips: 2 });
-    expect(carryThroughGate(cfg.player.maxHealth - 1, 5, cfg).hp).toBe(cfg.player.maxHealth);
+    expect(at(40, 2)).toMatchObject({ hp: 40 + heal, pips: 2 });
+    expect(at(cfg.player.maxHealth - 1, 5).hp).toBe(cfg.player.maxHealth);
   });
 
   it('the next room starts with the healed health', () => {
     const r = startRun(level, rooms, 4, { hp: 100, pips: 5 });
-    takeExit(r, 0, level, rooms, carryThroughGate(30, 3, cfg));
+    takeExit(r, 0, level, rooms, at(30, 3));
     const w = createWorld(rooms[r.current]!, cfg, r.roomSeed, r.carry);
     expect(w.player.hp).toBe(30 + Math.round(cfg.player.maxHealth * cfg.rooms.roomHealFrac));
   });

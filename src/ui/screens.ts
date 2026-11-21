@@ -13,6 +13,8 @@ export class Screens {
   private fallen: HTMLDivElement;
   private cleared: HTMLDivElement;
   private fader: HTMLDivElement;
+  private toastEl: HTMLDivElement;
+  private toastTimer = 0;
 
   constructor(root: HTMLElement) {
     this.title = this.panel(root, 'screen title-screen');
@@ -21,6 +23,8 @@ export class Screens {
     this.hud = this.panel(root, 'room-hud');
     this.prompt = this.panel(root, 'tutorial-prompt');
     this.fader = this.panel(root, 'fader');
+    this.toastEl = this.panel(root, 'toast');
+    this.toastEl.hidden = true;
     this.fader.hidden = false;
     this.hideAll();
     this.hud.hidden = true;
@@ -56,7 +60,21 @@ export class Screens {
     this.prompt.hidden = true;
   }
 
-  showTitle(info: { runs: number; deaths: number; tutorialDone: boolean }): void {
+  /** A short banner (e.g. a vial pickup) that fades after a few seconds. */
+  toast(title: string, line: string): void {
+    this.toastEl.innerHTML = '';
+    const t = document.createElement('div');
+    t.className = 'toast-title';
+    t.textContent = title;
+    const l = document.createElement('div');
+    l.textContent = line;
+    this.toastEl.append(t, l);
+    this.toastEl.hidden = false;
+    window.clearTimeout(this.toastTimer);
+    this.toastTimer = window.setTimeout(() => (this.toastEl.hidden = true), 3200);
+  }
+
+  showTitle(info: { runs: number; deaths: number; tutorialDone: boolean; rageCarried: number; rageMax: number }): void {
     this.hideAll();
     const t = this.title;
     t.innerHTML = '';
@@ -74,6 +92,23 @@ export class Screens {
     stats.className = 'meta';
     stats.textContent = info.runs > 0 ? `Runs ${info.runs} · Falls ${info.deaths}` : 'Enter to begin';
     t.append(h, sub, menu, stats);
+    if (info.rageCarried > 0) {
+      // PDF title mock: "Rage carried over" panel.
+      const r = document.createElement('div');
+      r.className = 'rage-carry';
+      const lab = document.createElement('div');
+      lab.textContent = 'RAGE CARRIED OVER';
+      const bar = document.createElement('div');
+      bar.className = 'bar';
+      const fill = document.createElement('div');
+      fill.style.width = `${Math.round((100 * info.rageCarried) / info.rageMax)}%`;
+      bar.appendChild(fill);
+      const note = document.createElement('div');
+      note.className = 'note';
+      note.textContent = `${info.rageCarried} / ${info.rageMax} from your last falls`;
+      r.append(lab, bar, note);
+      t.appendChild(r);
+    }
     t.hidden = false;
   }
 

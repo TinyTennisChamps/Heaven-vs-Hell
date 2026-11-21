@@ -14,7 +14,8 @@ import { loadAtlas } from './render/atlas';
 import type { AnimConfig } from './render/animSync';
 import { attackDef, attackPhase } from './sim/actors/player';
 import type { LevelDef, RoomDef, SimConfig } from './sim/config';
-import { carryThroughGate, startRun, takeExit, type RunState } from './sim/rooms/run';
+import { carryThroughGate, rageCarryOver, roomPickups, startRun, takeExit, type RunState } from './sim/rooms/run';
+import { maxHp } from './sim/stats';
 import { step } from './sim/step';
 import { createWorld, spawnEnemyAt, type World } from './sim/world';
 import { Screens } from './ui/screens';
@@ -28,6 +29,8 @@ const cfg: SimConfig = {
   attacks: getData('attacks/satan'),
   enemies: { dummy: getData('enemies/dummy'), dominion: getData('enemies/dominion'), archer: getData('enemies/archer'), cherub: getData('enemies/cherub') },
   rooms: getData('tuning/rooms'),
+  rage: getData('tuning/rage'),
+  vials: getData('vials'),
 };
 
 /** Every room under data/rooms/, keyed by its id (e.g. "l1/cloister"). */
@@ -53,12 +56,15 @@ const meta = {
   },
   bump(k: string): number {
     const v = meta.get(k) + 1;
+    meta.set(k, v);
+    return v;
+  },
+  set(k: string, v: number): void {
     try {
       localStorage.setItem(`hvh.${k}`, String(v));
     } catch {
       /* ignore */
     }
-    return v;
   },
 };
 
@@ -91,10 +97,10 @@ async function boot() {
   legend.className = 'legend';
   root.appendChild(legend);
   const updateLegend = () => {
-    const base = 'WASD move · LMB slash · RMB parry (hold: block) · E throw · Space dash · Q lock';
+    const base = 'WASD move · LMB slash · RMB parry (hold: block) · E throw · Space dash · Q lock · R rage';
     legend.hidden = mode === 'title';
     legend.textContent =
-      mode === 'training' ? `${base} · 1/2/3/4 spawn, 0 clear · F3 attacks ${world.flags.dummyAttacks ? 'ON' : 'OFF'} · F4 reset · Esc title · F1 debug` : `${base} · Esc title`;
+      mode === 'training' ? `${base} · 1/2/3/4 spawn, 0 clear, 5 fill rage · F3 attacks ${world.flags.dummyAttacks ? 'ON' : 'OFF'} · F4 reset · Esc title · F1 debug` : `${base} · Esc title`;
   };
 
   // --- Spawn panel (training only): test enemies one at a time ---
@@ -104,6 +110,10 @@ async function boot() {
     ['Digit3', 'archer', 'Archer'],
     ['Digit4', 'cherub', 'Cherub'],
   ];
+  const fillRage = () => {
+    world.player.rage = cfg.rage.max;
+    world.events.push({ type: 'rageFull', pos: { ...world.player.pos } });
+  };
   const spawnPanel = document.createElement('div');
   spawnPanel.className = 'spawn-panel';
   root.appendChild(spawnPanel);
@@ -136,6 +146,10 @@ async function boot() {
   clr.textContent = '0 Clear';
   clr.addEventListener('click', clear);
   spawnPanel.appendChild(clr);
+  const rg = document.createElement('button');
+  rg.textContent = '5 Fill Rage';
+  rg.addEventListener('click', fillRage);
+  spawnPanel.appendChild(rg);
 
   // --- Modes ---
   const setScene = (s: Scene | null) => {
@@ -153,14 +167,14 @@ async function boot() {
     spawnPanel.hidden = true;
     screens.hud.hidden = true;
     tutorial.hide();
-    screens.showTitle({ runs: meta.get('runs'), deaths: meta.get('deaths'), tutorialDone: tutorial.finished });
+    screens.showTitle({ runs: meta.get('runs'), deaths: meta.get('deaths'), tutorialDone: tutorial.finished, rageCarried: meta.get('rageCarry'), rageMax: cfg.rage.max });
     updateLegend();
   };
 
   const enterRoom = () => {
     if (!run) return;
     const room = rooms[run.current]!;
-    world = createWorld(room, cfg, run.roomSeed, run.carry);
+    world = createWorld(room, cfg, run.roomSeed, run.carry, roomPickups(run, room, cfg));
     world.flags.respawn = false;
     world.roomRun.exitCount = run.options.length;
     if (healedOnEntry) world.events.push({ type: 'restHeal', pos: { ...world.player.pos } });
@@ -181,7 +195,8 @@ async function boot() {
     screens.hud.hidden = false;
     spawnPanel.hidden = true;
     const seed = (Date.now() ^ Math.floor(Math.random() * 1e9)) >>> 0;
-    run = startRun(level, rooms, seed, { hp: cfg.player.maxHealth, pips: cfg.player.throw.maxPips });
+    // Vials are per run; a little Rage carries over from recent falls (never enough to transform).
+    run = startRun(level, rooms, seed, { hp: cfg.player.maxHealth, pips: cfg.player.throw.maxPips, rage: meta.get('rageCarry'), vials: [] });
     tutorial.enabled = true;
     screens.fade(() => enterRoom());
     updateLegend();
@@ -209,10 +224,13 @@ async function boot() {
     if (world.roomRun.exit !== null) {
       frozen = true;
       endShown = true;
-      const opt = takeExit(run, world.roomRun.exit, level, rooms, carryThroughGate(p.hp, p.pips, cfg));
+      const opt = takeExit(run, world.roomRun.exit, level, rooms, carryThroughGate(world, cfg));
       healedOnEntry = run.carry.hp > p.hp;
       if (run.finished || opt.kind === 'end') {
-        screens.showCleared(level.name, { rooms: run.visited.length, hp: p.hp, max: cfg.player.maxHealth });
+        // A cleared level resets the fall streak and the carried Rage.
+        meta.set('fallStreak', 0);
+        meta.set('rageCarry', 0);
+        screens.showCleared(level.name, { rooms: run.visited.length, hp: p.hp, max: maxHp(world, cfg) });
       } else {
         screens.fade(() => enterRoom());
       }
@@ -222,6 +240,8 @@ async function boot() {
       endShown = true;
       frozen = true;
       meta.bump('deaths');
+      const streak = meta.bump('fallStreak');
+      meta.set('rageCarry', rageCarryOver(p.rage, streak, cfg));
       screens.showFallen({ room: world.room.name, roomNo: run.visited.length, kills: world.stats.kills });
     }
   };
@@ -249,6 +269,8 @@ async function boot() {
         return run;
       },
       begin: beginRun,
+      /** Rebuild the current run room (e.g. after editing run.hiddenRoom in a script). */
+      reenter: () => enterRoom(),
       training: beginTraining,
       /** Page (CSS px) coordinates of a ground point, for scripted mouse input. */
       toPage(gx: number, gy: number) {
@@ -286,6 +308,7 @@ async function boot() {
         e.preventDefault();
         beginTraining();
       } else if (e.code === 'Digit0') clear();
+      else if (e.code === 'Digit5') fillRage();
       else {
         const sp = SPAWNS.find(([k]) => k === e.code);
         if (sp && !e.repeat) spawn(sp[1]);
@@ -334,6 +357,12 @@ async function boot() {
     if (mode === 'run') {
       tutorial.observe(world, cfg);
       runFlow();
+    }
+    for (const ev of world.events) {
+      if (ev.type === 'vialGained') {
+        const v = cfg.vials.vials.find((x) => x.id === ev.vialId);
+        if (v) screens.toast(`${v.name}`, v.text);
+      }
     }
     spawnEffects(world, scene);
     scene.particles.update(Math.min(elapsed, 0.05));
@@ -453,6 +482,33 @@ function spawnEffects(world: World, scene: Scene): void {
         break;
       case 'roomCleared':
         P.burst(s.x, s.y - 14, { count: 24, colors: [HEAVEN.gold1, HEAVEN.gold2, 0xffffff], speed: 90, life: 0.7 });
+        break;
+      case 'vialGained': {
+        P.burst(s.x, s.y - 10, { count: 30, colors: [SATAN.hellfire, SATAN.ember, SATAN.eyeGlow, 0xffffff], speed: 90, life: 0.8 });
+        break;
+      }
+      case 'crackHit':
+        P.burst(s.x, s.y - 2, { count: 8, colors: [HEAVEN.stone, HEAVEN.gold3, SATAN.ember], speed: 60, life: 0.3 });
+        break;
+      case 'crackBroken':
+        P.burst(s.x, s.y - 4, { count: 22, colors: [HEAVEN.stone, HEAVEN.marble, HEAVEN.gold2, SATAN.hellfire], speed: 100, life: 0.5 });
+        break;
+      case 'cageOpen':
+        P.burst(s.x, s.y - 10, { count: 16, colors: [HEAVEN.gold1, HEAVEN.gold2], speed: 70, life: 0.5 });
+        break;
+      case 'rageFull':
+        P.burst(s.x, s.y - 14, { count: 14, colors: [SATAN.hellfire, SATAN.ember], speed: 60, life: 0.5 });
+        break;
+      case 'rageStart':
+        P.burst(s.x, s.y - 14, { count: 50, colors: [SATAN.hellfire, SATAN.crimson, SATAN.ember, SATAN.eyeGlow], speed: 160, life: 0.8, drag: 0.9 });
+        scene.sparks.spawn(s.x, s.y - 16, true, 0);
+        break;
+      case 'rageEnd':
+        P.burst(s.x, s.y - 14, { count: 18, colors: [SATAN.cloak2, SATAN.blood, SATAN.ember], speed: 60, life: 0.6 });
+        break;
+      case 'roar':
+        scene.roarRing(ev.pos);
+        P.burst(s.x, s.y - 10, { count: 36, colors: [SATAN.hellfire, SATAN.ember, SATAN.eyeGlow], speed: 200, life: 0.4, drag: 0.85 });
         break;
       case 'restHeal':
         P.burst(s.x, s.y - 12, { count: 30, colors: [HEAVEN.gold1, ANGEL.sky, 0xffffff], speed: 70, life: 0.9 });

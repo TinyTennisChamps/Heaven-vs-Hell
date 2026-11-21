@@ -20,6 +20,8 @@ export function testConfig(): SimConfig {
     attacks: loadData('attacks/satan'),
     enemies: { dummy: loadData('enemies/dummy'), dominion: loadData('enemies/dominion'), archer: loadData('enemies/archer'), cherub: loadData('enemies/cherub') },
     rooms: loadData('tuning/rooms'),
+    rage: loadData('tuning/rage'),
+    vials: loadData('vials'),
   };
 }
 

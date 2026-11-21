@@ -202,6 +202,8 @@ export interface SimConfig {
   attacks: Record<string, AttackDef>;
   enemies: Record<string, EnemyDef>;
   rooms: RoomTuning;
+  rage: RageTuning;
+  vials: VialsData;
 }
 
 export type WallKind = 'pillar' | 'hedge' | 'fountain';
@@ -238,6 +240,48 @@ export interface RoomDef {
   exits?: DoorDef[];
   /** Rest room: the font that heals once when Satan reaches it. */
   font?: [number, number];
+  /** Cracked rim spot that can hide this run's hidden vial (slash it open). */
+  crack?: [number, number];
+  /** Hard rooms: where the locked vial cage stands (opens on clear). */
+  cage?: [number, number];
+}
+
+export type VialStat = 'maxPosture' | 'rageGain' | 'slashPosture' | 'deflectFrames' | 'maxHealth' | 'pips' | 'postureRegen';
+
+export interface VialDef {
+  id: string;
+  level: string;
+  source: 'hidden' | 'locked' | 'boss';
+  name: string;
+  stat: VialStat;
+  /** Fraction (0.05 = +5%) for multiplier stats; whole units for deflectFrames / pips. */
+  amount: number;
+  text: string;
+}
+
+export interface VialsData {
+  vials: VialDef[];
+  /** Budget: no stat may exceed +20% from vials. */
+  maxPerStat: number;
+}
+
+export interface RageTuning {
+  max: number;
+  gain: { kill: number; deathblow: number; perfectParry: number; hitTaken: number };
+  /** Invulnerable transform before the form starts. */
+  transformFrames: number;
+  durationFrames: number;
+  /** Each kill in Rage adds this many ticks and heals `killHeal`. */
+  killExtendFrames: number;
+  killHeal: number;
+  /** Hyper armour: incoming health damage multiplier; no stagger, no posture. */
+  damageTakenMul: number;
+  radiusMul: number;
+  speedMul: number;
+  /** RMB in Rage: a burst around Satan. */
+  roar: { cooldownFrames: number; radius: number; healthDamage: number; postureDamage: number; knockback: number; hitstop: number; shake: number };
+  /** Next run starts with min(max, meterMul * meter at death + perDeath * deaths in a row). */
+  carryOver: { max: number; meterMul: number; perDeath: number };
 }
 
 export interface RoomTuning {
@@ -255,6 +299,10 @@ export interface RoomTuning {
   roomHealFrac: number;
   /** Ticks after Satan falls before the run can end. */
   deathFrames: number;
+  /** Slashes that break a cracked rim spot open. */
+  crackHits: number;
+  /** Distance at which Satan picks up a revealed vial. */
+  pickupRadius: number;
 }
 
 /** A level: a pool of combat rooms, how many a run visits, the rest room and the end. */

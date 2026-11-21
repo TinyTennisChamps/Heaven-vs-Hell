@@ -4,6 +4,7 @@ import { v2, type Vec2 } from '../core/math';
 import { InputBuffer } from '../input/buffer';
 import type { RoomDef, SimConfig } from './config';
 import { depenetrate, pointInPolygon, segmentsFromPolygon, type Seg } from './physics/collide';
+import { modsFromVials, type Mods } from './stats';
 
 export interface AttackState {
   /** Key into the attack data ("slash1".."slash3", "deathblow"). */
@@ -92,6 +93,27 @@ export interface PlayerState {
   lockHold: number;
   /** Health reached 0 (and the world isn't immortal). */
   dead: boolean;
+  /** Rage meter, 0..rage.max. Full = R transforms. */
+  rage: number;
+  /** Rage form ticks remaining (0 = not raging). */
+  rageForm: number;
+  /** Invulnerable transform ticks remaining. */
+  rageTransform: number;
+  /** Rage roar (RMB) cooldown ticks. */
+  roarCd: number;
+}
+
+/** A vial in the room: behind a cracked rim spot, or in a cage that opens on clear. */
+export interface Pickup {
+  vialId: string;
+  kind: 'crack' | 'cage';
+  /** The crack / cage position. */
+  at: Vec2;
+  /** Where the vial sits once revealed (a crack's vial rolls inward). */
+  vialAt: Vec2;
+  hits: number;
+  open: boolean;
+  taken: boolean;
 }
 
 export type EnemyPhase = 'idle' | 'windup' | 'active' | 'recover' | 'recoil' | 'broken' | 'down';
@@ -162,7 +184,15 @@ export type SimEvent =
   | { type: 'playerDied'; pos: Vec2 }
   | { type: 'spawnIn'; pos: Vec2; swarm: boolean }
   | { type: 'roomCleared'; pos: Vec2 }
-  | { type: 'restHeal'; pos: Vec2 };
+  | { type: 'restHeal'; pos: Vec2 }
+  | { type: 'rageFull'; pos: Vec2 }
+  | { type: 'rageStart'; pos: Vec2 }
+  | { type: 'rageEnd'; pos: Vec2 }
+  | { type: 'roar'; pos: Vec2 }
+  | { type: 'crackHit'; pos: Vec2 }
+  | { type: 'crackBroken'; pos: Vec2 }
+  | { type: 'cageOpen'; pos: Vec2 }
+  | { type: 'vialGained'; pos: Vec2; vialId: string };
 
 /** Progress through the current room's waves and doors. */
 export interface RoomRun {
@@ -184,6 +214,9 @@ export interface RoomRun {
 export interface Carry {
   hp: number;
   pips: number;
+  rage?: number;
+  /** Vials collected this run (ids). */
+  vials?: string[];
 }
 
 export interface CameraState {
@@ -218,10 +251,15 @@ export interface World {
   events: SimEvent[];
   flags: { dummyAttacks: boolean; respawn: boolean; immortal: boolean };
   roomRun: RoomRun;
+  /** This run's vial bonuses (see stats.ts). */
+  mods: Mods;
+  /** Vials collected this run, including any picked up in this room. */
+  vials: string[];
+  pickups: Pickup[];
   stats: { hitsLanded: number; hitsTaken: number; kills: number; deflects: number; perfects: number; deathblows: number };
 }
 
-export function createWorld(room: RoomDef, cfg: SimConfig, seed = 1, carry?: Carry): World {
+export function createWorld(room: RoomDef, cfg: SimConfig, seed = 1, carry?: Carry, pickups: Pickup[] = []): World {
   const segs = [...segmentsFromPolygon(room.bounds), ...room.walls.flatMap((w) => segmentsFromPolygon(w))];
   const pts = room.bounds.map(([x, y]) => groundToScreen(x, y));
   const screenBox = {
@@ -271,6 +309,10 @@ export function createWorld(room: RoomDef, cfg: SimConfig, seed = 1, carry?: Car
       pips: carry ? carry.pips : cfg.player.throw.maxPips,
       pipProgress: 0,
       dead: false,
+      rage: carry?.rage ?? 0,
+      rageForm: 0,
+      rageTransform: 0,
+      roarCd: 0,
     },
     enemies: [],
     projectiles: [],
@@ -279,6 +321,9 @@ export function createWorld(room: RoomDef, cfg: SimConfig, seed = 1, carry?: Car
     camera: { pos: { ...camPos }, prevPos: { ...camPos }, shake: 0, shakeOffset: v2() },
     events: [],
     flags: { dummyAttacks: true, respawn: true, immortal: false },
+    mods: modsFromVials(carry?.vials ?? [], cfg),
+    vials: [...(carry?.vials ?? [])],
+    pickups: pickups.map((q) => ({ ...q, at: { ...q.at }, vialAt: { ...q.vialAt } })),
     roomRun: { wave: 0, timer: cfg.rooms.firstWaveDelayFrames, cleared: false, exitCount: room.exits?.length ?? 0, exit: null, fontUsed: false, deadTicks: 0 },
     stats: { hitsLanded: 0, hitsTaken: 0, kills: 0, deflects: 0, perfects: 0, deathblows: 0 },
   };

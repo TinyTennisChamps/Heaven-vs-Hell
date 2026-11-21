@@ -1,6 +1,7 @@
 import { createRng, nextFloat, nextInt, type RngState } from '../../core/rng';
 import type { LevelDef, RoomDef, SimConfig } from '../config';
-import type { Carry } from '../world';
+import { maxHp, raging } from '../stats';
+import type { Carry, Pickup, World } from '../world';
 
 /**
  * A run through one level: which room Satan is in, what the exit doors lead
@@ -35,6 +36,8 @@ export interface RunState {
   /** Seed for the current room's world. */
   roomSeed: number;
   finished: boolean;
+  /** The combat room whose cracked rim hides this run's hidden vial (if Satan goes there). */
+  hiddenRoom: string | null;
 }
 
 export function startRun(level: LevelDef, rooms: Record<string, RoomDef>, seed: number, carry: Carry): RunState {
@@ -51,15 +54,59 @@ export function startRun(level: LevelDef, rooms: Record<string, RoomDef>, seed: 
     carry: { ...carry },
     roomSeed: nextInt(rng, 1, 1e9),
     finished: false,
+    hiddenRoom: null,
   };
+  const crackRooms = level.pool.filter((id) => rooms[id]?.crack);
+  run.hiddenRoom = crackRooms.length ? crackRooms[nextInt(rng, 0, crackRooms.length)]! : null;
   run.options = planExits(run, level, rooms);
   return run;
 }
 
-/** What Satan carries through a gate: a small heal (roomHealFrac), pips as they are. */
-export function carryThroughGate(hp: number, pips: number, cfg: SimConfig): Carry {
-  const max = cfg.player.maxHealth;
-  return { hp: Math.min(max, hp + Math.round(max * cfg.rooms.roomHealFrac)), pips };
+/**
+ * What Satan carries through a gate: health plus a small heal (roomHealFrac),
+ * pips, the Rage meter (a Rage form in progress is spent) and this run's vials.
+ */
+export function carryThroughGate(world: World, cfg: SimConfig): Carry {
+  const p = world.player;
+  const max = maxHp(world, cfg);
+  return {
+    hp: Math.min(max, p.hp + Math.round(max * cfg.rooms.roomHealFrac)),
+    pips: p.pips,
+    rage: raging(p) || p.rageTransform > 0 ? 0 : p.rage,
+    vials: [...world.vials],
+  };
+}
+
+/** The vials this room offers in this run: the hidden one behind its crack, the locked one in a hard room's cage. */
+export function roomPickups(run: RunState, room: RoomDef, cfg: SimConfig): Pickup[] {
+  const have = run.carry.vials ?? [];
+  const next = (source: 'hidden' | 'locked') => cfg.vials.vials.find((v) => v.level === run.level && v.source === source && !have.includes(v.id));
+  const out: Pickup[] = [];
+  const hidden = next('hidden');
+  if (room.crack && room.id === run.hiddenRoom && hidden) {
+    // The vial rolls a little inward from the broken rim.
+    const xs = room.bounds.map((b) => b[0]);
+    const ys = room.bounds.map((b) => b[1]);
+    const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
+    const cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+    const dx = cx - room.crack[0];
+    const dy = cy - room.crack[1];
+    const l = Math.hypot(dx, dy) || 1;
+    const at = { x: room.crack[0], y: room.crack[1] };
+    out.push({ vialId: hidden.id, kind: 'crack', at, vialAt: { x: at.x + (dx / l) * 16, y: at.y + (dy / l) * 16 }, hits: 0, open: false, taken: false });
+  }
+  const locked = next('locked');
+  if (room.cage && room.tier === 'hard' && locked) {
+    const at = { x: room.cage[0], y: room.cage[1] };
+    out.push({ vialId: locked.id, kind: 'cage', at, vialAt: { ...at }, hits: 0, open: false, taken: false });
+  }
+  return out;
+}
+
+/** Rage a new run starts with after a fall: capped so you can never begin able to transform. */
+export function rageCarryOver(rageAtFall: number, fallsInARow: number, cfg: SimConfig): number {
+  const c = cfg.rage.carryOver;
+  return Math.min(c.max, Math.round(c.meterMul * rageAtFall + c.perDeath * fallsInARow));
 }
 
 /** The current room is cleared and Satan took exit `i`, carrying `carry` forward. */

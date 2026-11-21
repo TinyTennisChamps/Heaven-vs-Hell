@@ -1,0 +1,68 @@
+{
+  "vials": [
+    {
+      "id": "l1_hidden",
+      "level": "l1",
+      "source": "hidden",
+      "name": "Vial of the Unbowed",
+      "stat": "maxPosture",
+      "amount": 0.05,
+      "text": "+5% max posture"
+    },
+    {
+      "id": "l1_locked",
+      "level": "l1",
+      "source": "locked",
+      "name": "Vial of Wrath",
+      "stat": "rageGain",
+      "amount": 0.05,
+      "text": "+5% Rage gain"
+    },
+    {
+      "id": "l1_gabriel",
+      "level": "l1",
+      "source": "boss",
+      "name": "Herald's Ichor",
+      "stat": "slashPosture",
+      "amount": 0.04,
+      "text": "+4% slash posture damage"
+    },
+    {
+      "id": "l2_hidden_a",
+      "level": "l2",
+      "source": "hidden",
+      "name": "Vial of the Keen Eye",
+      "stat": "deflectFrames",
+      "amount": 1,
+      "text": "+1 deflect frame"
+    },
+    {
+      "id": "l2_hidden_b",
+      "level": "l2",
+      "source": "hidden",
+      "name": "Vial of Ash",
+      "stat": "maxHealth",
+      "amount": 0.05,
+      "text": "+5% max health"
+    },
+    {
+      "id": "l2_locked",
+      "level": "l2",
+      "source": "locked",
+      "name": "Vial of Embers",
+      "stat": "pips",
+      "amount": 1,
+      "text": "+1 throw pip"
+    },
+    {
+      "id": "l2_raphael",
+      "level": "l2",
+      "source": "boss",
+      "name": "Healer's Gall",
+      "stat": "postureRegen",
+      "amount": 0.05,
+      "text": "+5% posture regen"
+    }
+  ],
+  "maxPerStat": 0.2
+}

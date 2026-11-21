@@ -195,7 +195,75 @@ So a full run costs a decent player about 70 of 140 effective HP. The guard rail
 - Holding block still doesn't stop it, and it keeps its white-gold glyph. It's a "read it and tap" attack, and dashing through still works.
 - Other Judgement attacks stay undeflectable unless they set the flag. This covers Gabriel's and Raphael's later.
 
-## Rage Vials (7, flat additive, every stat ≤ +20%)
+## M6: Rage and Rage Vials
+Decisions confirmed with the user on 2026-11-20:
+- Hyper armour at half damage.
+- RMB is a hellfire roar.
+- A hard room's cage opens when the room is cleared.
+- The hidden vial is opened by slashing a cracked rim 3 times.
+
+**Rage meter** (`data/tuning/rage.json`):
+
+| Source | Gain |
+|---|---|
+| Kill | +8 |
+| Deathblow | +15 more (on top of the kill) |
+| Perfect parry | +4 |
+| Hit taken | +6 |
+
+- The Vial of Wrath adds +5% to all gains.
+- The meter is shown under the pips: ember while charging, pulsing with an "R" when full, white-gold burning down while in form.
+
+**Transform:**
+- Tap R with a full meter. It works out of anything except death, including hurt and posture-broken states.
+- The transform is invulnerable for 20f plus a short hit-stop, while Satan swells and flashes.
+- The form then lasts 600f (10 s). Each kill adds 60f and heals 5.
+- The last 1.5 s flickers. When the form ends, the meter is empty.
+
+**In the form:**
+- **Size and speed:** Satan is drawn ×1.25 with a hellfire aura and embers. His collider is ×1.3 and he moves ×1.1 faster.
+- **Claws:** LMB is the claw combo (`claw1`–`claw3` in `attacks/satan.json`, reusing the slash art). Claws are faster, wider and hit harder, with three raking streaks.
+- **Roar (RMB):**
+  - A 44 px burst with a 2 s cooldown.
+  - 8 damage, enough to kill a cherub, plus 30 posture and a big knockback.
+  - It ignores shields and burns enemy arrows in its radius.
+- **Hyper armour:** hits deal 50% damage, never stagger or knock back, never add posture, and don't interrupt the claws.
+- **Disabled:** parry, block and throw.
+- **Deathblows** still work.
+
+**Carry-over:**
+- After a fall, the next run starts with `min(40, 0.5 × meter at the fall + 5 × falls in a row)`. Since 40 is below 100, you can never start a run able to transform.
+- Clearing the level resets the streak and the carry.
+- The title shows a "Rage carried over" panel, as in the PDF mock.
+- Within a run, the meter goes through gates. A form still in progress when you leave is spent.
+
+**Vials** (`data/vials.json`, 7 in all):
+- They're per run. Each is flat and additive, with one vial per stat, so there's no stacking.
+- A budget test keeps every stat at or below +20% of its base. For example, +1 deflect frame on an 18f window is about 5.6%, and +1 pip on 5 is 20%.
+- `src/sim/stats.ts` is the only place the sim reads Satan's effective max HP, posture, pips, radius, regen and deflect window.
+
+| Vial | Level | Where | Effect | Status |
+|---|---|---|---|---|
+| Vial of the Unbowed | L1 | Hidden | +5% max posture | Placed |
+| Vial of Wrath | L1 | Locked | +5% Rage gain | Placed |
+| Herald's Ichor | L1 | Gabriel drop | +4% slash posture | M7 |
+| Vial of the Keen Eye | L2 | Hidden | +1 deflect frame | M8 |
+| Vial of Ash | L2 | Hidden | +5% max health | M8 |
+| Vial of Embers | L2 | Locked | +1 throw pip | M8 |
+| Healer's Gall | L2 | Raphael drop | +5% posture regen | M8 |
+
+**Hidden vial:**
+- Each run picks one combat room from the pool to hide it in (`run.hiddenRoom`), and that room shows a cracked rim with a red glint every 1.5 s.
+- 3 slashes break it (`rooms.crackHits`), and the vial rolls inward.
+- You may never visit the room, since you only see 4 of the 6 combat rooms. That's part of it being hidden.
+
+**Locked vial:**
+- Every hard room has a gold cage (`cage`) that opens on clear, until you've collected the vial this run.
+- Walk over a vial to take it. You get a toast with its name and effect, and a flask icon on the HUD.
+
+**Training:** key 5, or the "Fill Rage" button, fills the meter.
+
+## Rage Vials (original plan: 7, flat additive, every stat ≤ +20%)
 | L1 | L2 |
 |---|---|
 | Hidden: +5% max posture | Hidden: +1 deflect frame |
@@ -229,7 +297,7 @@ Cherub (swarmer, L1/L2), Choir Archer (ranged, deflectable arrows, L1/L2), Domin
 - M3: posture, parry, block, Dominion, and deathblow (pulled forward from M4).
 - M4: throw, Archer, projectiles and deflectable arrows (tokens covered by the focus system). Done.
 - M5: Level 1 flow: cherub, rooms, doors, rest, tutorial, title and death. Done.
-- M6: Rage and vials.
+- M6: Rage (transform, claws, roar, hyper armour, carry-over) and vials (hidden cracks, hard-room cages, budget). Done.
 - M7: Gabriel.
 - M8: Level 2, Ophan, Virtue and Raphael.
 - M9: polish, then an independent bug-hunt agent.

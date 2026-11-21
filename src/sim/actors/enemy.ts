@@ -7,6 +7,7 @@ import { inFrontCone, resolveOnPlayer } from '../combat/damage';
 import { regenPosture } from '../combat/posture';
 import { moveAndSlide } from '../physics/collide';
 import { enemyArrowInFlight, spawnProjectile } from '../projectiles';
+import { playerRadius } from '../stats';
 import { emit, type Enemy, type World } from '../world';
 
 /**
@@ -163,7 +164,7 @@ export function updateEnemy(world: World, e: Enemy, cfg: SimConfig, think: Think
           spawnProjectile(world, 'arrow', e.id, from, e.attackDir, atk.projectile, atk);
           emit(world, { type: 'arrowLoosed', pos: from });
         }
-      } else if (!e.swingHit && arcHitsCircle(e.pos, e.attackDir, atk.hitbox, p.pos, cfg.player.radius)) {
+      } else if (!e.swingHit && arcHitsCircle(e.pos, e.attackDir, atk.hitbox, p.pos, playerRadius(world, cfg))) {
         const out = resolveOnPlayer(world, e, atk, cfg);
         if (out !== 'evaded') e.swingHit = true;
       }

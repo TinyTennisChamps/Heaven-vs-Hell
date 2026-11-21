@@ -6,5 +6,7 @@
   "fontRadius": 20,
   "restHealFrac": 0.4,
   "deathFrames": 90,
-  "roomHealFrac": 0.15
+  "roomHealFrac": 0.15,
+  "crackHits": 3,
+  "pickupRadius": 12
 }

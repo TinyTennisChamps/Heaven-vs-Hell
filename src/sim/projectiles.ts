@@ -1,8 +1,9 @@
 import { SIM_DT } from '../core/loop';
 import { normalize, type Vec2 } from '../core/math';
 import type { ProjectileSpec, SimConfig } from './config';
-import { addPlayerPosture, damagePlayer, gainPips, hitEnemy, inFrontCone, isPlayerInvulnerable, startHitstop } from './combat/damage';
+import { addPlayerPosture, damagePlayer, gainPips, gainRage, rageHit, hitEnemy, inFrontCone, isPlayerInvulnerable, startHitstop } from './combat/damage';
 import { moveAndSlide } from './physics/collide';
+import { playerRadius, raging } from './stats';
 import { emit, type Projectile, type World } from './world';
 
 /**
@@ -91,12 +92,18 @@ function hitEnemiesAt(world: World, p: Projectile, at: Vec2, cfg: SimConfig): bo
 
 function hitPlayerAt(world: World, p: Projectile, at: Vec2, cfg: SimConfig): boolean {
   const pl = world.player;
-  if (Math.hypot(pl.pos.x - at.x, pl.pos.y - at.y) > cfg.player.radius + p.radius) return false;
+  if (Math.hypot(pl.pos.x - at.x, pl.pos.y - at.y) > playerRadius(world, cfg) + p.radius) return false;
   if (isPlayerInvulnerable(pl, cfg)) return false; // dashes straight through arrows
   const c = cfg.combat;
   const dir = normalize(p.vel);
   const from = { x: at.x - dir.x * 12, y: at.y - dir.y * 12 };
   p.pos = { ...at };
+
+  if (raging(pl)) {
+    rageHit(world, p.healthDamage, dir, p.hitstop, p.shake, cfg);
+    end(world, p);
+    return true;
+  }
 
   // Deflect: send it back at the archer.
   if (pl.broken === 0 && pl.parry && pl.parry.frame <= pl.parry.window && inFrontCone(pl.pos, pl.facing, from, c.parry.coneDeg)) {
@@ -107,6 +114,7 @@ function hitPlayerAt(world: World, p: Projectile, at: Vec2, cfg: SimConfig): boo
     if (perfect) {
       world.stats.perfects++;
       gainPips(world, cfg.player.throw.perfectParryPips, cfg);
+      gainRage(world, cfg.rage.gain.perfectParry, cfg);
     }
     startHitstop(world, perfect ? c.parry.perfectHitstop : c.parry.hitstop, perfect ? c.parry.perfectShake : c.parry.shake, cfg);
     emit(world, { type: 'deflect', pos: { ...at }, dir: { x: -dir.x, y: -dir.y }, perfect });

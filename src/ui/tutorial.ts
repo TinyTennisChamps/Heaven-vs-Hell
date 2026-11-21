@@ -36,6 +36,24 @@ const STEPS: Step[] = [
     done: (w) => has(w, 'deathblow'),
   },
   {
+    id: 'rage',
+    text: 'RAGE is full — press R to transform',
+    show: (w, cfg) => w.player.rage >= cfg.rage.max && w.player.rageForm === 0,
+    done: (w) => has(w, 'rageStart'),
+  },
+  {
+    id: 'rageForm',
+    text: 'In Rage: LMB claws · RMB hellfire roar · kills feed the flame',
+    show: (w) => w.player.rageForm > 0,
+    done: (w) => has(w, 'roar'),
+  },
+  {
+    id: 'vial',
+    text: 'A red glint in the rim — slash it 3 times',
+    show: (w) => w.pickups.some((q) => q.kind === 'crack' && !q.open && Math.hypot(q.at.x - w.player.pos.x, q.at.y - w.player.pos.y) < 70),
+    done: (w) => has(w, 'crackBroken'),
+  },
+  {
     id: 'parry',
     text: 'RMB just as it flashes white — Deflect   (hold RMB to block)',
     show: (w) => w.enemies.some((e) => e.phase === 'windup' && dist(w, e.pos.x, e.pos.y) < 90),

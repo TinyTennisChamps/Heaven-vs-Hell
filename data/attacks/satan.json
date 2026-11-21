@@ -108,5 +108,68 @@
       "radius": 3,
       "lifeFrames": 60
     }
+  },
+  "claw1": {
+    "startup": 4,
+    "active": 3,
+    "recovery": 8,
+    "chainAt": 2,
+    "lunge": {
+      "px": 12,
+      "overFrames": 4
+    },
+    "moveSpeedMul": 0.5,
+    "hitbox": {
+      "radius": 32,
+      "angleDeg": 150,
+      "offset": 6
+    },
+    "healthDamage": 16,
+    "postureDamage": 14,
+    "hitstop": 3,
+    "knockback": 200,
+    "shake": 1.6
+  },
+  "claw2": {
+    "startup": 3,
+    "active": 3,
+    "recovery": 8,
+    "chainAt": 2,
+    "lunge": {
+      "px": 12,
+      "overFrames": 4
+    },
+    "moveSpeedMul": 0.5,
+    "hitbox": {
+      "radius": 32,
+      "angleDeg": 150,
+      "offset": 6
+    },
+    "healthDamage": 16,
+    "postureDamage": 14,
+    "hitstop": 3,
+    "knockback": 200,
+    "shake": 1.6
+  },
+  "claw3": {
+    "startup": 6,
+    "active": 4,
+    "recovery": 12,
+    "chainAt": 99,
+    "lunge": {
+      "px": 18,
+      "overFrames": 4
+    },
+    "moveSpeedMul": 0.3,
+    "hitbox": {
+      "radius": 38,
+      "angleDeg": 220,
+      "offset": 6
+    },
+    "healthDamage": 28,
+    "postureDamage": 28,
+    "hitstop": 5,
+    "knockback": 320,
+    "shake": 2.6
   }
 }

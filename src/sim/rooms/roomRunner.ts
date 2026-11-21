@@ -1,5 +1,6 @@
 import { nextFloat } from '../../core/rng';
 import type { SimConfig, WaveSpawn } from '../config';
+import { maxHp, maxPips, modsFromVials } from '../stats';
 import { emit, isValidSpot, spawnEnemy, type World } from '../world';
 
 /**
@@ -47,11 +48,25 @@ export function updateRoom(world: World, cfg: SimConfig): void {
     }
   }
 
+  // Vials: cages open with the room; revealed vials are picked up by walking over them.
+  for (const q of world.pickups) {
+    if (q.kind === 'cage' && !q.open && rr.cleared) {
+      q.open = true;
+      emit(world, { type: 'cageOpen', pos: { ...q.at } });
+    }
+    if (q.open && !q.taken && Math.hypot(p.pos.x - q.vialAt.x, p.pos.y - q.vialAt.y) <= T.pickupRadius + cfg.player.radius) {
+      q.taken = true;
+      if (!world.vials.includes(q.vialId)) world.vials.push(q.vialId);
+      world.mods = modsFromVials(world.vials, cfg);
+      emit(world, { type: 'vialGained', pos: { ...q.vialAt }, vialId: q.vialId });
+    }
+  }
+
   const font = world.room.font;
   if (font && !rr.fontUsed && Math.hypot(p.pos.x - font[0], p.pos.y - font[1]) <= T.fontRadius) {
     rr.fontUsed = true;
-    p.hp = Math.min(cfg.player.maxHealth, p.hp + Math.round(cfg.player.maxHealth * T.restHealFrac));
-    p.pips = cfg.player.throw.maxPips;
+    p.hp = Math.min(maxHp(world, cfg), p.hp + Math.round(maxHp(world, cfg) * T.restHealFrac));
+    p.pips = maxPips(world, cfg);
     emit(world, { type: 'restHeal', pos: { ...p.pos } });
   }
 }
