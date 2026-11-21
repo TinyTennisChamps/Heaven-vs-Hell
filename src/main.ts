@@ -21,6 +21,7 @@ import { playEventSound } from './audio/cues';
 import { carryThroughGate, rageCarryOver, roomPickups, roomScale, startRun, takeExit, type RunState } from './sim/rooms/run';
 import { maxHp } from './sim/stats';
 import { step } from './sim/step';
+import { hubTarget } from './sim/rooms/hub';
 import { createWorld, spawnEnemyAt, type World } from './sim/world';
 import { Screens } from './ui/screens';
 import { Tutorial } from './ui/tutorial';
@@ -55,7 +56,7 @@ function loadRooms(): Record<string, RoomDef> {
   return out;
 }
 
-type Mode = 'title' | 'run' | 'training';
+type Mode = 'title' | 'hub' | 'run' | 'training';
 
 /** Persistent meta (localStorage): runs started and deaths, for the title and later Rage carry-over. */
 const meta = {
@@ -113,6 +114,8 @@ async function boot() {
   let endShown = false;
   /** The gate just taken healed Satan: show it as he arrives. */
   let healedOnEntry = false;
+  /** The Training Court was entered through the hub's Yard (Esc goes back there). */
+  let trainingFromHub = false;
 
   const legend = document.createElement('div');
   legend.className = 'legend';
@@ -120,8 +123,13 @@ async function boot() {
   const updateLegend = () => {
     const base = 'WASD move · LMB slash · RMB parry (hold: block) · E throw · Space dash · Q lock · R rage';
     legend.hidden = mode === 'title';
+    const back = trainingFromHub ? 'Esc back to the Cage' : 'Esc title';
     legend.textContent =
-      mode === 'training' ? `${base} · 1/2/3/4/6 spawn (6 = Gabriel), 0 clear, 5 fill rage · F3 attacks ${world.flags.dummyAttacks ? 'ON' : 'OFF'} · F4 reset · Esc title · F1 debug` : `${base} · Esc title`;
+      mode === 'hub'
+        ? 'WASD move · Space dash · E interact · walk into the Gate Down to descend · Esc title'
+        : mode === 'training'
+          ? `${base} · 1/2/3/4/6 spawn (6 = Gabriel), 0 clear, 5 fill rage · F3 attacks ${world.flags.dummyAttacks ? 'ON' : 'OFF'} · F4 reset · ${back} · F1 debug`
+          : `${base} · Esc title`;
   };
 
   // --- Spawn panel (training only): test enemies one at a time ---
@@ -195,6 +203,48 @@ async function boot() {
     updateLegend();
   };
 
+  /** The Gilded Cage: the hub between runs. */
+  const enterHub = () => {
+    mode = 'hub';
+    run = null;
+    trainingFromHub = false;
+    screens.hideAll();
+    screens.hud.hidden = true;
+    screens.setBoss(null);
+    spawnPanel.hidden = true;
+    tutorial.enabled = false;
+    tutorial.hide();
+    const biome = cfg.biomes!['cage']!;
+    world = createWorld(rooms['hub']!, cfg, 1, undefined, [], undefined, biome.id);
+    world.flags.respawn = false;
+    const s = new Scene(world, satanAtlas, anim, biome, app.renderer);
+    s.layers = layersPanel.flags;
+    setScene(s);
+    music.enterRoom(biome, world, false);
+    endShown = false;
+    frozen = false;
+    screens.titleCard('', world.room.name, "Heaven's holding pen", true);
+    updateLegend();
+  };
+
+  /** Hub events: walk-in exits and talking to whoever is in reach. */
+  const hubFlow = () => {
+    const target = hubTarget(world);
+    screens.hubPrompt(target ? `E · ${target.verb} — ${target.name}` : null);
+    for (const ev of world.events) {
+      if (ev.type === 'hubExit') {
+        frozen = true;
+        screens.hubPrompt(null);
+        if (ev.kind === 'gate') beginRun();
+        else if (ev.kind === 'yard') screens.fade(() => beginTraining(true));
+      } else if (ev.type === 'interact') {
+        const it = world.room.interactables?.find((i) => i.id === ev.id);
+        // Placeholder until the dialogue system (H4) and the shops (H2/H3) land.
+        if (it) screens.say(it.name, '…');
+      }
+    }
+  };
+
   const enterRoom = () => {
     if (!run) return;
     const level = levelOf(run);
@@ -235,8 +285,9 @@ async function boot() {
     updateLegend();
   };
 
-  const beginTraining = () => {
+  const beginTraining = (fromHub = false) => {
     mode = 'training';
+    trainingFromHub = fromHub;
     screens.hideAll();
     screens.hud.hidden = true;
     spawnPanel.hidden = false;
@@ -280,7 +331,8 @@ async function boot() {
       meta.bump('deaths');
       const streak = meta.bump('fallStreak');
       meta.set('rageCarry', rageCarryOver(p.rage, streak, cfg));
-      screens.showFallen({ room: world.room.name, roomNo: run.visited.length, kills: world.stats.kills });
+      // Heaven drags him back to the Cage (the cinematic and the run summary come later).
+      screens.fade(() => enterHub());
     }
   };
 
@@ -303,11 +355,12 @@ async function boot() {
   screens.onAction = (a, arg) => {
     if (a === 'gallery' && arg) beginGallery(arg);
     else if (a === 'begin') beginRun();
+    else if (a === 'hub') enterHub();
     else if (a === 'training') beginTraining();
     else if (a === 'title') showTitle();
     else if (a === 'tutorial') {
       tutorial.reset();
-      beginRun();
+      enterHub();
     }
   };
 
@@ -329,7 +382,8 @@ async function boot() {
       gallery: (id: string) => beginGallery(id),
       /** Rebuild the current run room (e.g. after editing run.hiddenRoom in a script). */
       reenter: () => enterRoom(),
-      training: beginTraining,
+      training: () => beginTraining(),
+      hub: () => enterHub(),
       /** Page (CSS px) coordinates of a ground point, for scripted mouse input. */
       toPage(gx: number, gy: number) {
         const s = groundToScreen(gx, gy);
@@ -374,13 +428,14 @@ async function boot() {
       world.flags.dummyAttacks = !world.flags.dummyAttacks;
       updateLegend();
     } else if (e.code === 'Escape') {
-      if (mode !== 'title') showTitle();
+      if (mode === 'training' && trainingFromHub) screens.fade(() => enterHub());
+      else if (mode !== 'title') showTitle();
     } else if (mode === 'title') {
-      if (e.code === 'Enter' || e.code === 'Space') beginRun();
+      if (e.code === 'Enter' || e.code === 'Space') enterHub();
     } else if (mode === 'training') {
       if (e.code === 'F4') {
         e.preventDefault();
-        beginTraining();
+        beginTraining(trainingFromHub);
       } else if (e.code === 'Digit0') clear();
       else if (e.code === 'Digit5') fillRage();
       else {
@@ -388,9 +443,8 @@ async function boot() {
         if (sp && !e.repeat) spawn(sp[1]);
       }
     } else if (mode === 'run' && endShown && (e.code === 'Enter' || e.code === 'Space') && screens.anyOpen) {
-      // Fallen: Enter starts again. Cleared: Enter returns to the title.
-      if (screens.fallenOpen) beginRun();
-      else showTitle();
+      // Fallen / cleared: Enter returns to the Cage.
+      enterHub();
     }
   });
 
@@ -446,7 +500,7 @@ async function boot() {
       if (frozen || endShown) tutorial.hide();
       else tutorial.observe(world, cfg);
       runFlow();
-    }
+    } else if (mode === 'hub') hubFlow();
     for (const ev of world.events) {
       if (ev.type === 'vialGained') {
         const v = cfg.vials.vials.find((x) => x.id === ev.vialId);

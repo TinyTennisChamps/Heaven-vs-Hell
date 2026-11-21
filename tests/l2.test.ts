@@ -8,9 +8,9 @@ import { findSpot, SECRET_EXIT } from '../src/sim/rooms/roomRunner';
 import { roomPickups, startRun, takeExit } from '../src/sim/rooms/run';
 import { zoneRegenMul } from '../src/sim/rooms/zones';
 import { step } from '../src/sim/step';
-import { createWorld, isValidSpot, spawnEnemy, type World } from '../src/sim/world';
+import { createWorld, isValidSpot, spawnEnemy } from '../src/sim/world';
 import { playRoom } from './bots';
-import { input, loadData, run, testConfig } from './helpers';
+import { input, loadData, reachable, run, testConfig } from './helpers';
 
 const cfg = testConfig();
 const levels: Record<string, LevelDef> = { l1: loadData('levels/l1'), l2: loadData('levels/l2') };
@@ -25,40 +25,6 @@ const L2 = levels.l2!;
 const l2Rooms = Object.values(rooms).filter((r) => r.id.startsWith('l2/'));
 const world = (r: RoomDef, seed = 1) => createWorld(r, cfg, seed, undefined, [], undefined, r.id.startsWith('l2/') ? 'nave' : 'gardens');
 
-/** Flood-fill the walkable floor (Satan-sized) from the spawn on a 4 px grid. */
-function reachable(w: World): (x: number, y: number) => boolean {
-  const r = w.room;
-  const xs = r.bounds.map((b) => b[0]);
-  const ys = r.bounds.map((b) => b[1]);
-  const S = 4;
-  const x0 = Math.min(...xs);
-  const y0 = Math.min(...ys);
-  const nx = Math.ceil((Math.max(...xs) - x0) / S) + 1;
-  const ny = Math.ceil((Math.max(...ys) - y0) / S) + 1;
-  const seen = new Uint8Array(nx * ny);
-  const rad = cfg.player.radius;
-  const ok = (i: number, j: number) => i >= 0 && j >= 0 && i < nx && j < ny && isValidSpot(w, x0 + i * S, y0 + j * S, rad);
-  const si = Math.round((r.playerSpawn[0] - x0) / S);
-  const sj = Math.round((r.playerSpawn[1] - y0) / S);
-  const q: [number, number][] = [[si, sj]];
-  seen[sj * nx + si] = 1;
-  while (q.length) {
-    const [i, j] = q.pop()!;
-    for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
-      const a = i + di;
-      const b = j + dj;
-      if (!ok(a, b) || seen[b * nx + a]) continue;
-      seen[b * nx + a] = 1;
-      q.push([a, b]);
-    }
-  }
-  // A point counts as reachable if Satan can stand within `tol` of it.
-  return (x, y) => {
-    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) if (seen[j * nx + i] && Math.hypot(x0 + i * S - x, y0 + j * S - y) <= 16) return true;
-    return false;
-  };
-}
-
 describe('L2 room data', () => {
   it('the level references real rooms and a real biome', () => {
     for (const id of [...L2.pool, ...L2.openers, L2.rest, L2.boss, L2.secret!, ...(L2.fixed ?? []).map((f) => f.room), ...(L2.secretHosts ?? [])]) expect(rooms[id], id).toBeDefined();
@@ -70,7 +36,7 @@ describe('L2 room data', () => {
     it(`${r.id}: connected — spawns, doors, font, cage, cracks and the secret door are all reachable; no light pool on a spawn or doorway`, () => {
       const w = world(r);
       expect(isValidSpot(w, r.playerSpawn[0], r.playerSpawn[1], cfg.player.radius), 'spawn').toBe(true);
-      const reach = reachable(w);
+      const reach = reachable(w, cfg);
       for (const wave of r.waves ?? []) for (const s of wave) {
         const at = findSpot(w, s.at[0], s.at[1], (cfg.enemies[s.type]?.radius ?? 8) + 2);
         expect(at, `${s.type} at ${s.at}`).not.toBeNull();

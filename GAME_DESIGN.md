@@ -605,3 +605,28 @@ Cherub (swarmer, L1/L2), Choir Archer (ranged, deflectable arrows, L1/L2), Domin
 - M7: Gabriel (two segments, Horn Call, Triple Thrust, Trumpet, Charge, Annunciation) and difficulty scaling (per level plus a per-room ramp). Done.
 - M8: Level 2 (the Gilded Nave), done as the immersion pass, stop 1: biome system, lighting, parallax, ambient life, sanctified light, 11 rooms, the Gabriel set-piece and Raphael. The Ophan and Virtue were dropped by the user.
 - M9: polish, then an independent bug-hunt agent.
+
+## The Gilded Cage: hub, Embers and Infernal Pacts (from HUB_PROMPT.md)
+The full plan is in the H0–H5 plan; the decisions confirmed with the user on 2026-11-21:
+
+| Topic | Choice |
+|---|---|
+| Flow | Title → Hub. The Gate Down starts runs; death drags Satan back (a ~6 s skippable cinematic at H5). |
+| Interact | **E in the hub** (the hub has no combat, so it never throws there). In runs and the Yard, E stays throw. |
+| Names | The Gilded Cage, Vael (the Wise Devil, Pacts), Kesh (the Forger, boons and aspects), Nib (the imp), the Sleeper, the Wardens |
+| Tone | More menace: the devils are bitter and scheming, the Wardens creepy; Satan answers in short, cold lines |
+| Layout | A long promenade from the landing (bottom right) up to the Gate Down (top left), corners on both sides |
+| Codex | A simple bestiary |
+| Pacts cap | +20% total power across all tracks, enforced in code and tests; everything is additive through one clamp |
+| Balance | Tuned for zero upgrades; upgrades are a cushion |
+| Embers | Fly into Satan from slain angels |
+| Boons | 1 of 3 at Kesh's anvil before each run |
+| Aspects | Ember Fang (quick 4-hit) and Cinder Brand (heavy 2-hit), same damage per second as the default |
+| Art | Real PNG sprite sheets by a dedicated visuals agent, scored by the pixel-art review board |
+
+**H0 (done):**
+- The hub is a room (`data/rooms/hub/cage.json`) in its own biome (`data/biomes/cage.json`), so movement, dash, camera and collision are exactly the run's.
+- `interactables[]` in the room data (`kind`, `name`, `verb`, `at`, `radius`, `walkIn`). `src/sim/rooms/hub.ts` finds the one in reach, turns E into `interact`, and fires walk-in exits (`hubExit`) once.
+- Characters stand on invisible `npc` wall bodies. The art is in `src/render/hub/hubArt.ts` (code-drawn placeholders, one named slot per kind) with a gold ring and an "E" key cap over whoever is in reach.
+- The combat HUD is hidden in the hub. The interact prompt and the speech box are gold and ivory, never red.
+

@@ -3,7 +3,7 @@
  * room HUD label, the tutorial prompt line and the room-to-room fade.
  * Plain DOM keeps the text crisp at any scale; the art behind is Pixi.
  */
-export type ScreenAction = 'begin' | 'training' | 'title' | 'tutorial' | 'gallery';
+export type ScreenAction = 'begin' | 'training' | 'title' | 'tutorial' | 'gallery' | 'hub';
 
 export class Screens {
   readonly hud: HTMLDivElement;
@@ -21,6 +21,11 @@ export class Screens {
   private bossPosture: HTMLDivElement;
   private bossSegs: HTMLDivElement;
   private toastTimer = 0;
+  /** The hub: "E · Talk — Vael" under whoever Satan can use. */
+  private hubPromptEl: HTMLDivElement;
+  /** The hub: a speaker's line in a small box (the dialogue system builds on this). */
+  private sayEl: HTMLDivElement;
+  private sayTimer = 0;
 
   constructor(root: HTMLElement) {
     this.title = this.panel(root, 'screen title-screen');
@@ -52,6 +57,10 @@ export class Screens {
     head.append(this.bossName, this.bossSegs);
     this.boss.append(head, hp, po);
     this.boss.hidden = true;
+    this.hubPromptEl = this.panel(root, 'hub-prompt');
+    this.hubPromptEl.hidden = true;
+    this.sayEl = this.panel(root, 'say-box');
+    this.sayEl.hidden = true;
     this.fader.hidden = false;
     this.hideAll();
     this.hud.hidden = true;
@@ -85,6 +94,38 @@ export class Screens {
     this.fallen.hidden = true;
     this.cleared.hidden = true;
     this.prompt.hidden = true;
+    this.hubPromptEl.hidden = true;
+    this.sayEl.hidden = true;
+  }
+
+  /** The hub's interact prompt; null hides it. */
+  hubPrompt(text: string | null): void {
+    if (!text) {
+      this.hubPromptEl.hidden = true;
+      return;
+    }
+    if (this.hubPromptEl.textContent !== text) this.hubPromptEl.textContent = text;
+    this.hubPromptEl.hidden = false;
+  }
+
+  /** One spoken line in a small box with the speaker's name (and a portrait slot). */
+  say(name: string, line: string, ms = 4200): void {
+    const s = this.sayEl;
+    s.innerHTML = '';
+    const portrait = document.createElement('div');
+    portrait.className = 'say-portrait';
+    const body = document.createElement('div');
+    const n = document.createElement('div');
+    n.className = 'say-name';
+    n.textContent = name;
+    const l = document.createElement('div');
+    l.className = 'say-line';
+    l.textContent = line;
+    body.append(n, l);
+    s.append(portrait, body);
+    s.hidden = false;
+    window.clearTimeout(this.sayTimer);
+    this.sayTimer = window.setTimeout(() => (s.hidden = true), ms);
   }
 
   /** A short banner (e.g. a vial pickup) that fades after a few seconds. */
@@ -132,7 +173,7 @@ export class Screens {
     sub.textContent = 'FIGHT YOUR WAY DOWN';
     const menu = document.createElement('div');
     menu.className = 'menu';
-    this.button(menu, 'Begin Descent', 'begin', true);
+    this.button(menu, 'Begin', 'hub', true);
     this.button(menu, 'Training Court', 'training');
     if (info.tutorialDone) this.button(menu, 'Replay tutorial', 'tutorial');
     const stats = document.createElement('div');
@@ -187,7 +228,7 @@ export class Screens {
     p.textContent = `Struck down in ${info.room} (room ${info.roomNo}) · ${info.kills} angels slain here`;
     const menu = document.createElement('div');
     menu.className = 'menu';
-    this.button(menu, 'Descend again', 'begin', true);
+    this.button(menu, 'Return to the Cage', 'hub', true);
     this.button(menu, 'Title', 'title');
     f.append(h, p, menu);
     f.hidden = false;
@@ -200,10 +241,11 @@ export class Screens {
     const h = document.createElement('h1');
     h.textContent = `${level} — cleared`;
     const p = document.createElement('p');
-    p.textContent = `Gabriel has fallen. ${info.rooms} rooms · ${info.hp}/${info.max} health left. The Gilded Nave lies below (coming in M8).`;
+    p.textContent = `${info.rooms} rooms · ${info.hp}/${info.max} health left. Heaven's chains will find you again.`;
     const menu = document.createElement('div');
     menu.className = 'menu';
-    this.button(menu, 'Title', 'title', true);
+    this.button(menu, 'Return to the Cage', 'hub', true);
+    this.button(menu, 'Title', 'title');
     c.append(h, p, menu);
     c.hidden = false;
   }

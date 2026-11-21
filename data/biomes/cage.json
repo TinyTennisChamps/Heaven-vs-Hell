@@ -1,0 +1,92 @@
+{
+  "id": "cage",
+  "name": "The Gilded Cage",
+  "indoor": false,
+  "palette": {
+    "sky": "#d0e8f5",
+    "floorA": "#f4eedf",
+    "floorB": "#e8dfca",
+    "wallLit": "#ece4d0",
+    "wallShade": "#c9b99a",
+    "hedgeTop": "#c4d8b4",
+    "hedge": "#a3bf95",
+    "hedgeDark": "#7f9c76",
+    "cloud": "#ffffff",
+    "cloudShade": "#e4eef5",
+    "basin": "#f4eedf",
+    "water": "#a9c4da"
+  },
+  "accents": {
+    "inlay": "#e8c872",
+    "rim": "#e8c872",
+    "lip": "#b8923e",
+    "lipDark": "#7a5e2a",
+    "wallTop": "#e8c872",
+    "wallTrim": "#b8923e",
+    "blossom": "#ffffff",
+    "flame": "#dff0ff",
+    "flameCore": "#ffffff",
+    "eye": "#f3f0ea",
+    "pupil": "#2a2840"
+  },
+  "lighting": {
+    "darkness": "#2a2840",
+    "darknessAlpha": 0,
+    "satanLight": {
+      "radius": 56,
+      "alpha": 0.16
+    },
+    "flash": {
+      "radius": 50,
+      "alpha": 0.3,
+      "frames": 8
+    },
+    "grade": {
+      "color": "#fff0b8",
+      "alpha": 0.06
+    },
+    "vignette": 0.2,
+    "descendDarken": 0
+  },
+  "parallax": [
+    {
+      "kind": "skyClouds",
+      "factor": 0.15,
+      "alpha": 0.7
+    },
+    {
+      "kind": "farClouds",
+      "factor": 0.45,
+      "alpha": 0.85
+    }
+  ],
+  "ambient": [
+    {
+      "kind": "feather",
+      "perSec": 0.8,
+      "max": 10,
+      "colors": [
+        "#ffffff",
+        "#f3f0ea"
+      ]
+    },
+    {
+      "kind": "petal",
+      "perSec": 1.2,
+      "max": 16,
+      "colors": [
+        "#fff0b8",
+        "#f3f0ea"
+      ]
+    }
+  ],
+  "audio": {
+    "explore": "hub_theme",
+    "combat": "hub_theme",
+    "boss": "hub_theme",
+    "bpm": 84,
+    "ambience": "hub_bed",
+    "footsteps": "marble",
+    "reverb": "open"
+  }
+}

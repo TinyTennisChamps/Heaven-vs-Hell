@@ -18,7 +18,7 @@ import { decoRng, hex, proj } from './geom';
  * floor_<biome>, lip_<biome>, backwall_<biome>, window_<glass>, column,
  * pew, altar, apse, pillar, hedge, fountain, brazier, candelabra, eyes, banner.
  */
-const WALL_H: Record<WallKind, number> = { pillar: 30, hedge: 10, fountain: 7, column: 52, pew: 9, altar: 11, apse: 44 };
+const WALL_H: Record<WallKind, number> = { pillar: 30, hedge: 10, fountain: 7, column: 52, pew: 9, altar: 11, apse: 44, npc: 0 };
 const LIP_H = 8;
 const BACK_WALL_H = 70;
 
@@ -145,6 +145,7 @@ export class RoomArt {
     const C = this.col;
     room.walls.forEach((wall, wi) => {
       const kind: WallKind = room.wallKinds?.[wi] ?? 'pillar';
+      if (kind === 'npc') return; // the hub art draws whatever stands here
       const H = WALL_H[kind];
       const pc = new Graphics();
       const cx = wall.reduce((s, p) => s + p[0], 0) / wall.length;

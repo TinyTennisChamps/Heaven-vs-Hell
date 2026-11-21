@@ -272,7 +272,8 @@ export interface SimConfig {
   biomes?: Record<string, BiomeDef>;
 }
 
-export type WallKind = 'pillar' | 'hedge' | 'fountain' | 'column' | 'pew' | 'altar' | 'apse';
+/** `npc`: an invisible body under a hub character or prop (drawn by the hub art, not as a wall). */
+export type WallKind = 'pillar' | 'hedge' | 'fountain' | 'column' | 'pew' | 'altar' | 'apse' | 'npc';
 
 /** Tall walls block flyers (and are drawn tall); low ones (hedge, fountain, pew, altar) are flown over. */
 export const TALL_WALLS: readonly WallKind[] = ['pillar', 'column', 'apse'];
@@ -344,6 +345,21 @@ export interface WaveSpawn {
   spread?: number;
 }
 
+/** Hub: something Satan can walk up to and use (E), or walk into (`walkIn`: the Gate Down, the Yard). */
+export interface InteractableDef {
+  id: string;
+  kind: 'vael' | 'kesh' | 'codex' | 'gate' | 'yard' | 'imp' | 'sleeper' | 'warden';
+  /** Shown in the interact prompt, e.g. "Vael". */
+  name: string;
+  /** Verb in the prompt ("Talk", "Read", "Descend"). */
+  verb: string;
+  at: [number, number];
+  /** Use range from the centre (ground px). */
+  radius: number;
+  /** Walking into the radius triggers it (no key). */
+  walkIn?: boolean;
+}
+
 export interface DoorDef {
   /** Ground point on the room's edge. */
   at: [number, number];
@@ -353,7 +369,7 @@ export interface RoomDef {
   id: string;
   name: string;
   /** Shown on door icons; set-pieces are fixed slots, secrets are reached through hidden doors. */
-  tier?: 'combat' | 'hard' | 'rest' | 'boss' | 'training' | 'setpiece' | 'secret';
+  tier?: 'combat' | 'hard' | 'rest' | 'boss' | 'training' | 'setpiece' | 'secret' | 'hub';
   bounds: [number, number][];
   walls: [number, number][][];
   /** Visual kind per wall (parallel to `walls`), default 'pillar'. */
@@ -383,6 +399,8 @@ export interface RoomDef {
   vial?: { id: string; at: [number, number] };
   /** Lighting preset the room starts in. */
   lighting?: string;
+  /** The hub: NPCs, the Gate Down and the Yard. A room with these is peaceful (E interacts, never throws). */
+  interactables?: InteractableDef[];
 }
 
 export type VialStat = 'maxPosture' | 'rageGain' | 'slashPosture' | 'deflectFrames' | 'maxHealth' | 'pips' | 'postureRegen';

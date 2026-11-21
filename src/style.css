@@ -427,3 +427,53 @@ canvas {
   font-size: 11px;
   opacity: 0.8;
 }
+
+/* --- The hub (The Gilded Cage): gold and ivory, never red (red is Satan's). --- */
+.hub-prompt {
+  position: fixed;
+  left: 50%;
+  bottom: 12%;
+  transform: translateX(-50%);
+  color: #7a5e2a;
+  background: rgba(255, 253, 246, 0.9);
+  border: 1px solid #e8c872;
+  box-shadow: 0 0 0 1px rgba(122, 94, 42, 0.35);
+  font: 13px/1.3 ui-monospace, Menlo, monospace;
+  padding: 5px 12px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.say-box {
+  position: fixed;
+  left: 50%;
+  bottom: 4%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-width: min(520px, 86vw);
+  max-width: 86vw;
+  color: #f4eedf;
+  background: rgba(42, 40, 64, 0.9);
+  border: 1px solid #b8923e;
+  font: 14px/1.4 ui-monospace, Menlo, monospace;
+  padding: 8px 12px;
+  pointer-events: none;
+}
+.say-portrait {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  background: #4a4650;
+  border: 1px solid #b8923e;
+  image-rendering: pixelated;
+}
+.say-name {
+  color: #e8c872;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.hub-prompt[hidden],
+.say-box[hidden] {
+  display: none;
+}

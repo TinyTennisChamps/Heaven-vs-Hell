@@ -24,6 +24,7 @@ import { hex } from './biome/geom';
 import { maxHp, maxPips, maxPosture, playerRadius } from '../sim/stats';
 import { enemyAttack } from '../sim/actors/enemy';
 import { shieldUp } from '../sim/combat/damage';
+import { HubArt } from './hub/hubArt';
 
 interface Sprite {
   root: Container;
@@ -79,6 +80,8 @@ export class Scene {
   private grade = new Grade();
   private greyFilter = new ColorMatrixFilter();
   private shadeKey = '';
+  /** The hub's characters and set pieces (null outside the hub). */
+  private hubArt: HubArt | null = null;
 
   constructor(
     world: World,
@@ -97,6 +100,10 @@ export class Scene {
     this.screenFlash.rect(0, 0, VIEW_W, VIEW_H).fill(0xffffff);
     this.screenFlash.alpha = 0;
     this.root.addChild(this.parallax.root, this.worldLayer, this.screenFlash, this.grade.root, this.hud, this.cursorG);
+    if (world.room.interactables) {
+      this.hubArt = new HubArt(world, this.entities);
+      this.worldLayer.addChild(this.hubArt.prompt);
+    }
     if (!biome.indoor) this.drawClouds(world);
     this.makeDoors(world);
     this.player = new PixiSprite();
@@ -364,6 +371,7 @@ export class Scene {
     this.fx.clear();
     this.drawDoors(world);
     this.drawFont(world);
+    this.hubArt?.draw(world);
 
     // --- Player ---
     const p = world.player;
@@ -725,6 +733,7 @@ export class Scene {
   private drawHud(world: World, cfg: SimConfig): void {
     const g = this.hud;
     g.clear();
+    if (world.hub) return; // the hub is peaceful: no combat HUD
     const p = world.player;
     const x = 8;
     const y = 8;

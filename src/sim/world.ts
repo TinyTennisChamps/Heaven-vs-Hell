@@ -212,6 +212,8 @@ export type SimEvent =
   | { type: 'playerDied'; pos: Vec2 }
   | { type: 'spawnIn'; pos: Vec2; swarm: boolean }
   | { type: 'roomCleared'; pos: Vec2 }
+  | { type: 'interact'; id: string; kind: string; pos: Vec2 }
+  | { type: 'hubExit'; id: string; kind: string; pos: Vec2 }
   | { type: 'restHeal'; pos: Vec2 }
   | { type: 'rageFull'; pos: Vec2 }
   | { type: 'rageStart'; pos: Vec2 }
@@ -315,6 +317,8 @@ export interface World {
   nav: Nav | null;
   /** Set-piece script progress and the lighting preset it has switched to. */
   script: { t: number; fired: boolean[]; lighting: string | null; silenced: boolean };
+  /** The hub only: the interactable in reach (id) and whether a walk-in exit has fired. */
+  hub: { target: string | null; exited: boolean } | null;
   stats: { hitsLanded: number; hitsTaken: number; kills: number; deflects: number; perfects: number; deathblows: number };
 }
 
@@ -390,6 +394,7 @@ export function createWorld(room: RoomDef, cfg: SimConfig, seed = 1, carry?: Car
     zones: makeZones(room.zones, cfg.biomes?.[biomeId]),
     nav: null,
     script: { t: 0, fired: [], lighting: room.lighting ?? null, silenced: false },
+    hub: room.interactables ? { target: null, exited: false } : null,
     roomRun: { wave: 0, timer: cfg.rooms.firstWaveDelayFrames, cleared: false, exitCount: room.exits?.length ?? 0, exit: null, fontUsed: false, secretOpen: false, deadTicks: 0 },
     stats: { hitsLanded: 0, hitsTaken: 0, kills: 0, deflects: 0, perfects: 0, deathblows: 0 },
   };
