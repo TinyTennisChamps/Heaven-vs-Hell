@@ -157,6 +157,12 @@ export interface EnemyAttackDef {
   lunge?: { px: number; overFrames: number };
   /** Optional follow-up attack started straight from recovery. */
   chain?: { next: string; chance: number };
+  /** Extra windup ticks rolled 0..windupJitter per use (a varied delay that catches mashers). */
+  windupJitter?: number;
+  /** Hitting the attacker during the windup cancels it (stagger) with bonus posture. */
+  interruptible?: boolean;
+  /** On the first active tick, call in reinforcements instead of striking. */
+  summon?: { type: string; count: number; spread: number; maxAlive: number };
   /** If set, the first active frame fires this projectile instead of a melee arc. */
   projectile?: ProjectileSpec;
 }
@@ -185,6 +191,17 @@ export interface EnemyDef {
   /** Flanking punish: after Satan spends `afterFrames` behind the shield within `range`, spin (once per cooldown). */
   flankSpin?: { afterFrames: number; range: number; cooldownFrames: number };
   posture: PostureTuning;
+  /** Bosses: hand-tuned (no level scaling), a big HUD bar, and `segments` health bars. */
+  boss?: boolean;
+  /** Display name for the boss bar. */
+  title?: string;
+  segments?: number;
+  /** Bosses: ticks the rally between segments lasts. */
+  rallyFrames?: number;
+  /** Ticks before the first special move (e.g. Gabriel's first Horn Call). */
+  specialDelay?: number;
+  /** Gabriel: Horn Call cooldown [phase 1, phase 2] in ticks. */
+  hornEveryFrames?: [number, number];
   /** Swarmers (cherubs) ignore the focus/hold-back rule and use their own pool (combat.groups.swarmMax). */
   swarm?: boolean;
   /** No posture bar: every hit just deals damage (cherubs die in one hit). */
@@ -224,8 +241,8 @@ export interface DoorDef {
 export interface RoomDef {
   id: string;
   name: string;
-  /** 'combat' | 'hard' | 'rest' | 'training' — shown on door icons. */
-  tier?: 'combat' | 'hard' | 'rest' | 'training';
+  /** 'combat' | 'hard' | 'rest' | 'boss' | 'training' — shown on door icons. */
+  tier?: 'combat' | 'hard' | 'rest' | 'boss' | 'training';
   bounds: [number, number][];
   walls: [number, number][][];
   /** Visual kind per wall (parallel to `walls`), default 'pillar'. */
@@ -316,4 +333,10 @@ export interface LevelDef {
   rest: string;
   /** The first room is always drawn from these (gentle start + tutorial). */
   openers: string[];
+  /** The level's boss arena, entered after the combat rooms and the rest. */
+  boss: string;
+  /** Enemy multipliers for this level (bosses excepted). */
+  scaling: { health: number; posture: number; damage: number };
+  /** Each combat room already cleared this run makes enemies this much tougher (all three stats). */
+  rampPerRoom: number;
 }

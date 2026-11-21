@@ -1,7 +1,9 @@
 import { createRng, nextFloat, nextInt, type RngState } from '../../core/rng';
 import type { LevelDef, RoomDef, SimConfig } from '../config';
 import { maxHp, raging } from '../stats';
-import type { Carry, Pickup, World } from '../world';
+import type { Carry, EnemyScale, Pickup, World } from '../world';
+
+const isCombat = (r: RoomDef | undefined) => r?.tier === 'combat' || r?.tier === 'hard';
 
 /**
  * A run through one level: which room Satan is in, what the exit doors lead
@@ -14,7 +16,7 @@ import type { Carry, Pickup, World } from '../world';
  * may be the rest room. If the rest was never taken it is the only door
  * before the end.
  */
-export type DoorKind = 'combat' | 'hard' | 'rest' | 'end';
+export type DoorKind = 'combat' | 'hard' | 'rest' | 'boss' | 'end';
 
 export interface DoorOption {
   kind: DoorKind;
@@ -80,7 +82,7 @@ export function carryThroughGate(world: World, cfg: SimConfig): Carry {
 /** The vials this room offers in this run: the hidden one behind its crack, the locked one in a hard room's cage. */
 export function roomPickups(run: RunState, room: RoomDef, cfg: SimConfig): Pickup[] {
   const have = run.carry.vials ?? [];
-  const next = (source: 'hidden' | 'locked') => cfg.vials.vials.find((v) => v.level === run.level && v.source === source && !have.includes(v.id));
+  const next = (source: 'hidden' | 'locked' | 'boss') => cfg.vials.vials.find((v) => v.level === run.level && v.source === source && !have.includes(v.id));
   const out: Pickup[] = [];
   const hidden = next('hidden');
   if (room.crack && room.id === run.hiddenRoom && hidden) {
@@ -95,12 +97,28 @@ export function roomPickups(run: RunState, room: RoomDef, cfg: SimConfig): Picku
     const at = { x: room.crack[0], y: room.crack[1] };
     out.push({ vialId: hidden.id, kind: 'crack', at, vialAt: { x: at.x + (dx / l) * 16, y: at.y + (dy / l) * 16 }, hits: 0, open: false, taken: false });
   }
+  const drop = next('boss');
+  if (room.tier === 'boss' && drop) {
+    // Dropped where the boss falls (the runner moves it there on clear).
+    const at = { x: room.playerSpawn[0], y: room.playerSpawn[1] };
+    out.push({ vialId: drop.id, kind: 'drop', at, vialAt: { ...at }, hits: 0, open: false, taken: false });
+  }
   const locked = next('locked');
   if (room.cage && room.tier === 'hard' && locked) {
     const at = { x: room.cage[0], y: room.cage[1] };
     out.push({ vialId: locked.id, kind: 'cage', at, vialAt: { ...at }, hits: 0, open: false, taken: false });
   }
   return out;
+}
+
+/**
+ * Enemy toughness for a room: the level's multipliers, ramped by how many
+ * combat rooms this run has already cleared (bosses ignore scaling).
+ */
+export function roomScale(run: RunState, level: LevelDef, room: RoomDef): EnemyScale {
+  const s = level.scaling;
+  const f = isCombat(room) ? 1 + level.rampPerRoom * run.combatDone : 1;
+  return { health: s.health * f, posture: s.posture * f, damage: s.damage * f };
 }
 
 /** Rage a new run starts with after a fall: capped so you can never begin able to transform. */
@@ -113,7 +131,7 @@ export function rageCarryOver(rageAtFall: number, fallsInARow: number, cfg: SimC
 export function takeExit(run: RunState, i: number, level: LevelDef, rooms: Record<string, RoomDef>, carry: Carry): DoorOption {
   const opt = run.options[i] ?? run.options[0]!;
   const was = rooms[run.current];
-  if (was && was.tier !== 'rest') run.combatDone++;
+  if (isCombat(was)) run.combatDone++;
   run.carry = { ...carry };
   if (opt.kind === 'end' || !opt.roomId) {
     run.finished = true;
@@ -130,14 +148,15 @@ export function takeExit(run: RunState, i: number, level: LevelDef, rooms: Recor
 
 /** Combat rooms finished once the current room is cleared. */
 function doneAfterCurrent(run: RunState, rooms: Record<string, RoomDef>): number {
-  return run.combatDone + (rooms[run.current]?.tier === 'rest' ? 0 : 1);
+  return run.combatDone + (isCombat(rooms[run.current]) ? 1 : 0);
 }
 
 function planExits(run: RunState, level: LevelDef, rooms: Record<string, RoomDef>): DoorOption[] {
   const done = doneAfterCurrent(run, rooms);
   const left = level.combatRooms - done;
   const restDoor: DoorOption = { kind: 'rest', roomId: level.rest };
-  if (left <= 0) return run.restTaken ? [{ kind: 'end', roomId: null }] : [restDoor];
+  if (rooms[run.current]?.tier === 'boss') return [{ kind: 'end', roomId: null }];
+  if (left <= 0) return run.restTaken ? [{ kind: 'boss', roomId: level.boss }] : [restDoor];
 
   const fresh = level.pool.filter((id) => !run.visited.includes(id));
   shuffle(run.rng, fresh);

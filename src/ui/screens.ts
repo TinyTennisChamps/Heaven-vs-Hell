@@ -14,6 +14,11 @@ export class Screens {
   private cleared: HTMLDivElement;
   private fader: HTMLDivElement;
   private toastEl: HTMLDivElement;
+  private boss: HTMLDivElement;
+  private bossName: HTMLDivElement;
+  private bossHp: HTMLDivElement;
+  private bossPosture: HTMLDivElement;
+  private bossSegs: HTMLDivElement;
   private toastTimer = 0;
 
   constructor(root: HTMLElement) {
@@ -25,6 +30,25 @@ export class Screens {
     this.fader = this.panel(root, 'fader');
     this.toastEl = this.panel(root, 'toast');
     this.toastEl.hidden = true;
+    // Boss bar: name, health (with segment pips), centre-fill posture.
+    this.boss = this.panel(root, 'boss-bar');
+    this.bossName = document.createElement('div');
+    this.bossName.className = 'boss-name';
+    this.bossSegs = document.createElement('div');
+    this.bossSegs.className = 'boss-segs';
+    const hp = document.createElement('div');
+    hp.className = 'boss-hp';
+    this.bossHp = document.createElement('div');
+    hp.appendChild(this.bossHp);
+    const po = document.createElement('div');
+    po.className = 'boss-posture';
+    this.bossPosture = document.createElement('div');
+    po.appendChild(this.bossPosture);
+    const head = document.createElement('div');
+    head.className = 'boss-head';
+    head.append(this.bossName, this.bossSegs);
+    this.boss.append(head, hp, po);
+    this.boss.hidden = true;
     this.fader.hidden = false;
     this.hideAll();
     this.hud.hidden = true;
@@ -135,12 +159,28 @@ export class Screens {
     const h = document.createElement('h1');
     h.textContent = `${level} — cleared`;
     const p = document.createElement('p');
-    p.textContent = `${info.rooms} rooms · ${info.hp}/${info.max} health left. The Herald Gabriel waits beyond the gate (coming in M7).`;
+    p.textContent = `Gabriel has fallen. ${info.rooms} rooms · ${info.hp}/${info.max} health left. The Gilded Nave lies below (coming in M8).`;
     const menu = document.createElement('div');
     menu.className = 'menu';
     this.button(menu, 'Title', 'title', true);
     c.append(h, p, menu);
     c.hidden = false;
+  }
+
+  /** Boss bar state each frame; null hides it. */
+  setBoss(b: { title: string; hp: number; maxHp: number; posture: number; postureMax: number; segments: number; segmentsMax: number; broken: boolean } | null): void {
+    if (!b) {
+      this.boss.hidden = true;
+      return;
+    }
+    this.boss.hidden = false;
+    if (this.bossName.textContent !== b.title) this.bossName.textContent = b.title;
+    const segs = '◆'.repeat(b.segments) + '◇'.repeat(Math.max(0, b.segmentsMax - b.segments));
+    if (this.bossSegs.textContent !== segs) this.bossSegs.textContent = segs;
+    this.bossHp.style.width = `${Math.max(0, (100 * b.hp) / b.maxHp).toFixed(1)}%`;
+    const pf = Math.min(1, b.posture / b.postureMax);
+    this.bossPosture.style.width = `${(100 * pf).toFixed(1)}%`;
+    this.bossPosture.className = b.broken ? 'broken' : pf > 0.8 ? 'hot' : '';
   }
 
   setHud(level: string, room: string, n: number, total: number): void {

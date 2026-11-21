@@ -108,7 +108,7 @@ export function imminentThreat(world: World, cfg: SimConfig): Vec2 | null {
     if (d > (atk.projectile ? range * 2 : range)) continue;
     // A ranged windup lands later than its windup ends (flight time).
     const flight = atk.projectile ? (d / atk.projectile.speed) * 60 : 0;
-    const ticksLeft = (e.phase === 'active' ? 0 : atk.windup - e.phaseFrame) + flight;
+    const ticksLeft = (e.phase === 'active' ? 0 : e.windupLen - e.phaseFrame) + flight;
     const score = ticksLeft * 1000 + d;
     if (score < bestScore) {
       best = e.pos;

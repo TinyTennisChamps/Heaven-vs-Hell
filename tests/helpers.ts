@@ -18,7 +18,7 @@ export function testConfig(): SimConfig {
     combat: loadData('tuning/combat'),
     camera: loadData('tuning/camera'),
     attacks: loadData('attacks/satan'),
-    enemies: { dummy: loadData('enemies/dummy'), dominion: loadData('enemies/dominion'), archer: loadData('enemies/archer'), cherub: loadData('enemies/cherub') },
+    enemies: { dummy: loadData('enemies/dummy'), dominion: loadData('enemies/dominion'), archer: loadData('enemies/archer'), cherub: loadData('enemies/cherub'), gabriel: loadData('enemies/gabriel') },
     rooms: loadData('tuning/rooms'),
     rage: loadData('tuning/rage'),
     vials: loadData('vials'),

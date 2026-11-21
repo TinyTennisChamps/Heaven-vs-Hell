@@ -1,14 +1,15 @@
 import { SIM_DT } from '../../core/loop';
 import { angleDiff, angleOf, DEG, easeOutQuad, fromAngle, normalize, type Vec2 } from '../../core/math';
-import { nextFloat, nextRange } from '../../core/rng';
+import { nextFloat, nextInt, nextRange } from '../../core/rng';
 import type { EnemyAttackDef, EnemyDef, SimConfig } from '../config';
 import { arcHitsCircle } from '../combat/hitbox';
-import { inFrontCone, resolveOnPlayer } from '../combat/damage';
+import { inFrontCone, resolveOnPlayer, scaledAttack } from '../combat/damage';
+import { findSpot } from '../rooms/roomRunner';
 import { regenPosture } from '../combat/posture';
 import { moveAndSlide } from '../physics/collide';
 import { enemyArrowInFlight, spawnProjectile } from '../projectiles';
 import { playerRadius } from '../stats';
-import { emit, type Enemy, type World } from '../world';
+import { emit, spawnEnemy, type Enemy, type World } from '../world';
 
 /**
  * Shared enemy runner: timers, posture, broken/down states, attack frame data
@@ -43,6 +44,7 @@ export function startEnemyAttack(world: World, e: Enemy, key: string, cfg: SimCo
   e.swingHit = false;
   e.engage = false;
   e.attackDir = { ...e.facing };
+  e.windupLen = atk.windup + (atk.windupJitter ? nextInt(world.rng, 0, atk.windupJitter + 1) : 0);
   setPhase(e, 'windup');
   emit(world, { type: 'telegraph', pos: { ...e.pos }, judgement: !!atk.judgement });
 }
@@ -65,7 +67,7 @@ export function updateEnemy(world: World, e: Enemy, cfg: SimConfig, think: Think
 
   if (e.phase === 'down') {
     if (world.flags.respawn && e.phaseFrame >= def.respawnFrames) {
-      e.hp = e.maxHp = def.health;
+      e.hp = e.maxHp;
       e.posture = 0;
       e.pos = { ...e.spawn };
       e.prevPos = { ...e.spawn };
@@ -89,6 +91,13 @@ export function updateEnemy(world: World, e: Enemy, cfg: SimConfig, think: Think
   let lungeDelta: Vec2 = { x: 0, y: 0 };
 
   switch (e.phase) {
+    case 'rally':
+      // Boss between phases: rises, untouchable, then comes back harder.
+      if (e.phaseFrame >= (def.rallyFrames ?? 90)) {
+        setPhase(e, 'idle');
+        e.cooldown = 20;
+      }
+      break;
     case 'recoil':
       if (e.phaseFrame >= cfg.combat.riposte.frames) {
         setPhase(e, 'idle');
@@ -98,7 +107,7 @@ export function updateEnemy(world: World, e: Enemy, cfg: SimConfig, think: Think
     case 'broken':
       if (e.phaseFrame >= def.brokenFrames) {
         // Survived the opening: recover with posture partly restored.
-        e.posture = def.posture.max * 0.5;
+        e.posture = e.postureMax * 0.5;
         e.sinceHit = 0;
         setPhase(e, 'idle');
         e.cooldown = def.cooldownMin;
@@ -146,7 +155,7 @@ export function updateEnemy(world: World, e: Enemy, cfg: SimConfig, think: Think
         turnToward(e, toP, Math.max(def.turnRateDeg, 8));
         e.attackDir = { ...e.facing };
       }
-      if (e.phaseFrame >= atk.windup) setPhase(e, 'active');
+      if (e.phaseFrame >= e.windupLen) setPhase(e, 'active');
       break;
     }
     case 'active': {
@@ -157,11 +166,16 @@ export function updateEnemy(world: World, e: Enemy, cfg: SimConfig, think: Think
         const s = f <= n ? atk.lunge.px * (easeOutQuad(f / n) - easeOutQuad((f - 1) / n)) : 0;
         lungeDelta = { x: e.attackDir.x * s, y: e.attackDir.y * s };
       }
-      if (atk.projectile) {
+      if (atk.summon) {
+        if (!e.swingHit) {
+          e.swingHit = true;
+          summon(world, e, atk.summon, cfg);
+        }
+      } else if (atk.projectile) {
         if (!e.swingHit) {
           e.swingHit = true;
           const from = { x: e.pos.x + e.attackDir.x * (e.radius + 4), y: e.pos.y + e.attackDir.y * (e.radius + 4) };
-          spawnProjectile(world, 'arrow', e.id, from, e.attackDir, atk.projectile, atk);
+          spawnProjectile(world, 'arrow', e.id, from, e.attackDir, atk.projectile, scaledAttack(atk, e.dmgMul));
           emit(world, { type: 'arrowLoosed', pos: from });
         }
       } else if (!e.swingHit && arcHitsCircle(e.pos, e.attackDir, atk.hitbox, p.pos, playerRadius(world, cfg))) {
@@ -188,6 +202,25 @@ export function updateEnemy(world: World, e: Enemy, cfg: SimConfig, think: Think
   }
 
   moveBody(world, e, move, cfg, lungeDelta);
+}
+
+/** Call reinforcements in a ring around the caller (never more than maxAlive of that type). */
+function summon(world: World, e: Enemy, s: NonNullable<EnemyAttackDef['summon']>, cfg: SimConfig): void {
+  const def = cfg.enemies[s.type];
+  if (!def) return;
+  const alive = world.enemies.filter((o) => o.type === s.type && o.phase !== 'down').length;
+  const n = Math.max(0, Math.min(s.count, s.maxAlive - alive));
+  const a0 = nextFloat(world.rng) * Math.PI * 2;
+  for (let i = 0; i < n; i++) {
+    const a = a0 + (i / n) * Math.PI * 2;
+    const at = findSpot(world, e.pos.x + Math.cos(a) * s.spread, e.pos.y + Math.sin(a) * s.spread, def.radius + 2);
+    if (!at) continue;
+    const c = spawnEnemy(world, cfg, s.type, at);
+    c.arrive = cfg.rooms.arriveFrames;
+    c.cooldown = Math.max(c.cooldown, cfg.rooms.arriveFrames + 20);
+    emit(world, { type: 'spawnIn', pos: { ...at }, swarm: !!def.swarm });
+  }
+  emit(world, { type: 'summon', pos: { ...e.pos } });
 }
 
 /** A non-swarm enemy with an attack in flight (swarm lunges run in their own pool). */

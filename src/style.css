@@ -297,3 +297,60 @@ canvas {
   color: #f4eedf;
   letter-spacing: 0;
 }
+
+/* ---- M7 boss bar ---- */
+.boss-bar {
+  position: fixed;
+  left: 50%;
+  top: 5%;
+  transform: translateX(-50%);
+  width: min(560px, 60vw);
+  pointer-events: none;
+  z-index: 7;
+  font: 12px/1.2 ui-monospace, Menlo, monospace;
+  background: rgba(42, 40, 64, 0.82);
+  border: 1px solid #b8923e;
+  padding: 5px 8px 6px;
+}
+.boss-bar[hidden] {
+  display: none;
+}
+.boss-head {
+  display: flex;
+  justify-content: space-between;
+  color: #fff6c8;
+  letter-spacing: 2px;
+  text-shadow: 0 1px 0 #2a2840;
+  margin-bottom: 2px;
+}
+.boss-segs {
+  color: #e8c872;
+}
+.boss-hp {
+  height: 7px;
+  background: #2a2840;
+  border: 1px solid #b8923e;
+}
+.boss-hp div {
+  height: 100%;
+  background: #f3f0ea;
+}
+.boss-posture {
+  height: 4px;
+  margin: 3px auto 0;
+  width: 70%;
+  background: #2a2840;
+  display: flex;
+  justify-content: center;
+}
+.boss-posture div {
+  height: 100%;
+  background: #e8c872;
+}
+.boss-posture div.hot {
+  background: #ffffff;
+}
+.boss-posture div.broken {
+  background: #ffffff;
+  box-shadow: 0 0 6px #fff0b8;
+}

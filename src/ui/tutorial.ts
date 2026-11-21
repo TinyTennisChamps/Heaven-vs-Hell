@@ -75,7 +75,7 @@ const STEPS: Step[] = [
   {
     id: 'posture',
     text: 'Deflects and hits fill the gold posture bar — fill it to break them',
-    show: (w, cfg) => w.enemies.some((e) => !cfg.enemies[e.type]?.noPosture && e.phase !== 'down' && e.posture > cfg.enemies[e.type]!.posture.max * 0.35),
+    show: (w, cfg) => w.enemies.some((e) => !cfg.enemies[e.type]?.noPosture && e.phase !== 'down' && e.posture > e.postureMax * 0.35),
     done: (w) => has(w, 'postureBreak'),
   },
   {

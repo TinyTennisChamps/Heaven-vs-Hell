@@ -106,7 +106,7 @@ export interface PlayerState {
 /** A vial in the room: behind a cracked rim spot, or in a cage that opens on clear. */
 export interface Pickup {
   vialId: string;
-  kind: 'crack' | 'cage';
+  kind: 'crack' | 'cage' | 'drop';
   /** The crack / cage position. */
   at: Vec2;
   /** Where the vial sits once revealed (a crack's vial rolls inward). */
@@ -116,7 +116,7 @@ export interface Pickup {
   taken: boolean;
 }
 
-export type EnemyPhase = 'idle' | 'windup' | 'active' | 'recover' | 'recoil' | 'broken' | 'down';
+export type EnemyPhase = 'idle' | 'windup' | 'active' | 'recover' | 'recoil' | 'broken' | 'down' | 'rally';
 
 export interface Enemy {
   id: number;
@@ -154,6 +154,14 @@ export interface Enemy {
   arrive: number;
   /** Ticks the enemy has been pushing into a wall without getting anywhere. */
   stuck: number;
+  /** Scaled posture capacity (def.posture.max × level/room scaling). */
+  postureMax: number;
+  /** Damage multiplier on this enemy's attacks (level/room scaling). */
+  dmgMul: number;
+  /** Rolled windup length of the current attack (windup + jitter). */
+  windupLen: number;
+  /** Bosses: health segments left (1 = last). Each one ends in a deathblow/kill. */
+  segments: number;
   spawn: Vec2;
 }
 
@@ -192,7 +200,17 @@ export type SimEvent =
   | { type: 'crackHit'; pos: Vec2 }
   | { type: 'crackBroken'; pos: Vec2 }
   | { type: 'cageOpen'; pos: Vec2 }
-  | { type: 'vialGained'; pos: Vec2; vialId: string };
+  | { type: 'vialGained'; pos: Vec2; vialId: string }
+  | { type: 'bossPhase'; pos: Vec2; phase: number }
+  | { type: 'summon'; pos: Vec2 }
+  | { type: 'interrupt'; pos: Vec2 };
+
+/** Level/room difficulty applied to enemies as they spawn (bosses use their own data). */
+export interface EnemyScale {
+  health: number;
+  posture: number;
+  damage: number;
+}
 
 /** Progress through the current room's waves and doors. */
 export interface RoomRun {
@@ -256,10 +274,11 @@ export interface World {
   /** Vials collected this run, including any picked up in this room. */
   vials: string[];
   pickups: Pickup[];
+  enemyScale: EnemyScale;
   stats: { hitsLanded: number; hitsTaken: number; kills: number; deflects: number; perfects: number; deathblows: number };
 }
 
-export function createWorld(room: RoomDef, cfg: SimConfig, seed = 1, carry?: Carry, pickups: Pickup[] = []): World {
+export function createWorld(room: RoomDef, cfg: SimConfig, seed = 1, carry?: Carry, pickups: Pickup[] = [], scale: EnemyScale = { health: 1, posture: 1, damage: 1 }): World {
   const segs = [...segmentsFromPolygon(room.bounds), ...room.walls.flatMap((w) => segmentsFromPolygon(w))];
   const pts = room.bounds.map(([x, y]) => groundToScreen(x, y));
   const screenBox = {
@@ -324,6 +343,7 @@ export function createWorld(room: RoomDef, cfg: SimConfig, seed = 1, carry?: Car
     mods: modsFromVials(carry?.vials ?? [], cfg),
     vials: [...(carry?.vials ?? [])],
     pickups: pickups.map((q) => ({ ...q, at: { ...q.at }, vialAt: { ...q.vialAt } })),
+    enemyScale: { ...scale },
     roomRun: { wave: 0, timer: cfg.rooms.firstWaveDelayFrames, cleared: false, exitCount: room.exits?.length ?? 0, exit: null, fontUsed: false, deadTicks: 0 },
     stats: { hitsLanded: 0, hitsTaken: 0, kills: 0, deflects: 0, perfects: 0, deathblows: 0 },
   };
@@ -334,6 +354,9 @@ export function createWorld(room: RoomDef, cfg: SimConfig, seed = 1, carry?: Car
 export function spawnEnemy(world: World, cfg: SimConfig, type: string, at: Vec2): Enemy {
   const d = cfg.enemies[type];
   if (!d) throw new Error(`unknown enemy type ${type}`);
+  // Bosses are hand-tuned: level scaling doesn't apply to them.
+  const sc = d.boss ? { health: 1, posture: 1, damage: 1 } : world.enemyScale;
+  const hp = Math.round(d.health * sc.health);
   const e: Enemy = {
     id: world.nextId++,
     type,
@@ -342,8 +365,8 @@ export function spawnEnemy(world: World, cfg: SimConfig, type: string, at: Vec2)
     vel: v2(),
     knock: v2(),
     facing: v2(-1, 0),
-    hp: d.health,
-    maxHp: d.health,
+    hp,
+    maxHp: hp,
     posture: 0,
     sinceHit: 999,
     radius: d.radius,
@@ -358,9 +381,13 @@ export function spawnEnemy(world: World, cfg: SimConfig, type: string, at: Vec2)
     shieldFlash: 0,
     engage: false,
     flankTicks: 0,
-    specialCooldown: 0,
+    specialCooldown: d.specialDelay ?? 0,
     arrive: 0,
     stuck: 0,
+    postureMax: d.posture.max * sc.posture,
+    dmgMul: sc.damage,
+    windupLen: 0,
+    segments: d.segments ?? 1,
     spawn: { ...at },
   };
   world.enemies.push(e);

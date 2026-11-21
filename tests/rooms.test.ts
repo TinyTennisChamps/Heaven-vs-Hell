@@ -39,7 +39,7 @@ function clearRoom(w: World): void {
 
 describe('L1 room data', () => {
   it('the level pool, openers and rest all exist', () => {
-    for (const id of [...level.pool, ...level.openers, level.rest]) expect(rooms[id], id).toBeDefined();
+    for (const id of [...level.pool, ...level.openers, level.rest, level.boss]) expect(rooms[id], id).toBeDefined();
     expect(level.pool.length).toBeGreaterThanOrEqual(level.combatRooms + 1);
   });
 
@@ -148,13 +148,15 @@ describe('run planner', () => {
     return { r, order };
   }
 
-  it(`every run is ${level.combatRooms} combat rooms + the rest room, no repeats, whatever doors you pick`, () => {
+  it(`every run is ${level.combatRooms} combat rooms + the rest room + the boss, no repeats, whatever doors you pick`, () => {
     for (let seed = 1; seed <= 300; seed++) {
       const { r, order } = playRun(seed, (n, t) => (seed + t) % n);
       expect(r.finished).toBe(true);
       expect(level.openers).toContain(order[0]);
       expect(order.filter((id) => id === level.rest).length).toBe(1);
-      const combat = order.filter((id) => id !== level.rest);
+      expect(order[order.length - 1]).toBe(level.boss); // the boss is always last
+      expect(order.filter((id) => id === level.boss).length).toBe(1);
+      const combat = order.filter((id) => id !== level.rest && id !== level.boss);
       expect(combat.length).toBe(level.combatRooms);
       expect(new Set(combat).size).toBe(combat.length);
     }

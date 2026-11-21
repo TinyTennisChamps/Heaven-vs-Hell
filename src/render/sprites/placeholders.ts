@@ -183,3 +183,61 @@ export function drawCherub(g: Graphics, pose: CherubPose, flash: boolean, lift: 
   // Halo.
   g.ellipse(hx, hy - 8, 4, 1.2).stroke({ width: 1, color: flash ? 0xffffff : HEAVEN.gold2 });
 }
+
+export type GabrielPose = 'idle' | 'drawBack' | 'thrust' | 'trumpet' | 'horn' | 'charge' | 'ring' | 'recoil' | 'broken' | 'rally';
+
+/**
+ * Gabriel, the Herald: tall, great wings, a sun-gold halo, a spear in one
+ * hand and the herald's trumpet in the other. Pearl and gold, lilac outline.
+ * Origin = feet, facing right.
+ */
+export function drawGabriel(g: Graphics, pose: GabrielPose, flash: boolean): void {
+  const c = (col: number) => (flash ? 0xffffff : col);
+  const line = flash ? 0xffffff : ANGEL.angelLine;
+  const st = { width: 1, color: line, alignment: 1 } as const;
+  g.clear();
+  const crouch = pose === 'broken' ? 6 : pose === 'charge' || pose === 'thrust' ? 2 : 0;
+  const lean = pose === 'thrust' ? 3 : pose === 'charge' ? 5 : pose === 'drawBack' ? -3 : pose === 'recoil' ? -5 : 0;
+  const y = (v: number) => v + crouch;
+  const wingUp = pose === 'ring' || pose === 'rally' ? -8 : pose === 'horn' ? -4 : 0;
+
+  // Great wings (behind).
+  g.poly([-3 + lean, y(-34), -22 + lean, y(-50) + wingUp, -26 + lean, y(-30) + wingUp, -18 + lean, y(-14), -6 + lean, y(-20)]).fill(c(ANGEL.white)).stroke(st);
+  g.poly([3 + lean, y(-34), 20 + lean, y(-52) + wingUp, 24 + lean, y(-32) + wingUp, 16 + lean, y(-16), 6 + lean, y(-22)]).fill(c(ANGEL.pearl)).stroke(st);
+  g.moveTo(-8 + lean, y(-40)).lineTo(-20 + lean, y(-44) + wingUp).stroke({ width: 1, color: c(ANGEL.pearl2) });
+  // Robe: long, flaring, gold hem and belt.
+  g.poly([-10, 0, 10, 0, 5 + lean, y(-30), -5 + lean, y(-30)]).fill(c(ANGEL.pearl)).stroke(st);
+  g.rect(-10, -2, 20, 2).fill(c(HEAVEN.gold2));
+  g.rect(-5 + lean, y(-20), 10, 2).fill(c(HEAVEN.gold2));
+  g.rect(-1 + lean, y(-29), 2, 27).fill(c(ANGEL.pearl2));
+  // Head: a calm helm-face, a single gold band; the sun halo behind.
+  const hx = lean;
+  const hy = y(-38);
+  g.circle(hx, hy - 4, pose === 'rally' ? 10 : 8).stroke({ width: 2, color: flash ? 0xffffff : HEAVEN.gold1 });
+  g.rect(hx - 4, hy - 4, 8, 9).fill(c(ANGEL.silver)).stroke(st);
+  g.rect(hx - 4, hy - 1, 8, 2).fill(c(HEAVEN.gold2));
+  if (!flash) g.rect(hx + 1, hy + 2, 2, 1).fill(ANGEL.void);
+
+  if (pose === 'broken') {
+    g.moveTo(-14, -2).lineTo(14, -6).stroke({ width: 1, color: c(HEAVEN.stoneDark) });
+    return;
+  }
+  // Trumpet (left hand / back side): raised to the lips for horn and trumpet blast.
+  const blowing = pose === 'horn' || pose === 'trumpet';
+  if (blowing) {
+    g.poly([hx + 3, hy + 2, hx + 16, hy - 4, hx + 18, hy + 4]).fill(c(HEAVEN.gold2)).stroke({ width: 1, color: c(HEAVEN.gold3), alignment: 1 });
+    g.rect(hx + 16, hy - 6, 2, 12).fill(c(HEAVEN.gold1));
+  } else {
+    g.poly([-8 + lean, y(-18), -16 + lean, y(-14), -16 + lean, y(-9)]).fill(c(HEAVEN.gold2));
+  }
+  // Spear: drawn back, thrust forward, couched for the charge, raised for the ring.
+  const sx = pose === 'drawBack' ? -6 : pose === 'thrust' ? 16 : pose === 'charge' ? 20 : 8;
+  if (pose === 'ring' || pose === 'rally') {
+    g.rect(hx + 6, hy - 26, 1, 34).fill(c(HEAVEN.stoneDark));
+    g.poly([hx + 4, hy - 26, hx + 9, hy - 26, hx + 6.5, hy - 33]).fill(c(HEAVEN.gold1));
+  } else if (!blowing) {
+    const sy = y(-20);
+    g.moveTo(sx - 26 + lean, sy + 4).lineTo(sx + lean, sy).stroke({ width: 1, color: c(HEAVEN.stoneDark) });
+    g.poly([sx + lean, sy - 2, sx + 7 + lean, sy - 1, sx + lean, sy + 2]).fill(c(HEAVEN.gold1)).stroke({ width: 1, color: c(HEAVEN.gold3), alignment: 1 });
+  }
+}

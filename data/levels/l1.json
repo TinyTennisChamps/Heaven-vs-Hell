@@ -15,5 +15,12 @@
   "openers": [
     "l1/cloister",
     "l1/hedgerow"
-  ]
+  ],
+  "boss": "l1/herald",
+  "scaling": {
+    "health": 1,
+    "posture": 1,
+    "damage": 1
+  },
+  "rampPerRoom": 0.06
 }

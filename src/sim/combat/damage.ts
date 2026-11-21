@@ -43,7 +43,7 @@ export function breakEnemy(world: World, e: Enemy, cfg: SimConfig): void {
   e.phase = 'broken';
   e.phaseFrame = 0;
   e.attack = null;
-  e.posture = cfg.enemies[e.type]!.posture.max;
+  e.posture = e.postureMax;
   startHitstop(world, cfg.combat.breakHitstop, 3, cfg);
   emit(world, { type: 'postureBreak', pos: { ...e.pos } });
 }
@@ -51,13 +51,29 @@ export function breakEnemy(world: World, e: Enemy, cfg: SimConfig): void {
 export function addEnemyPosture(world: World, e: Enemy, amount: number, cfg: SimConfig): void {
   if (e.phase === 'broken' || e.phase === 'down') return;
   const def = cfg.enemies[e.type]!;
-  if (def.noPosture) return;
-  e.posture = Math.min(def.posture.max, e.posture + amount);
+  if (def.noPosture || e.phase === 'rally') return;
+  e.posture = Math.min(e.postureMax, e.posture + amount);
   e.sinceHit = 0;
-  if (e.posture >= def.posture.max) breakEnemy(world, e, cfg);
+  if (e.posture >= e.postureMax) breakEnemy(world, e, cfg);
 }
 
 export function killEnemy(world: World, e: Enemy, cfg: SimConfig): void {
+  const p0 = world.player;
+  if (e.segments > 1) {
+    // A boss loses a health segment instead of dying: it rallies (untouchable) into its next phase.
+    e.segments--;
+    e.hp = e.maxHp;
+    e.posture = 0;
+    e.attack = null;
+    e.phase = 'rally';
+    e.phaseFrame = 0;
+    e.knock = { x: 0, y: 0 };
+    const def = cfg.enemies[e.type]!;
+    emit(world, { type: 'bossPhase', pos: { ...e.pos }, phase: (def.segments ?? 1) - e.segments + 1 });
+    startHitstop(world, 10, 4, cfg);
+    if (!raging(p0)) gainRage(world, cfg.rage.gain.kill, cfg);
+    return;
+  }
   e.hp = 0;
   e.phase = 'down';
   e.phaseFrame = 0;
@@ -85,6 +101,11 @@ export function gainRage(world: World, amount: number, cfg: SimConfig): void {
 /** Satan's attack lands on an enemy. Returns 'shield' if the shield absorbed it. */
 export function hitEnemy(world: World, e: Enemy, from: Vec2, dir: Vec2, spec: HitSpec, cfg: SimConfig): 'hit' | 'shield' {
   const def = cfg.enemies[e.type]!;
+  if (e.phase === 'rally') {
+    // Rallying between phases: blows glance off.
+    emit(world, { type: 'shieldBlock', pos: { x: (e.pos.x + from.x) / 2, y: (e.pos.y + from.y) / 2 }, dir: { ...dir } });
+    return 'shield';
+  }
   e.hitFlash = cfg.combat.hitFlashFrames;
   e.sinceHit = 0;
 
@@ -110,7 +131,18 @@ export function hitEnemy(world: World, e: Enemy, from: Vec2, dir: Vec2, spec: Hi
     killEnemy(world, e, cfg);
     return 'hit';
   }
-  addEnemyPosture(world, e, spec.postureDamage * (riposte ? r.postureMul : 1), cfg);
+  // Interruptible windups (Gabriel's Horn Call): a hit cancels them and staggers.
+  const atk = e.attack ? def.attacks[e.attack] : undefined;
+  const interrupted = e.phase === 'windup' && !!atk?.interruptible;
+  if (interrupted) {
+    // A plain stagger (not a riposte opening): the call is cut off, posture takes double.
+    e.phase = 'idle';
+    e.phaseFrame = 0;
+    e.attack = null;
+    e.cooldown = Math.max(e.cooldown, cfg.combat.riposte.frames);
+    emit(world, { type: 'interrupt', pos: { ...e.pos } });
+  }
+  addEnemyPosture(world, e, spec.postureDamage * (riposte ? r.postureMul : 1) * (interrupted ? 2 : 1), cfg);
   return 'hit';
 }
 
@@ -138,8 +170,9 @@ export function addPlayerPosture(world: World, amount: number, cfg: SimConfig): 
  * An enemy attack reaches Satan. Resolution order:
  *   i-frames -> judgement (skips guard; `deflectable` ones still allow the deflect) -> deflect window -> block cone -> hit.
  */
-export function resolveOnPlayer(world: World, attacker: Enemy, atk: EnemyAttackDef, cfg: SimConfig): HitOutcome {
+export function resolveOnPlayer(world: World, attacker: Enemy, baseAtk: EnemyAttackDef, cfg: SimConfig): HitOutcome {
   const p = world.player;
+  const atk = scaledAttack(baseAtk, attacker.dmgMul);
   if (isPlayerInvulnerable(p, cfg)) return 'evaded';
   const c = cfg.combat;
   const dir = normalize({ x: p.pos.x - attacker.pos.x, y: p.pos.y - attacker.pos.y });
@@ -200,6 +233,12 @@ export function resolveOnPlayer(world: World, attacker: Enemy, atk: EnemyAttackD
   emit(world, { type: 'playerHit', pos: { ...p.pos }, dir });
   addPlayerPosture(world, atk.postureDamage * c.hitPostureMul, cfg);
   return 'hit';
+}
+
+/** An enemy attack with its damage scaled by level/room difficulty. */
+export function scaledAttack<T extends { healthDamage: number; postureDamage: number }>(atk: T, mul: number): T {
+  if (mul === 1) return atk;
+  return { ...atk, healthDamage: Math.round(atk.healthDamage * mul), postureDamage: atk.postureDamage * mul };
 }
 
 /**

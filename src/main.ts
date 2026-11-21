@@ -14,7 +14,7 @@ import { loadAtlas } from './render/atlas';
 import type { AnimConfig } from './render/animSync';
 import { attackDef, attackPhase } from './sim/actors/player';
 import type { LevelDef, RoomDef, SimConfig } from './sim/config';
-import { carryThroughGate, rageCarryOver, roomPickups, startRun, takeExit, type RunState } from './sim/rooms/run';
+import { carryThroughGate, rageCarryOver, roomPickups, roomScale, startRun, takeExit, type RunState } from './sim/rooms/run';
 import { maxHp } from './sim/stats';
 import { step } from './sim/step';
 import { createWorld, spawnEnemyAt, type World } from './sim/world';
@@ -27,7 +27,7 @@ const cfg: SimConfig = {
   combat: getData('tuning/combat'),
   camera: getData('tuning/camera'),
   attacks: getData('attacks/satan'),
-  enemies: { dummy: getData('enemies/dummy'), dominion: getData('enemies/dominion'), archer: getData('enemies/archer'), cherub: getData('enemies/cherub') },
+  enemies: { dummy: getData('enemies/dummy'), dominion: getData('enemies/dominion'), archer: getData('enemies/archer'), cherub: getData('enemies/cherub'), gabriel: getData('enemies/gabriel') },
   rooms: getData('tuning/rooms'),
   rage: getData('tuning/rage'),
   vials: getData('vials'),
@@ -174,7 +174,7 @@ async function boot() {
   const enterRoom = () => {
     if (!run) return;
     const room = rooms[run.current]!;
-    world = createWorld(room, cfg, run.roomSeed, run.carry, roomPickups(run, room, cfg));
+    world = createWorld(room, cfg, run.roomSeed, run.carry, roomPickups(run, room, cfg), roomScale(run, level, room));
     world.flags.respawn = false;
     world.roomRun.exitCount = run.options.length;
     if (healedOnEntry) world.events.push({ type: 'restHeal', pos: { ...world.player.pos } });
@@ -184,7 +184,11 @@ async function boot() {
     setScene(s);
     endShown = false;
     frozen = false;
-    const total = level.combatRooms + 1;
+    const total = level.combatRooms + 2; // + rest + boss
+    if (room.tier === 'boss') {
+      const boss = room.waves?.flat().map((s) => cfg.enemies[s.type]).find((d) => d?.boss);
+      if (boss?.title) screens.toast(boss.title, 'The Herald of the Host bars the way down');
+    }
     screens.setHud(level.name, room.name, run.visited.length, total);
   };
 
@@ -354,8 +358,16 @@ async function boot() {
     } else input.sample();
     const cursor = input.peekAim(); // render the cursor at its latest position without consuming presses
 
+    // Boss bar.
+    const boss = mode === 'run' ? world.enemies.find((e) => cfg.enemies[e.type]?.boss && e.phase !== 'down') : undefined;
+    if (boss) {
+      const d = cfg.enemies[boss.type]!;
+      screens.setBoss({ title: d.title ?? boss.type, hp: boss.hp, maxHp: boss.maxHp, posture: boss.posture, postureMax: boss.postureMax, segments: boss.segments, segmentsMax: d.segments ?? 1, broken: boss.phase === 'broken' });
+    } else screens.setBoss(null);
+
     if (mode === 'run') {
-      tutorial.observe(world, cfg);
+      if (frozen || endShown) tutorial.hide();
+      else tutorial.observe(world, cfg);
       runFlow();
     }
     for (const ev of world.events) {

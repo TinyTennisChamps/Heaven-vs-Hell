@@ -263,6 +263,44 @@ Decisions confirmed with the user on 2026-11-20:
 
 **Training:** key 5, or the "Fill Rage" button, fills the meter.
 
+## M7: Gabriel, the Herald, plus difficulty scaling
+Decisions confirmed with the user on 2026-11-20, after "the game is too easy; later enemies need more posture, health and damage":
+- Scaling is per level, plus a ramp within each run.
+- Gabriel's moveset is as planned, and his charge can be parried.
+- He has two deathblow segments.
+- Dying to him means a full restart.
+
+**Scaling** (`levels/l*.json`):
+- `scaling {health, posture, damage}` sets each level's multipliers. L1 is ×1, so it stays the easier layer. L2 will set its own in M8.
+- `rampPerRoom` (0.06) makes each combat room cleared earlier in the run make the next one 6% tougher in all three stats. The 4th room is ×1.18.
+- Each enemy carries its own `maxHp`, `postureMax` and `dmgMul`, which also scales its arrows.
+- Bosses ignore scaling and are hand-tuned.
+
+**Run shape:** opener → combat rooms → rest → **The Herald's Court** (boss, horn icon on the gate) → level cleared.
+- The boss arena is 320×320 with 4 pillars.
+- When Gabriel falls, his summoned cherubs fall with him, the arena clears, and **Herald's Ichor** (+4% slash posture damage) drops where he fell.
+
+**Gabriel** (`data/enemies/gabriel.json`, `src/sim/actors/gabriel.ts`): 360 HP per segment, 2 segments, 320 posture regenerating at 24/s.
+
+| Move | What it does |
+|---|---|
+| Triple Thrust | 3 deflectable hits. The third has a 14–36f windup (`windupJitter`) to catch mashers. |
+| Trumpet Blast | A wide cone that can be blocked or deflected, with heavy posture damage. |
+| Horn Call | A 70f windup that summons 4 cherubs (at most 6 alive). Hitting him during the windup cancels it (`interruptible`): he staggers and takes double posture damage, with no riposte bonus. His first horn comes after 5 s (`specialDelay`), then every 20 s. |
+| Herald's Charge | A Judgement lunge of 110 px. Holding block won't stop it, but a timed parry or a dash will. |
+
+- **Between segments:** losing segment 1 puts him into a 100f rally. He's untouchable, wrapped in a white-gold light column, and comes back at full health in phase 2.
+- **Phase 2:**
+  - The thrust becomes a 5-hit string, with a jittered 4th hit.
+  - Horn calls come every 12 s, with 5 cherubs and at most 7 alive.
+  - **Annunciation:** a Judgement ring of radius 62 all around him. It can't be parried, so you dash out of or through it.
+
+**Boss bar:** at the top of the screen, showing his name, a segment counter (◆◇), health, and a centre-fill posture bar.
+
+**Benchmark** (`tests/boss.test.ts`): the decent-player bot beats him in about 15 s for **86 damage on average** (best case 20, worst 136, so it sometimes dies). Its timing is near-perfect, so humans will take longer and get hit more.
+
+With the ramp, a hard room taken as your 3rd room costs the bot about 60 HP (balustrade).
+
 ## Rage Vials (original plan: 7, flat additive, every stat ≤ +20%)
 | L1 | L2 |
 |---|---|
@@ -298,6 +336,6 @@ Cherub (swarmer, L1/L2), Choir Archer (ranged, deflectable arrows, L1/L2), Domin
 - M4: throw, Archer, projectiles and deflectable arrows (tokens covered by the focus system). Done.
 - M5: Level 1 flow: cherub, rooms, doors, rest, tutorial, title and death. Done.
 - M6: Rage (transform, claws, roar, hyper armour, carry-over) and vials (hidden cracks, hard-room cages, budget). Done.
-- M7: Gabriel.
+- M7: Gabriel (two segments, Horn Call, Triple Thrust, Trumpet, Charge, Annunciation) and difficulty scaling (per level plus a per-room ramp). Done.
 - M8: Level 2, Ophan, Virtue and Raphael.
 - M9: polish, then an independent bug-hunt agent.

@@ -11,7 +11,7 @@ import type { Enemy, World } from '../sim/world';
 import { ANGEL, GARDEN, HEAVEN, JUDGEMENT, SATAN } from './palette';
 import { Particles } from './particles';
 import { Sparks } from './sparks';
-import { drawArcher, drawCherub, drawDominion, drawDummy, type ArcherPose, type CherubPose, type DominionPose } from './sprites/placeholders';
+import { drawArcher, drawCherub, drawDominion, drawDummy, drawGabriel, type ArcherPose, type CherubPose, type DominionPose, type GabrielPose } from './sprites/placeholders';
 import type { DoorKind } from '../sim/rooms/run';
 import type { WallKind } from '../sim/config';
 import { maxHp, maxPips, maxPosture, playerRadius } from '../sim/stats';
@@ -303,6 +303,11 @@ export class Scene {
   private drawPickups(world: World): void {
     const g = this.fx;
     for (const q of world.pickups) {
+      if (q.kind === 'drop') {
+        // A boss's vial appears only once the boss has fallen.
+        if (q.open && !q.taken) this.vial(world, q.vialAt, true);
+        continue;
+      }
       const c = groundToScreen(q.at.x, q.at.y);
       const cx = Math.round(c.x);
       const cy = Math.round(c.y);
@@ -499,7 +504,7 @@ export class Scene {
       this.place(s, ep, groundToScreen(faceDir.x, faceDir.y).x < 0);
       // The last flashLeadFrames of a windup blink white: "it's coming now" —
       // early enough that reacting to it still lands inside the parry window.
-      const tele = !!atk && e.phase === 'windup' && e.phaseFrame > atk.windup - cfg.combat.telegraph.flashLeadFrames && Math.floor(e.phaseFrame / 3) % 2 === 0;
+      const tele = !!atk && e.phase === 'windup' && e.phaseFrame > e.windupLen - cfg.combat.telegraph.flashLeadFrames && Math.floor(e.phaseFrame / 3) % 2 === 0;
       const flash = e.hitFlash > 0 || tele;
       // Spawning in: descend from the light and fade up.
       const arriving = e.arrive > 0 ? e.arrive / Math.max(1, cfg.rooms.arriveFrames) : 0;
@@ -509,7 +514,16 @@ export class Scene {
         const sp = groundToScreen(ep.x, ep.y);
         this.telegraphs.rect(Math.round(sp.x) - 3, Math.round(sp.y) - 90, 7, 90).fill({ color: HEAVEN.gold1, alpha: 0.35 * arriving });
       }
-      if (e.type === 'cherub') {
+      if (e.type === 'gabriel') {
+        const pose = gabrielPose(e);
+        const rally = e.phase === 'rally' && Math.floor(e.phaseFrame / 4) % 2 === 0;
+        this.redraw(s, `${pose}${flash || rally}`, () => drawGabriel(s!.body, pose, flash || rally));
+        if (e.phase === 'rally') {
+          // Rising light while he rallies into phase two (white-gold, never red).
+          const sp = groundToScreen(ep.x, ep.y);
+          this.telegraphs.rect(Math.round(sp.x) - 6, Math.round(sp.y) - 120, 13, 120).fill({ color: JUDGEMENT, alpha: 0.35 });
+        }
+      } else if (e.type === 'cherub') {
         const pose = cherubPose(e);
         const lift = Math.round(2 * Math.sin(world.tick * 0.12 + e.id * 1.7));
         this.redraw(s, `${pose}${flash}${lift}`, () => drawCherub(s!.body, pose, flash, lift));
@@ -524,7 +538,9 @@ export class Scene {
       }
       this.shadow(ep, e.radius);
       this.enemyTelegraph(e, cfg, ep);
-      if (!cfg.enemies[e.type]?.noPosture) this.enemyBars(e, ep, cfg); // cherubs: no bars (one hit kills)
+      const edef = cfg.enemies[e.type];
+      // Cherubs: no bars (one hit kills). Bosses: the big bar at the bottom of the screen.
+      if (!edef?.noPosture && !edef?.boss) this.enemyBars(e, ep);
       if (world.player.lockId === e.id) this.lockMarker(ep, world.tick);
     }
     for (const [id, s] of this.enemySprites) {
@@ -585,7 +601,7 @@ export class Scene {
   private enemyTelegraph(e: Enemy, cfg: SimConfig, ep: Vec2): void {
     const atk = enemyAttack(cfg, e);
     if (!atk || (e.phase !== 'windup' && e.phase !== 'active')) return;
-    const t = e.phase === 'active' ? 1 : e.phaseFrame / atk.windup;
+    const t = e.phase === 'active' ? 1 : e.phaseFrame / Math.max(1, e.windupLen);
     const box = atk.lunge ? { ...atk.hitbox, radius: atk.hitbox.radius + atk.lunge.px } : atk.hitbox;
     if (atk.projectile) {
       // Ranged: a pale line along the shot, brightening as the bow draws.
@@ -595,6 +611,25 @@ export class Scene {
         const b = groundToScreen(e.pos.x + e.attackDir.x * len, e.pos.y + e.attackDir.y * len);
         this.telegraphs.moveTo(a.x, a.y - 12).lineTo(b.x, b.y - 12).stroke({ width: 1, color: ANGEL.lilac, alpha: 0.15 + 0.6 * t });
       }
+      return;
+    }
+    if (atk.summon) {
+      // Horn Call: rings spilling from the trumpet; strike him to cut it short.
+      const sp = groundToScreen(ep.x, ep.y);
+      for (let k = 0; k < 3; k++) {
+        const rr = ((e.phaseFrame * 0.6 + k * 8) % 24) + 4;
+        this.telegraphs.ellipse(Math.round(sp.x + 14), Math.round(sp.y - 38), rr, rr * 0.6).stroke({ width: 1, color: HEAVEN.gold1, alpha: 1 - rr / 28 });
+      }
+      return;
+    }
+    if (atk.judgement && atk.hitbox.angleDeg >= 360) {
+      // Annunciation: a ring of white-gold on the floor, filling toward the strike.
+      this.telegraphs.poly(proj(groundCircle(e.pos, atk.hitbox.radius, 32))).fill({ color: JUDGEMENT, alpha: 0.12 + 0.35 * t });
+      this.telegraphs.poly(proj(groundCircle(e.pos, atk.hitbox.radius, 32))).stroke({ width: 2, color: HEAVEN.gold2, alpha: 0.9 });
+      this.telegraphs.poly(proj(groundCircle(e.pos, atk.hitbox.radius * Math.max(0.05, t), 32))).stroke({ width: 1, color: HEAVEN.gold3, alpha: 0.9 });
+      const sp = groundToScreen(ep.x, ep.y);
+      if (e.phase === 'active' || Math.floor(e.phaseFrame / 4) % 2 === 0) this.glyph(sp.x, sp.y - 70);
+      if (e.phase === 'active') this.fx.poly(proj(groundCircle(e.pos, atk.hitbox.radius, 32), 2)).fill({ color: JUDGEMENT, alpha: 0.8 });
       return;
     }
     if (atk.judgement) {
@@ -642,16 +677,15 @@ export class Scene {
     g.rect(x, y - 1, 1, 3).fill(HEAVEN.gold3);
   }
 
-  private enemyBars(e: Enemy, ground: Vec2, cfg: SimConfig): void {
+  private enemyBars(e: Enemy, ground: Vec2): void {
     const sp = groundToScreen(ground.x, ground.y);
     const w = 22;
     const x = Math.round(sp.x - w / 2);
     const y = Math.round(sp.y - 40);
-    const def = cfg.enemies[e.type]!;
     // Health: pearl. Posture: centre-fill gold, white when nearly broken.
     this.fx.rect(x - 1, y - 1, w + 2, 7).fill(ANGEL.void);
     this.fx.rect(x, y, Math.round((w * e.hp) / e.maxHp), 2).fill(ANGEL.pearl);
-    const pf = Math.min(1, e.posture / def.posture.max);
+    const pf = Math.min(1, e.posture / e.postureMax);
     const pw = Math.round(w * pf);
     if (pw > 0) this.fx.rect(x + Math.round((w - pw) / 2), y + 3, pw, 2).fill(pf > 0.8 ? 0xffffff : HEAVEN.gold2);
     if (e.phase === 'recoil') {
@@ -793,6 +827,14 @@ function doorIcon(g: Graphics, kind: DoorKind, x: number, y: number, open: boole
       g.rect(x - 2, y - 3, 5, 1).fill(GARDEN.water);
       break;
     case 'end':
+      // The way down: a descending arrow.
+      px(0, -5, 1, 7);
+      px(-3, 0, 7, 1);
+      px(-2, 1, 5, 1);
+      px(-1, 2, 3, 1);
+      px(0, 3, 1, 1);
+      break;
+    case 'boss':
       // Herald's horn flaring right.
       px(-5, 0, 2, 1);
       px(-3, -1, 4, 2);
@@ -800,6 +842,19 @@ function doorIcon(g: Graphics, kind: DoorKind, x: number, y: number, open: boole
       px(3, -3, 2, 6);
       break;
   }
+}
+
+function gabrielPose(e: Enemy): GabrielPose {
+  if (e.phase === 'broken') return 'broken';
+  if (e.phase === 'rally') return 'rally';
+  if (e.phase === 'recoil') return 'recoil';
+  const k = e.attack ?? '';
+  if (k.includes('horn')) return e.phase === 'windup' || e.phase === 'active' ? 'horn' : 'idle';
+  if (k === 'trumpet') return 'trumpet';
+  if (k === 'annunciation') return 'ring';
+  if (k === 'charge') return e.phase === 'windup' ? 'drawBack' : 'charge';
+  if (k.includes('thrust')) return e.phase === 'windup' ? 'drawBack' : e.phase === 'active' || e.phaseFrame < 8 ? 'thrust' : 'idle';
+  return 'idle';
 }
 
 function cherubPose(e: Enemy): CherubPose {

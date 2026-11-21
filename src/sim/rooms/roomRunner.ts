@@ -1,5 +1,6 @@
 import { nextFloat } from '../../core/rng';
 import type { SimConfig, WaveSpawn } from '../config';
+import { killEnemy } from '../combat/damage';
 import { maxHp, maxPips, modsFromVials } from '../stats';
 import { emit, isValidSpot, spawnEnemy, type World } from '../world';
 
@@ -19,6 +20,10 @@ export function updateRoom(world: World, cfg: SimConfig): void {
   if (p.dead) {
     rr.deadTicks++;
     return;
+  }
+  // A fallen boss takes its summoned choir with it.
+  if (world.enemies.some((e) => cfg.enemies[e.type]?.boss && e.phase === 'down')) {
+    for (const e of world.enemies) if (e.phase !== 'down') killEnemy(world, e, cfg);
   }
   const waves = world.room.waves ?? [];
   const fieldClear = world.enemies.every((e) => e.phase === 'down');
@@ -51,6 +56,14 @@ export function updateRoom(world: World, cfg: SimConfig): void {
   // Vials: cages open with the room; revealed vials are picked up by walking over them.
   for (const q of world.pickups) {
     if (q.kind === 'cage' && !q.open && rr.cleared) {
+      q.open = true;
+      emit(world, { type: 'cageOpen', pos: { ...q.at } });
+    }
+    if (q.kind === 'drop' && !q.open && rr.cleared) {
+      // A boss's vial falls where it fell.
+      const boss = world.enemies.find((e) => cfg.enemies[e.type]?.boss);
+      if (boss) q.vialAt = findSpot(world, boss.pos.x, boss.pos.y, cfg.player.radius) ?? { ...boss.pos };
+      q.at = { ...q.vialAt };
       q.open = true;
       emit(world, { type: 'cageOpen', pos: { ...q.at } });
     }
