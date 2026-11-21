@@ -562,6 +562,18 @@ Create `data/rooms/<level>/<id>.json`:
 - **Vial unlock** (user request: "like a Zelda chest opening"): a rising harp glissando that peaks on A, straight into an A-major "ta-da" fanfare (fixed pitch so the two stay in key). It's our own combination of two library sounds, not Zelda's melody. A cage opening plays a shorter harp run.
 - **M** mutes. Music is still silent hooks.
 
+## Rage kill heals (user request, 2026-11-21: "the game is too hard")
+- Every kill in Rage heals a share of **max** health (`rage.killHealPct` in `data/tuning/rage.json`), capped at full:
+
+  | Enemy | Heal |
+  |---|---|
+  | Cherub | 3% |
+  | Everyone else (Dominion, Archer, Grigori, the dummy…) | 10% |
+  | Principality (Zealot) | 15% |
+  | Gabriel, Raphael | 20%, on each health segment they lose |
+
+- Kills outside Rage heal nothing. This replaced the flat +2 HP per kill.
+
 ## Parrying and blocking in Rage (user request)
 - **The roar is gone.** RMB in Rage works exactly as it does outside it: a tap deflects (perfect deflects, ripostes and reflected arrows included) and a hold blocks at normal posture cost.
 - Anything the parry or guard doesn't catch (no press, the wrong angle, a true Judgement) meets the usual Rage hyper armour. `rageDefends()` in `combat/damage.ts` decides this for melee and projectiles.

@@ -76,7 +76,8 @@ export function killEnemy(world: World, e: Enemy, cfg: SimConfig): void {
     const def = cfg.enemies[e.type]!;
     emit(world, { type: 'bossPhase', pos: { ...e.pos }, phase: (def.segments ?? 1) - e.segments + 1 });
     startHitstop(world, 10, 4, cfg);
-    if (!raging(p0)) gainRage(world, cfg.rage.gain.kill, cfg);
+    if (raging(p0)) rageKillHeal(world, e, cfg);
+    else gainRage(world, cfg.rage.gain.kill, cfg);
     return;
   }
   e.hp = 0;
@@ -87,10 +88,19 @@ export function killEnemy(world: World, e: Enemy, cfg: SimConfig): void {
   emit(world, { type: 'enemyDown', pos: { ...e.pos } });
   const p = world.player;
   if (raging(p)) {
-    // Feeding the Rage: each kill extends it and heals a little.
+    // Feeding the Rage: each kill extends it and heals.
     p.rageForm += cfg.rage.killExtendFrames;
-    p.hp = Math.min(maxHp(world, cfg), p.hp + cfg.rage.killHeal);
+    rageKillHeal(world, e, cfg);
   } else gainRage(world, cfg.rage.gain.kill, cfg);
+}
+
+/** A kill in Rage heals a share of max health: more for big enemies, little for cherubs. */
+export function rageKillHeal(world: World, e: Enemy, cfg: SimConfig): void {
+  const p = world.player;
+  const table = cfg.rage.killHealPct;
+  const pct = table[e.type] ?? table.default ?? 0;
+  const max = maxHp(world, cfg);
+  p.hp = Math.min(max, p.hp + Math.round(max * pct));
 }
 
 /** Fill the Rage meter (not while raging). Vials scale the gain. */

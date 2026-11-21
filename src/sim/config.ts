@@ -428,9 +428,10 @@ export interface RageTuning {
   /** Invulnerable transform before the form starts. */
   transformFrames: number;
   durationFrames: number;
-  /** Each kill in Rage adds this many ticks and heals `killHeal`. */
+  /** Each kill in Rage adds this many ticks and heals a share of max health (`killHealPct`). */
   killExtendFrames: number;
-  killHeal: number;
+  /** Fraction of max health healed per kill in Rage, by enemy type (`default` for the rest). Bosses heal it per health segment. */
+  killHealPct: Record<string, number>;
   /** Hyper armour: incoming health damage multiplier; no stagger, no posture. */
   damageTakenMul: number;
   radiusMul: number;

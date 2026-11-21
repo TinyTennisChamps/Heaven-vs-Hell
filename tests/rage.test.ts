@@ -134,7 +134,41 @@ describe('Rage form', () => {
     const before = w.player.rageForm;
     killEnemy(w, w.enemies[0]!, cfg);
     expect(w.player.rageForm).toBe(before + R.killExtendFrames);
-    expect(w.player.hp).toBe(50 + R.killHeal);
+    expect(w.player.hp).toBe(50 + Math.round(cfg.player.maxHealth * 0.1)); // 10% for an ordinary enemy (the dummy)
+  });
+
+  it('Rage kill heals scale with the enemy: cherub 3%, Principality 15%, bosses 20% (capped at max)', () => {
+    const max = cfg.player.maxHealth;
+    for (const [type, pct] of [['cherub', 0.03], ['dominion', 0.1], ['archer', 0.1], ['watcher', 0.1], ['zealot', 0.15], ['gabriel', 0.2], ['raphael', 0.2]] as const) {
+      const w = enraged([type]);
+      w.player.hp = 40;
+      const e = w.enemies[0]!;
+      e.segments = 1;
+      killEnemy(w, e, cfg);
+      expect(w.player.hp, type).toBe(40 + Math.round(max * pct));
+    }
+    const w = enraged(['raphael']);
+    w.player.hp = max - 5;
+    w.enemies[0]!.segments = 1;
+    killEnemy(w, w.enemies[0]!, cfg);
+    expect(w.player.hp).toBe(max);
+  });
+
+  it('a boss losing a health segment in Rage also heals its share', () => {
+    const w = enraged(['gabriel']);
+    const e = w.enemies[0]!;
+    expect(e.segments).toBeGreaterThan(1);
+    w.player.hp = 40;
+    killEnemy(w, e, cfg);
+    expect(e.phase).toBe('rally');
+    expect(w.player.hp).toBe(40 + Math.round(cfg.player.maxHealth * 0.2));
+  });
+
+  it('outside Rage, kills heal nothing', () => {
+    const w = testWorld(cfg, { only: ['dummy'] });
+    w.player.hp = 40;
+    killEnemy(w, w.enemies[0]!, cfg);
+    expect(w.player.hp).toBe(40);
   });
 });
 
