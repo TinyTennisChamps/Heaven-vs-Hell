@@ -171,7 +171,7 @@ describe('training spawns', () => {
         }
       }
     }
-  });
+  }, 20_000); // 3 × 60 s of simulated chaos: slow under a parallel run
 
   it('the training room starts empty', async () => {
     const { createWorld } = await import('../src/sim/world');

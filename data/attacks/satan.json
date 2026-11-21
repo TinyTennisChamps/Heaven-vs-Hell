@@ -120,12 +120,12 @@
     },
     "moveSpeedMul": 0.5,
     "hitbox": {
-      "radius": 32,
-      "angleDeg": 150,
+      "radius": 28,
+      "angleDeg": 130,
       "offset": 6
     },
-    "healthDamage": 16,
-    "postureDamage": 14,
+    "healthDamage": 12,
+    "postureDamage": 10,
     "hitstop": 3,
     "knockback": 200,
     "shake": 1.6
@@ -141,12 +141,12 @@
     },
     "moveSpeedMul": 0.5,
     "hitbox": {
-      "radius": 32,
-      "angleDeg": 150,
+      "radius": 28,
+      "angleDeg": 130,
       "offset": 6
     },
-    "healthDamage": 16,
-    "postureDamage": 14,
+    "healthDamage": 12,
+    "postureDamage": 10,
     "hitstop": 3,
     "knockback": 200,
     "shake": 1.6
@@ -162,12 +162,12 @@
     },
     "moveSpeedMul": 0.3,
     "hitbox": {
-      "radius": 38,
-      "angleDeg": 220,
+      "radius": 32,
+      "angleDeg": 180,
       "offset": 6
     },
-    "healthDamage": 28,
-    "postureDamage": 28,
+    "healthDamage": 20,
+    "postureDamage": 18,
     "hitstop": 5,
     "knockback": 320,
     "shake": 2.6

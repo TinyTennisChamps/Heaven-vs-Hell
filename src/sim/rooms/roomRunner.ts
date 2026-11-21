@@ -22,8 +22,8 @@ export function updateRoom(world: World, cfg: SimConfig): void {
     return;
   }
   // A fallen boss takes its summoned choir with it.
-  if (world.enemies.some((e) => cfg.enemies[e.type]?.boss && e.phase === 'down')) {
-    for (const e of world.enemies) if (e.phase !== 'down') killEnemy(world, e, cfg);
+  if (world.room.tier === 'boss' && world.enemies.some((e) => cfg.enemies[e.type]?.boss && e.phase === 'down')) {
+    for (const e of world.enemies) if (e.phase !== 'down' && !cfg.enemies[e.type]?.boss) killEnemy(world, e, cfg);
   }
   const waves = world.room.waves ?? [];
   const fieldClear = world.enemies.every((e) => e.phase === 'down');

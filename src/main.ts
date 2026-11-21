@@ -100,7 +100,7 @@ async function boot() {
     const base = 'WASD move · LMB slash · RMB parry (hold: block) · E throw · Space dash · Q lock · R rage';
     legend.hidden = mode === 'title';
     legend.textContent =
-      mode === 'training' ? `${base} · 1/2/3/4 spawn, 0 clear, 5 fill rage · F3 attacks ${world.flags.dummyAttacks ? 'ON' : 'OFF'} · F4 reset · Esc title · F1 debug` : `${base} · Esc title`;
+      mode === 'training' ? `${base} · 1/2/3/4/6 spawn (6 = Gabriel), 0 clear, 5 fill rage · F3 attacks ${world.flags.dummyAttacks ? 'ON' : 'OFF'} · F4 reset · Esc title · F1 debug` : `${base} · Esc title`;
   };
 
   // --- Spawn panel (training only): test enemies one at a time ---
@@ -109,6 +109,7 @@ async function boot() {
     ['Digit2', 'dominion', 'Dominion'],
     ['Digit3', 'archer', 'Archer'],
     ['Digit4', 'cherub', 'Cherub'],
+    ['Digit6', 'gabriel', 'Gabriel'],
   ];
   const fillRage = () => {
     world.player.rage = cfg.rage.max;
@@ -359,7 +360,7 @@ async function boot() {
     const cursor = input.peekAim(); // render the cursor at its latest position without consuming presses
 
     // Boss bar.
-    const boss = mode === 'run' ? world.enemies.find((e) => cfg.enemies[e.type]?.boss && e.phase !== 'down') : undefined;
+    const boss = mode !== 'title' ? world.enemies.find((e) => cfg.enemies[e.type]?.boss && e.phase !== 'down') : undefined;
     if (boss) {
       const d = cfg.enemies[boss.type]!;
       screens.setBoss({ title: d.title ?? boss.type, hp: boss.hp, maxHp: boss.maxHp, posture: boss.posture, postureMax: boss.postureMax, segments: boss.segments, segmentsMax: d.segments ?? 1, broken: boss.phase === 'broken' });

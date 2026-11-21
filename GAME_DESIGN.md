@@ -301,6 +301,24 @@ Decisions confirmed with the user on 2026-11-20, after "the game is too easy; la
 
 With the ramp, a hard room taken as your 3rd room costs the bot about 60 HP (balustrade).
 
+## Rage nerf (user request after M7: "way too strong")
+
+| Setting | Before | After |
+|---|---|---|
+| Duration | 600f | 300f (5 s) |
+| Kill extend | 60f | 30f |
+| Kill heal | 5 | 2 |
+| Damage taken in form | ×0.5 | ×0.75 |
+| Move speed bonus | ×1.1 | none |
+| Claws 1–2 | 16 dmg / 14 posture / 32 px / 150° | 12 / 10 / 28 px / 130° |
+| Claw 3 | 28 / 28 / 38 px / 220° | 20 / 18 / 32 px / 180° |
+| Roar cooldown | 120f | 210f |
+| Roar posture | 30 | 18 |
+| Roar knockback | 280 | 220 |
+
+- The roar still deals 8 damage, so it still kills cherubs.
+- Gabriel can now be spawned in the Training Court (key 6), with his boss bar.
+
 ## Rage Vials (original plan: 7, flat additive, every stat ≤ +20%)
 | L1 | L2 |
 |---|---|
