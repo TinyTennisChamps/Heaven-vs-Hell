@@ -388,7 +388,9 @@ Decisions:
 - Sound hooks: `telegraph:<enemy>:<attack>` (e.g. `telegraph:watcher:laser` is the charge hum), plus `stagger`, `blockFail` and `flinch`.
 
 **The Watcher** (`data/enemies/watcher.json`, `src/sim/actors/watcher.ts`, Training key 7): a floating eye with golden wings, a flyer.
-- 100 HP (about 10 slashes; raised from 50 at the user's request), 60 posture, light knockback, ×2 posture from bolts and from its own reflected lasers.
+- 100 HP (about 10 slashes; raised from 50 at the user's request) and **120 posture**, raised from 60 after "one parry destroys it".
+- Light knockback, ×2 posture from bolts, ×1 from its own reflected lasers (30 normal, 55 perfect).
+- The chomp parry gives +35 (perfect +55) and a 70f stagger. No single parry breaks it; it takes a parry plus a punish in the stagger, or several reflected lasers.
 - It orbits Satan at 110–160 px and retreats fast inside 70 px.
 
 | Attack | Windup | Active | Recovery | Damage / posture | Notes |

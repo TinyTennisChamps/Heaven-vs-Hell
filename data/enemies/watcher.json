@@ -16,7 +16,7 @@
   "flying": true,
   "knockbackMul": 0.4,
   "throwPostureMul": 2,
-  "reflectPostureMul": 2,
+  "reflectPostureMul": 1,
   "telegraphColor": "#ff4a3d",
   "ai": {
     "rangeMin": 110,
@@ -29,7 +29,7 @@
     "biteMeleeHits": 2
   },
   "posture": {
-    "max": 60,
+    "max": 120,
     "regenDelay": 70,
     "regenPerSec": 12,
     "lowHealthMul": 0.5
@@ -93,8 +93,8 @@
         "frames": 6
       },
       "onDeflect": {
-        "posture": 45,
-        "perfectPosture": 60,
+        "posture": 35,
+        "perfectPosture": 55,
         "recoilFrames": 70
       }
     }

@@ -73,7 +73,7 @@ describe('Watcher: laser volley', () => {
     expect(w.stats.hitsTaken).toBe(2);
   });
 
-  it('deflected lasers fly back into the eye and hammer its posture (×reflectPostureMul)', () => {
+  it('deflected lasers fly back into the eye and build its posture', () => {
     const { w, e } = setup(120);
     startEnemyAttack(w, e, 'laser', cfg);
     for (let t = 0; t < 200; t++) {
@@ -84,7 +84,7 @@ describe('Watcher: laser volley', () => {
     expect(w.stats.deflects).toBe(3);
     expect(w.stats.hitsTaken).toBe(0);
     expect(e.hp).toBeLessThan(W.health);
-    // Three reflected lasers at ×2 posture break its 60-posture bar.
+    // Reflected lasers pile posture onto it.
     expect(e.phase === 'broken' || e.posture >= cfg.combat.reflect.postureDamage * (W.reflectPostureMul ?? 1)).toBe(true);
   });
 });
@@ -115,12 +115,15 @@ describe('Watcher: chomp', () => {
     expect(w.stats.deathblows).toBe(1);
   });
 
-  it('a perfect deflect breaks it outright', () => {
+  it('no single parry breaks it — even a perfect one only staggers it', () => {
     const { w, e } = setup(28);
     startEnemyAttack(w, e, 'chomp', cfg);
-    for (let t = 0; t < 60; t++) step(w, input({ press: e.phase === 'windup' && e.phaseFrame === e.windupLen - 1 ? ['parry'] : [], aim: aimAt(e) }), cfg);
+    for (let t = 0; t < 30 && e.phase !== 'recoil'; t++) step(w, input({ press: e.phase === 'windup' && e.phaseFrame === e.windupLen - 1 ? ['parry'] : [], aim: aimAt(e) }), cfg);
     expect(w.stats.perfects).toBe(1);
-    expect(e.phase).toBe('broken');
+    expect(e.phase).toBe('recoil');
+    expect(e.posture).toBeLessThan(e.postureMax);
+    // Nor does a single reflected laser.
+    expect(cfg.combat.reflect.perfectPostureDamage * (W.reflectPostureMul ?? 1)).toBeLessThan(W.posture.max);
   });
 
   it('a dash passes through the lunge', () => {
