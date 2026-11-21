@@ -35,6 +35,13 @@ export interface HitSpec {
 
 // ---------------------------------------------------------------- enemies
 
+/** Mid-leap: in the air and out of reach. */
+export function airborne(e: Enemy, cfg: SimConfig): boolean {
+  if (e.phase !== 'active' || !e.attack) return false;
+  const lp = cfg.enemies[e.type]!.attacks[e.attack]?.leap;
+  return !!lp && e.phaseFrame <= lp.frames;
+}
+
 export function shieldUp(e: Enemy): boolean {
   return e.phase === 'idle' || e.phase === 'windup';
 }
@@ -101,7 +108,7 @@ export function gainRage(world: World, amount: number, cfg: SimConfig): void {
 /** Satan's attack lands on an enemy. Returns 'shield' if the shield absorbed it. */
 export function hitEnemy(world: World, e: Enemy, from: Vec2, dir: Vec2, spec: HitSpec, cfg: SimConfig): 'hit' | 'shield' {
   const def = cfg.enemies[e.type]!;
-  if (e.phase === 'rally') {
+  if (e.phase === 'rally' || airborne(e, cfg)) {
     // Rallying between phases: blows glance off.
     emit(world, { type: 'shieldBlock', pos: { x: (e.pos.x + from.x) / 2, y: (e.pos.y + from.y) / 2 }, dir: { ...dir } });
     return 'shield';
@@ -201,7 +208,7 @@ export function resolveOnPlayer(world: World, attacker: Enemy, baseAtk: EnemyAtt
     const kb = perfect ? c.parry.perfectRecoil : c.parry.recoil;
     attacker.knock = { x: -dir.x * kb, y: -dir.y * kb };
     addEnemyPosture(world, attacker, atk.postureDamage * (perfect ? c.parry.perfectAttackerPostureMul : c.parry.attackerPostureMul), cfg);
-    if (perfect && attacker.phase !== 'broken' && attacker.phase !== 'down') {
+    if (perfect && !atk.relentless && attacker.phase !== 'broken' && attacker.phase !== 'down') {
       // Riposte: a perfect read staggers the attacker and opens it up.
       attacker.phase = 'recoil';
       attacker.phaseFrame = 0;

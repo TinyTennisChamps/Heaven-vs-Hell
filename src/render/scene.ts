@@ -516,6 +516,15 @@ export class Scene {
       }
       if (e.type === 'gabriel') {
         const pose = gabrielPose(e);
+        // Leap: lifted on an arc above his (moving) shadow; a ring marks where he'll land.
+        const L = atk?.leap;
+        if (L && e.phase === 'active' && e.phaseFrame <= L.frames) {
+          const k = e.phaseFrame / L.frames;
+          s.root.position.y -= Math.round(Math.sin(Math.PI * k) * L.height);
+          const homing = e.phaseFrame <= L.frames * L.homeFrac;
+          this.telegraphs.poly(proj(groundCircle(e.leapTo, atk!.hitbox.radius, 24))).fill({ color: ANGEL.lilac, alpha: 0.15 + 0.35 * k });
+          this.telegraphs.poly(proj(groundCircle(e.leapTo, atk!.hitbox.radius * (homing ? 1 : 1 - k * 0.5), 24))).stroke({ width: 1, color: ANGEL.angelLine, alpha: 0.8 });
+        }
         const rally = e.phase === 'rally' && Math.floor(e.phaseFrame / 4) % 2 === 0;
         this.redraw(s, `${pose}${flash || rally}`, () => drawGabriel(s!.body, pose, flash || rally));
         if (e.phase === 'rally') {
@@ -556,13 +565,14 @@ export class Scene {
       const sp = groundToScreen(gp.x, gp.y);
       const v = groundToScreen(pr.vel.x, pr.vel.y);
       const vl = Math.hypot(v.x, v.y) || 1;
-      const tx = (-v.x / vl) * (pr.kind === 'bolt' ? 8 : 14);
-      const ty = (-v.y / vl) * (pr.kind === 'bolt' ? 8 : 14);
+      const len = pr.kind === 'bolt' ? 8 : pr.kind === 'laser' ? 26 : 14;
+      const tx = (-v.x / vl) * len;
+      const ty = (-v.y / vl) * len;
       const x = Math.round(sp.x);
       const y = Math.round(sp.y - 12);
       const satans = pr.owner === 'player';
       // Angels' arrows are pale light; anything Satan owns (bolts, reflected arrows) burns red.
-      const tail = satans ? (pr.perfect ? SATAN.eyeGlow : SATAN.ember) : ANGEL.sky2;
+      const tail = satans ? (pr.perfect ? SATAN.eyeGlow : SATAN.ember) : pr.kind === 'laser' ? HEAVEN.gold1 : ANGEL.sky2;
       const core = satans ? (pr.kind === 'bolt' ? SATAN.hellfire : pr.perfect ? 0xffffff : SATAN.hellfire) : 0xffffff;
       // Two-tone streak: wide coloured tail with a bright inner line, then a solid head.
       this.fx.moveTo(x, y).lineTo(x + tx, y + ty).stroke({ width: 3, color: tail, alpha: 0.55 });
@@ -613,6 +623,8 @@ export class Scene {
       }
       return;
     }
+    // Leap: the landing ring is drawn during the flight (see the Gabriel branch); nothing at his feet.
+    if (atk.leap) return;
     if (atk.summon) {
       // Horn Call: rings spilling from the trumpet; strike him to cut it short.
       const sp = groundToScreen(ep.x, ep.y);
@@ -849,6 +861,14 @@ function gabrielPose(e: Enemy): GabrielPose {
   if (e.phase === 'rally') return 'rally';
   if (e.phase === 'recoil') return 'recoil';
   const k = e.attack ?? '';
+  if (k === 'leap') return e.phase === 'windup' ? 'crouch' : e.phase === 'active' ? 'air' : 'bladeLow';
+  if (k.startsWith('beam')) return 'cast';
+  if (k.includes('blade')) {
+    // Alternate high and low swings through the string; wind up high.
+    const n = Number(k.replace(/\D/g, '').slice(-1)) || 1;
+    if (e.phase === 'windup') return n % 2 ? 'bladeHigh' : 'bladeLow';
+    return n % 2 ? 'bladeLow' : 'bladeHigh';
+  }
   if (k.includes('horn')) return e.phase === 'windup' || e.phase === 'active' ? 'horn' : 'idle';
   if (k === 'trumpet') return 'trumpet';
   if (k === 'annunciation') return 'ring';

@@ -124,8 +124,8 @@
       "angleDeg": 130,
       "offset": 6
     },
-    "healthDamage": 12,
-    "postureDamage": 10,
+    "healthDamage": 10,
+    "postureDamage": 8,
     "hitstop": 3,
     "knockback": 200,
     "shake": 1.6
@@ -145,8 +145,8 @@
       "angleDeg": 130,
       "offset": 6
     },
-    "healthDamage": 12,
-    "postureDamage": 10,
+    "healthDamage": 10,
+    "postureDamage": 8,
     "hitstop": 3,
     "knockback": 200,
     "shake": 1.6
@@ -166,8 +166,8 @@
       "angleDeg": 180,
       "offset": 6
     },
-    "healthDamage": 20,
-    "postureDamage": 18,
+    "healthDamage": 16,
+    "postureDamage": 14,
     "hitstop": 5,
     "knockback": 320,
     "shake": 2.6

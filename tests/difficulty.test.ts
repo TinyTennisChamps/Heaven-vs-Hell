@@ -29,7 +29,7 @@ describe('L1 difficulty (decent-player bot)', () => {
       console.log(`[difficulty] ${room.tier} ${id}: ${secs.toFixed(1)}s, ${dmg.toFixed(0)} dmg avg (max ${Math.max(...rs.map((r) => r.dmg))})`);
       expect(rs.every((r) => Number.isFinite(r.secs))).toBe(true);
       // L1 is the gentlest layer: a decent player loses well under half a bar per room.
-      expect(dmg).toBeLessThan(cfg.player.maxHealth * (room.tier === 'hard' ? 0.65 : 0.35));
+      expect(dmg).toBeLessThan(cfg.player.maxHealth * (room.tier === 'hard' ? 0.75 : 0.4));
     });
   }
 });

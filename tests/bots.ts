@@ -33,11 +33,12 @@ export function decentBot(w: World, cfg: SimConfig, tick: number): { press: Butt
     const d = Math.hypot(e.pos.x - p.pos.x, e.pos.y - p.pos.y);
     if (d > (atk.projectile ? 200 : atk.hitbox.radius + (atk.lunge?.px ?? 0) + 12)) continue;
     const dir = normalize({ x: e.pos.x - p.pos.x, y: e.pos.y - p.pos.y });
-    // Human-ish timing: varies by ±3 frames around "just before impact"; misses ~1 in 5.
-    const jitter = ((e.id * 7 + Math.floor(tick / 97)) % 7) - 3;
+    // Human-ish timing: varies by ±6 frames around "6 frames before impact" — about half
+    // the deflects are perfect, the rest normal — and misses ~1 in 5.
+    const jitter = ((e.id * 7 + Math.floor(tick / 97)) % 13) - 6;
     const miss = (e.id + Math.floor(tick / 131)) % 5 === 0;
     if (atk.judgement && e.phaseFrame === e.windupLen - 3) return { press: ['dash'], move: screenMove({ x: -dir.y, y: dir.x }), aim: { ...e.pos } };
-    if (!atk.judgement && !atk.projectile && !miss && e.phaseFrame === e.windupLen - 4 + jitter) return { press: ['parry'], move: { x: 0, y: 0 }, aim: { ...e.pos } };
+    if (!atk.judgement && !atk.projectile && !miss && e.phaseFrame === e.windupLen - 6 + jitter) return { press: ['parry'], move: { x: 0, y: 0 }, aim: { ...e.pos } };
   }
   const t = live.slice().sort((a, b) => Math.hypot(a.pos.x - p.pos.x, a.pos.y - p.pos.y) - Math.hypot(b.pos.x - p.pos.x, b.pos.y - p.pos.y))[0]!;
   const to = { x: t.pos.x - p.pos.x, y: t.pos.y - p.pos.y };

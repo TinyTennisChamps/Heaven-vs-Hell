@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { startEnemyAttack } from '../src/sim/actors/enemy';
 import type { LevelDef, RoomDef } from '../src/sim/config';
-import { killEnemy } from '../src/sim/combat/damage';
+import { hitEnemy, killEnemy } from '../src/sim/combat/damage';
 import { roomPickups, roomScale, startRun, takeExit } from '../src/sim/rooms/run';
 import { step } from '../src/sim/step';
 import { createWorld, spawnEnemy, type Enemy, type World } from '../src/sim/world';
@@ -121,6 +121,72 @@ describe('Gabriel: moves', () => {
     };
     expect(go('parry')).toBe(1);
     expect(go('dash')).toBe(0);
+  });
+});
+
+describe('Gabriel: leap, light lances, blade of light', () => {
+  it('Leap: he flies to Satan (untouchable in the air) and slams down on him', () => {
+    const { w, g } = duel();
+    w.player.pos = { x: 60, y: 120 };
+    g.pos = { x: 170, y: 120 };
+    const hp0 = g.hp;
+    startEnemyAttack(w, g, 'leap', cfg);
+    run(w, cfg, g.windupLen + 8);
+    expect(g.phase).toBe('active');
+    // Mid-air: blows can't touch him.
+    expect(hitEnemy(w, g, { x: g.pos.x - 10, y: g.pos.y }, { x: 1, y: 0 }, cfg.attacks.slash1!, cfg)).toBe('shield');
+    expect(g.hp).toBe(hp0);
+    run(w, cfg, 40);
+    expect(Math.hypot(g.pos.x - 60, g.pos.y - 120)).toBeLessThan(20); // landed on him
+    expect(w.stats.hitsTaken).toBe(1);
+  });
+
+  it('Leap: walking out of the landing ring after he stops homing avoids it', () => {
+    const { w, g } = duel();
+    w.player.pos = { x: 60, y: 120 };
+    g.pos = { x: 170, y: 120 };
+    startEnemyAttack(w, g, 'leap', cfg);
+    const L = G.attacks.leap!.leap!;
+    run(w, cfg, g.windupLen + Math.ceil(L.frames * L.homeFrac) + 1);
+    run(w, cfg, 40, () => input({ move: { x: 0, y: -1 } }));
+    expect(w.stats.hitsTaken).toBe(0);
+  });
+
+  it('Light Lances: three beams, each can be deflected back at him', () => {
+    const { w, g } = duel();
+    w.player.pos = { x: 60, y: 120 };
+    g.pos = { x: 170, y: 120 };
+    let lasers = 0;
+    startEnemyAttack(w, g, 'beam1', cfg);
+    for (let t = 0; t < 200; t++) {
+      // Deflect each beam a few ticks before it arrives.
+      const incoming = w.projectiles.some((p) => p.owner !== 'player' && Math.hypot(p.pos.x - 60, p.pos.y - 120) < 30 && Math.hypot(p.pos.x - 60, p.pos.y - 120) > 18);
+      step(w, input({ press: incoming && !w.player.parry ? ['parry'] : [], aim: { ...g.pos } }), cfg);
+      lasers += w.events.filter((e) => e.type === 'arrowLoosed').length;
+      w.events.length = 0;
+    }
+    expect(lasers).toBe(3);
+    expect(w.stats.deflects).toBe(3);
+    expect(w.stats.hitsTaken).toBe(0);
+    expect(g.hp).toBeLessThan(G.health); // sent back into him
+  });
+
+  it("Blade of Light: parrying doesn't stop it — all five hits come", () => {
+    const { w, g } = duel();
+    w.player.pos = { x: 140 - 28, y: 120 };
+    startEnemyAttack(w, g, 'blade1', cfg);
+    const swings: string[] = [];
+    for (let t = 0; t < 260; t++) {
+      // A perfect deflect on every swing.
+      const press = g.phase === 'windup' && g.phaseFrame === g.windupLen - 1 ? ['parry' as const] : [];
+      step(w, input({ press, aim: { ...g.pos } }), cfg);
+      if (g.phase === 'windup' && g.phaseFrame === 1 && g.attack) swings.push(g.attack);
+      w.player.pos = { x: g.pos.x - 28, y: g.pos.y }; // stay in reach
+    }
+    expect(swings.slice(0, 5)).toEqual(['blade1', 'blade2', 'blade3', 'blade4', 'blade5']);
+    expect(swings.filter((k) => k.startsWith('blade')).length).toBe(5);
+    expect(w.stats.perfects).toBeGreaterThanOrEqual(4);
+    expect(w.events.some((e) => e.type === 'riposteOpen')).toBe(false); // no stagger opening
   });
 });
 

@@ -161,6 +161,16 @@ export interface EnemyAttackDef {
   windupJitter?: number;
   /** Hitting the attacker during the windup cancels it (stagger) with bonus posture. */
   interruptible?: boolean;
+  /**
+   * Leap: during the active phase the attacker flies from where it stood to
+   * the landing point over `frames` ticks (untouchable in the air), homing on
+   * Satan for the first `homeFrac` of the flight; the hitbox strikes on landing.
+   */
+  leap?: { frames: number; maxDist: number; homeFrac: number; height: number };
+  /** Parrying doesn't stagger it (no riposte opening); the string keeps coming. */
+  relentless?: boolean;
+  /** Visual kind of the projectile (default 'arrow'). */
+  projectileKind?: 'arrow' | 'laser';
   /** On the first active tick, call in reinforcements instead of striking. */
   summon?: { type: string; count: number; spread: number; maxAlive: number };
   /** If set, the first active frame fires this projectile instead of a melee arc. */

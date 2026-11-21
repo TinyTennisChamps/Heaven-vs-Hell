@@ -523,6 +523,9 @@ function spawnEffects(world: World, scene: Scene): void {
         scene.roarRing(ev.pos);
         P.burst(s.x, s.y - 10, { count: 36, colors: [SATAN.hellfire, SATAN.ember, SATAN.eyeGlow], speed: 200, life: 0.4, drag: 0.85 });
         break;
+      case 'leapLand':
+        P.burst(s.x, s.y - 2, { count: 26, colors: [HEAVEN.marble, HEAVEN.stone, HEAVEN.gold1, 0xffffff], speed: 120, life: 0.45 });
+        break;
       case 'restHeal':
         P.burst(s.x, s.y - 12, { count: 30, colors: [HEAVEN.gold1, ANGEL.sky, 0xffffff], speed: 70, life: 0.9 });
         break;

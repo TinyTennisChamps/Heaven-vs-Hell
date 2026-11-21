@@ -23,7 +23,7 @@ export interface AttackState {
 
 export interface Projectile {
   id: number;
-  kind: 'bolt' | 'arrow';
+  kind: 'bolt' | 'arrow' | 'laser';
   /** 'player' or the id of the enemy that fired it. A reflected arrow becomes Satan's. */
   owner: 'player' | number;
   /** Enemy that originally shot it (reflections fly back at them). */
@@ -162,6 +162,9 @@ export interface Enemy {
   windupLen: number;
   /** Bosses: health segments left (1 = last). Each one ends in a deathblow/kill. */
   segments: number;
+  /** Leap attacks: take-off point and (homing, then locked) landing point. */
+  leapFrom: Vec2;
+  leapTo: Vec2;
   spawn: Vec2;
 }
 
@@ -184,7 +187,7 @@ export type SimEvent =
   | { type: 'throw'; pos: Vec2; dir: Vec2 }
   | { type: 'noPips'; pos: Vec2 }
   | { type: 'pipGained'; pos: Vec2 }
-  | { type: 'projectileEnd'; pos: Vec2; kind: 'bolt' | 'arrow'; reflected: boolean }
+  | { type: 'projectileEnd'; pos: Vec2; kind: 'bolt' | 'arrow' | 'laser'; reflected: boolean }
   | { type: 'reflect'; pos: Vec2; perfect: boolean }
   | { type: 'arrowLoosed'; pos: Vec2 }
   | { type: 'lockOn'; pos: Vec2 }
@@ -203,7 +206,8 @@ export type SimEvent =
   | { type: 'vialGained'; pos: Vec2; vialId: string }
   | { type: 'bossPhase'; pos: Vec2; phase: number }
   | { type: 'summon'; pos: Vec2 }
-  | { type: 'interrupt'; pos: Vec2 };
+  | { type: 'interrupt'; pos: Vec2 }
+  | { type: 'leapLand'; pos: Vec2 };
 
 /** Level/room difficulty applied to enemies as they spawn (bosses use their own data). */
 export interface EnemyScale {
@@ -388,6 +392,8 @@ export function spawnEnemy(world: World, cfg: SimConfig, type: string, at: Vec2)
     dmgMul: sc.damage,
     windupLen: 0,
     segments: d.segments ?? 1,
+    leapFrom: { ...at },
+    leapTo: { ...at },
     spawn: { ...at },
   };
   world.enemies.push(e);

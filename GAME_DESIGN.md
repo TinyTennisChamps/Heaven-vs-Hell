@@ -319,6 +319,37 @@ With the ramp, a hard room taken as your 3rd room costs the bot about 60 HP (bal
 - The roar still deals 8 damage, so it still kills cherubs.
 - Gabriel can now be spawned in the Training Court (key 6), with his boss bar.
 
+## Gabriel: three new attacks, tougher, plus Rage −20% (user request)
+**New attacks:**
+- **Leap** (`leap`):
+  - A 24f crouch, then a 30f flight on an arc. He's untouchable in the air (blows glance off), and a lilac ring marks the landing spot.
+  - He homes on Satan for the first third of the flight, then locks. Walking out of the ring after that is enough, and so is dashing, blocking or deflecting the slam.
+  - The slam has a 22 px radius, does 22 damage and 40 posture.
+- **Light Lances** (`beam1`–`beam3`):
+  - He raises a hand, an orb gathers, and he fires three fast gold beams (330 px/s), each re-aimed at you.
+  - Each can be blocked, and a deflect sends it back into him.
+- **Blade of Light** (`blade1`–`blade5`; `p2blade1`–`p2blade7` in phase 2):
+  - A long string with a sword of light, alternating high and low swings, with a small lunge each hit.
+  - It's `relentless`: a perfect deflect doesn't stagger him or open a riposte, and the string keeps coming. Block or deflect every hit.
+  - Perfect deflects still build his posture.
+
+**AI:**
+- At range he picks between the leap, the charge and the lances.
+- Up close he picks between the blade string, the trumpet and the thrusts.
+
+**Stats:** health 360 → **480** per segment, posture 320 → **420**.
+
+**Benchmark bot made more human:** its deflect timing now spreads ±6f, so about half are perfect.
+- Gabriel now costs it **123 HP on average** (best case 32), taking about 23 s. Without Rage, a decent player usually loses.
+- L1 rooms got a little harder for it, so the Balustrade's opening wave drops to two archers.
+- The guard rails are now under 40% of max HP for combat rooms and under 75% for hard ones.
+
+**Rage −20%:**
+- Duration is 4 s (240f) and kill extends are 24f.
+- In form you take 80% damage.
+- Claws do 10/10/16 damage and 8/8/14 posture.
+- Roar: 6 damage, 14 posture, a 35 px radius, a 4.2 s cooldown and 176 knockback. It no longer one-shots a cherub; a cherub survives it on 2 HP.
+
 ## Rage Vials (original plan: 7, flat additive, every stat ≤ +20%)
 | L1 | L2 |
 |---|---|

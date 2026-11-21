@@ -3,7 +3,7 @@
   "title": "GABRIEL, THE HERALD",
   "segments": 2,
   "rallyFrames": 100,
-  "health": 360,
+  "health": 480,
   "radius": 11,
   "speed": 58,
   "turnRateDeg": 9,
@@ -15,7 +15,7 @@
   "shieldArcDeg": 0,
   "shieldPostureMul": 0,
   "posture": {
-    "max": 320,
+    "max": 420,
     "regenDelay": 55,
     "regenPerSec": 24,
     "lowHealthMul": 0.5
@@ -292,6 +292,410 @@
         "offset": 0
       },
       "judgement": true
+    },
+    "leap": {
+      "range": 150,
+      "windup": 24,
+      "trackUntil": 20,
+      "active": 34,
+      "recovery": 32,
+      "healthDamage": 22,
+      "postureDamage": 40,
+      "knockback": 300,
+      "hitstop": 6,
+      "shake": 4,
+      "hitbox": {
+        "radius": 22,
+        "angleDeg": 360,
+        "offset": 0
+      },
+      "leap": {
+        "frames": 30,
+        "maxDist": 150,
+        "homeFrac": 0.33,
+        "height": 46
+      }
+    },
+    "beam1": {
+      "range": 170,
+      "windup": 28,
+      "trackUntil": 24,
+      "active": 1,
+      "recovery": 10,
+      "healthDamage": 12,
+      "postureDamage": 16,
+      "knockback": 150,
+      "hitstop": 3,
+      "shake": 1.5,
+      "hitbox": {
+        "radius": 1,
+        "angleDeg": 1,
+        "offset": 0
+      },
+      "projectile": {
+        "speed": 330,
+        "radius": 3,
+        "lifeFrames": 70
+      },
+      "projectileKind": "laser",
+      "chain": {
+        "next": "beam2",
+        "chance": 1
+      }
+    },
+    "beam2": {
+      "range": 170,
+      "windup": 14,
+      "trackUntil": 10,
+      "active": 1,
+      "recovery": 10,
+      "healthDamage": 12,
+      "postureDamage": 16,
+      "knockback": 150,
+      "hitstop": 3,
+      "shake": 1.5,
+      "hitbox": {
+        "radius": 1,
+        "angleDeg": 1,
+        "offset": 0
+      },
+      "projectile": {
+        "speed": 330,
+        "radius": 3,
+        "lifeFrames": 70
+      },
+      "projectileKind": "laser",
+      "chain": {
+        "next": "beam3",
+        "chance": 1
+      }
+    },
+    "beam3": {
+      "range": 170,
+      "windup": 14,
+      "trackUntil": 10,
+      "active": 1,
+      "recovery": 26,
+      "healthDamage": 14,
+      "postureDamage": 18,
+      "knockback": 180,
+      "hitstop": 4,
+      "shake": 2,
+      "hitbox": {
+        "radius": 1,
+        "angleDeg": 1,
+        "offset": 0
+      },
+      "projectile": {
+        "speed": 330,
+        "radius": 3,
+        "lifeFrames": 70
+      },
+      "projectileKind": "laser"
+    },
+    "blade1": {
+      "range": 46,
+      "windup": 20,
+      "trackUntil": 8,
+      "active": 3,
+      "recovery": 9,
+      "healthDamage": 10,
+      "postureDamage": 16,
+      "knockback": 120,
+      "hitstop": 3,
+      "shake": 1.4,
+      "hitbox": {
+        "radius": 42,
+        "angleDeg": 140,
+        "offset": 4
+      },
+      "relentless": true,
+      "lunge": {
+        "px": 12,
+        "overFrames": 3
+      },
+      "chain": {
+        "next": "blade2",
+        "chance": 1
+      }
+    },
+    "blade2": {
+      "range": 46,
+      "windup": 14,
+      "trackUntil": 8,
+      "active": 3,
+      "recovery": 9,
+      "healthDamage": 10,
+      "postureDamage": 16,
+      "knockback": 120,
+      "hitstop": 3,
+      "shake": 1.4,
+      "hitbox": {
+        "radius": 42,
+        "angleDeg": 140,
+        "offset": 4
+      },
+      "relentless": true,
+      "lunge": {
+        "px": 12,
+        "overFrames": 3
+      },
+      "chain": {
+        "next": "blade3",
+        "chance": 1
+      }
+    },
+    "blade3": {
+      "range": 46,
+      "windup": 12,
+      "trackUntil": 8,
+      "active": 3,
+      "recovery": 9,
+      "healthDamage": 10,
+      "postureDamage": 16,
+      "knockback": 120,
+      "hitstop": 3,
+      "shake": 1.4,
+      "hitbox": {
+        "radius": 42,
+        "angleDeg": 140,
+        "offset": 4
+      },
+      "relentless": true,
+      "lunge": {
+        "px": 12,
+        "overFrames": 3
+      },
+      "chain": {
+        "next": "blade4",
+        "chance": 1
+      }
+    },
+    "blade4": {
+      "range": 46,
+      "windup": 14,
+      "trackUntil": 8,
+      "active": 3,
+      "recovery": 9,
+      "healthDamage": 10,
+      "postureDamage": 16,
+      "knockback": 120,
+      "hitstop": 3,
+      "shake": 1.4,
+      "hitbox": {
+        "radius": 42,
+        "angleDeg": 140,
+        "offset": 4
+      },
+      "relentless": true,
+      "lunge": {
+        "px": 12,
+        "overFrames": 3
+      },
+      "chain": {
+        "next": "blade5",
+        "chance": 1
+      }
+    },
+    "blade5": {
+      "range": 46,
+      "windup": 12,
+      "trackUntil": 8,
+      "active": 3,
+      "recovery": 26,
+      "healthDamage": 14,
+      "postureDamage": 24,
+      "knockback": 200,
+      "hitstop": 5,
+      "shake": 2.4,
+      "hitbox": {
+        "radius": 42,
+        "angleDeg": 140,
+        "offset": 4
+      },
+      "relentless": true,
+      "lunge": {
+        "px": 12,
+        "overFrames": 3
+      }
+    },
+    "p2blade1": {
+      "range": 46,
+      "windup": 20,
+      "trackUntil": 8,
+      "active": 3,
+      "recovery": 9,
+      "healthDamage": 10,
+      "postureDamage": 16,
+      "knockback": 120,
+      "hitstop": 3,
+      "shake": 1.4,
+      "hitbox": {
+        "radius": 42,
+        "angleDeg": 140,
+        "offset": 4
+      },
+      "relentless": true,
+      "lunge": {
+        "px": 12,
+        "overFrames": 3
+      },
+      "chain": {
+        "next": "p2blade2",
+        "chance": 1
+      }
+    },
+    "p2blade2": {
+      "range": 46,
+      "windup": 14,
+      "trackUntil": 8,
+      "active": 3,
+      "recovery": 9,
+      "healthDamage": 10,
+      "postureDamage": 16,
+      "knockback": 120,
+      "hitstop": 3,
+      "shake": 1.4,
+      "hitbox": {
+        "radius": 42,
+        "angleDeg": 140,
+        "offset": 4
+      },
+      "relentless": true,
+      "lunge": {
+        "px": 12,
+        "overFrames": 3
+      },
+      "chain": {
+        "next": "p2blade3",
+        "chance": 1
+      }
+    },
+    "p2blade3": {
+      "range": 46,
+      "windup": 12,
+      "trackUntil": 8,
+      "active": 3,
+      "recovery": 9,
+      "healthDamage": 10,
+      "postureDamage": 16,
+      "knockback": 120,
+      "hitstop": 3,
+      "shake": 1.4,
+      "hitbox": {
+        "radius": 42,
+        "angleDeg": 140,
+        "offset": 4
+      },
+      "relentless": true,
+      "lunge": {
+        "px": 12,
+        "overFrames": 3
+      },
+      "chain": {
+        "next": "p2blade4",
+        "chance": 1
+      }
+    },
+    "p2blade4": {
+      "range": 46,
+      "windup": 14,
+      "trackUntil": 8,
+      "active": 3,
+      "recovery": 9,
+      "healthDamage": 10,
+      "postureDamage": 16,
+      "knockback": 120,
+      "hitstop": 3,
+      "shake": 1.4,
+      "hitbox": {
+        "radius": 42,
+        "angleDeg": 140,
+        "offset": 4
+      },
+      "relentless": true,
+      "lunge": {
+        "px": 12,
+        "overFrames": 3
+      },
+      "chain": {
+        "next": "p2blade5",
+        "chance": 1
+      }
+    },
+    "p2blade5": {
+      "range": 46,
+      "windup": 12,
+      "trackUntil": 8,
+      "active": 3,
+      "recovery": 9,
+      "healthDamage": 10,
+      "postureDamage": 16,
+      "knockback": 120,
+      "hitstop": 3,
+      "shake": 1.4,
+      "hitbox": {
+        "radius": 42,
+        "angleDeg": 140,
+        "offset": 4
+      },
+      "relentless": true,
+      "lunge": {
+        "px": 12,
+        "overFrames": 3
+      },
+      "chain": {
+        "next": "p2blade6",
+        "chance": 1
+      }
+    },
+    "p2blade6": {
+      "range": 46,
+      "windup": 14,
+      "trackUntil": 8,
+      "active": 3,
+      "recovery": 9,
+      "healthDamage": 10,
+      "postureDamage": 16,
+      "knockback": 120,
+      "hitstop": 3,
+      "shake": 1.4,
+      "hitbox": {
+        "radius": 42,
+        "angleDeg": 140,
+        "offset": 4
+      },
+      "relentless": true,
+      "lunge": {
+        "px": 12,
+        "overFrames": 3
+      },
+      "chain": {
+        "next": "p2blade7",
+        "chance": 1
+      }
+    },
+    "p2blade7": {
+      "range": 46,
+      "windup": 12,
+      "trackUntil": 8,
+      "active": 3,
+      "recovery": 26,
+      "healthDamage": 14,
+      "postureDamage": 24,
+      "knockback": 200,
+      "hitstop": 5,
+      "shake": 2.4,
+      "hitbox": {
+        "radius": 42,
+        "angleDeg": 140,
+        "offset": 4
+      },
+      "relentless": true,
+      "lunge": {
+        "px": 12,
+        "overFrames": 3
+      }
     }
   },
   "specialDelay": 300

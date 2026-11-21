@@ -184,7 +184,7 @@ export function drawCherub(g: Graphics, pose: CherubPose, flash: boolean, lift: 
   g.ellipse(hx, hy - 8, 4, 1.2).stroke({ width: 1, color: flash ? 0xffffff : HEAVEN.gold2 });
 }
 
-export type GabrielPose = 'idle' | 'drawBack' | 'thrust' | 'trumpet' | 'horn' | 'charge' | 'ring' | 'recoil' | 'broken' | 'rally';
+export type GabrielPose = 'idle' | 'drawBack' | 'thrust' | 'trumpet' | 'horn' | 'charge' | 'ring' | 'recoil' | 'broken' | 'rally' | 'crouch' | 'air' | 'cast' | 'bladeHigh' | 'bladeLow';
 
 /**
  * Gabriel, the Herald: tall, great wings, a sun-gold halo, a spear in one
@@ -196,10 +196,10 @@ export function drawGabriel(g: Graphics, pose: GabrielPose, flash: boolean): voi
   const line = flash ? 0xffffff : ANGEL.angelLine;
   const st = { width: 1, color: line, alignment: 1 } as const;
   g.clear();
-  const crouch = pose === 'broken' ? 6 : pose === 'charge' || pose === 'thrust' ? 2 : 0;
+  const crouch = pose === 'broken' ? 6 : pose === 'crouch' ? 5 : pose === 'charge' || pose === 'thrust' ? 2 : 0;
   const lean = pose === 'thrust' ? 3 : pose === 'charge' ? 5 : pose === 'drawBack' ? -3 : pose === 'recoil' ? -5 : 0;
   const y = (v: number) => v + crouch;
-  const wingUp = pose === 'ring' || pose === 'rally' ? -8 : pose === 'horn' ? -4 : 0;
+  const wingUp = pose === 'ring' || pose === 'rally' || pose === 'air' ? -8 : pose === 'horn' || pose === 'cast' ? -4 : pose === 'crouch' ? 4 : 0;
 
   // Great wings (behind).
   g.poly([-3 + lean, y(-34), -22 + lean, y(-50) + wingUp, -26 + lean, y(-30) + wingUp, -18 + lean, y(-14), -6 + lean, y(-20)]).fill(c(ANGEL.white)).stroke(st);
@@ -220,6 +220,25 @@ export function drawGabriel(g: Graphics, pose: GabrielPose, flash: boolean): voi
 
   if (pose === 'broken') {
     g.moveTo(-14, -2).lineTo(14, -6).stroke({ width: 1, color: c(HEAVEN.stoneDark) });
+    return;
+  }
+  if (pose === 'cast') {
+    // Light lances: a hand raised, an orb of white light gathering.
+    g.moveTo(hx + 3, hy + 8).lineTo(hx + 12, hy - 6).stroke({ width: 2, color: c(ANGEL.pearl) });
+    g.circle(hx + 13, hy - 8, 4).fill({ color: flash ? 0xffffff : 0xfff6c8, alpha: 0.95 });
+    g.circle(hx + 13, hy - 8, 2).fill(0xffffff);
+    return;
+  }
+  if (pose === 'bladeHigh' || pose === 'bladeLow' || pose === 'air' || pose === 'crouch') {
+    // Blade of light: a long pale-gold sword, raised high or swept low.
+    const up = pose === 'bladeHigh' || pose === 'air' || pose === 'crouch';
+    const bx0 = hx + 6;
+    const by0 = y(-22);
+    const bx1 = up ? hx + 10 : hx + 30;
+    const by1 = up ? y(-58) : y(-10);
+    g.moveTo(bx0, by0).lineTo(bx1, by1).stroke({ width: 3, color: c(0xfff6c8), alpha: 0.9 });
+    g.moveTo(bx0, by0).lineTo(bx1, by1).stroke({ width: 1, color: 0xffffff });
+    g.rect(bx0 - 3, by0 - 1, 7, 2).fill(c(HEAVEN.gold2));
     return;
   }
   // Trumpet (left hand / back side): raised to the lips for horn and trumpet blast.

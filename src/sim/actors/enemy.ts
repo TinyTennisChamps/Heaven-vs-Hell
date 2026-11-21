@@ -155,7 +155,13 @@ export function updateEnemy(world: World, e: Enemy, cfg: SimConfig, think: Think
         turnToward(e, toP, Math.max(def.turnRateDeg, 8));
         e.attackDir = { ...e.facing };
       }
-      if (e.phaseFrame >= e.windupLen) setPhase(e, 'active');
+      if (e.phaseFrame >= e.windupLen) {
+        setPhase(e, 'active');
+        if (atk.leap) {
+          e.leapFrom = { ...e.pos };
+          e.leapTo = leapTarget(world, e, atk.leap);
+        }
+      }
       break;
     }
     case 'active': {
@@ -166,6 +172,23 @@ export function updateEnemy(world: World, e: Enemy, cfg: SimConfig, think: Think
         const s = f <= n ? atk.lunge.px * (easeOutQuad(f / n) - easeOutQuad((f - 1) / n)) : 0;
         lungeDelta = { x: e.attackDir.x * s, y: e.attackDir.y * s };
       }
+      if (atk.leap) {
+        const L = atk.leap;
+        if (e.phaseFrame <= Math.floor(L.frames * L.homeFrac)) e.leapTo = leapTarget(world, e, L); // homing
+        const k = Math.min(1, e.phaseFrame / L.frames);
+        const ease = k * k * (3 - 2 * k);
+        e.pos = { x: e.leapFrom.x + (e.leapTo.x - e.leapFrom.x) * ease, y: e.leapFrom.y + (e.leapTo.y - e.leapFrom.y) * ease };
+        e.knock = { x: 0, y: 0 };
+        const d = normalize({ x: e.leapTo.x - e.leapFrom.x, y: e.leapTo.y - e.leapFrom.y });
+        if (d.x || d.y) e.attackDir = d;
+        if (e.phaseFrame > L.frames && !e.swingHit && arcHitsCircle(e.pos, e.attackDir, atk.hitbox, p.pos, playerRadius(world, cfg))) {
+          const out = resolveOnPlayer(world, e, atk, cfg);
+          if (out !== 'evaded') e.swingHit = true;
+        }
+        if (e.phaseFrame === L.frames) emit(world, { type: 'leapLand', pos: { ...e.pos } });
+        if (e.phaseFrame >= atk.active) setPhase(e, 'recover');
+        return; // flight is scripted; no normal movement this tick
+      }
       if (atk.summon) {
         if (!e.swingHit) {
           e.swingHit = true;
@@ -175,7 +198,7 @@ export function updateEnemy(world: World, e: Enemy, cfg: SimConfig, think: Think
         if (!e.swingHit) {
           e.swingHit = true;
           const from = { x: e.pos.x + e.attackDir.x * (e.radius + 4), y: e.pos.y + e.attackDir.y * (e.radius + 4) };
-          spawnProjectile(world, 'arrow', e.id, from, e.attackDir, atk.projectile, scaledAttack(atk, e.dmgMul));
+          spawnProjectile(world, atk.projectileKind ?? 'arrow', e.id, from, e.attackDir, atk.projectile, scaledAttack(atk, e.dmgMul));
           emit(world, { type: 'arrowLoosed', pos: from });
         }
       } else if (!e.swingHit && arcHitsCircle(e.pos, e.attackDir, atk.hitbox, p.pos, playerRadius(world, cfg))) {
@@ -202,6 +225,16 @@ export function updateEnemy(world: World, e: Enemy, cfg: SimConfig, think: Think
   }
 
   moveBody(world, e, move, cfg, lungeDelta);
+}
+
+/** Where a leap lands: at Satan, but no further than maxDist, on clear ground. */
+function leapTarget(world: World, e: Enemy, L: NonNullable<EnemyAttackDef['leap']>): Vec2 {
+  const p = world.player.pos;
+  const to = { x: p.x - e.leapFrom.x, y: p.y - e.leapFrom.y };
+  const d = Math.hypot(to.x, to.y);
+  const k = d > L.maxDist ? L.maxDist / d : 1;
+  const want = { x: e.leapFrom.x + to.x * k, y: e.leapFrom.y + to.y * k };
+  return findSpot(world, want.x, want.y, e.radius + 1) ?? { ...e.leapFrom };
 }
 
 /** Call reinforcements in a ring around the caller (never more than maxAlive of that type). */
