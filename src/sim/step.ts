@@ -12,6 +12,7 @@ import { updateCamera, updateShake } from './camera';
 import { moveAndSlide } from './physics/collide';
 import { updateRoom } from './rooms/roomRunner';
 import { playerRadius } from './stats';
+import { updateNav } from './nav';
 import { airborne } from './combat/damage';
 import type { World } from './world';
 
@@ -52,6 +53,7 @@ export function step(world: World, input: InputFrame, cfg: SimConfig): void {
     world.slowAcc = 0;
   }
 
+  updateNav(world);
   updateLock(world, input, cfg);
   updatePlayer(world, { move: input.move, guardHeld: input.held.parry, locked: !!lockTarget(world) }, resolveAim(world, input), cfg);
   for (const e of world.enemies) {

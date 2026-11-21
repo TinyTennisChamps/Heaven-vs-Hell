@@ -39,7 +39,7 @@
     {
       "id": "l2_hidden_b",
       "level": "l2",
-      "source": "hidden",
+      "source": "secret",
       "name": "Vial of Ash",
       "stat": "maxHealth",
       "amount": 0.05,

@@ -2,18 +2,25 @@ import { Container, Graphics, Sprite as PixiSprite } from 'pixi.js';
 import { loopFrame, type Atlas } from './atlas';
 import { pickPlayerAnim, type AnimConfig } from './animSync';
 import { VIEW_H, VIEW_W } from '../core/constants';
-import { GROUND_TILE, groundToScreen } from '../core/iso';
-import { DEG, angleOf, lerp, type Vec2 } from '../core/math';
+import { groundToScreen } from '../core/iso';
+import { lerp, type Vec2 } from '../core/math';
+import { arcPoly, groundCircle, proj } from './biome/geom';
 import { attackDef, attackPhase } from '../sim/actors/player';
-import type { ArcHitbox, SimConfig } from '../sim/config';
-import { pointInPolygon } from '../sim/physics/collide';
+import type { SimConfig } from '../sim/config';
 import type { Enemy, World } from '../sim/world';
 import { ANGEL, GARDEN, HEAVEN, JUDGEMENT, SATAN } from './palette';
 import { Particles } from './particles';
 import { Sparks } from './sparks';
-import { drawArcher, drawCherub, drawDominion, drawDummy, drawGabriel, drawWatcher, drawZealot, type ArcherPose, type CherubPose, type DominionPose, type GabrielPose, type WatcherPose, type ZealotPose } from './sprites/placeholders';
+import { drawArcher, drawCherub, drawDominion, drawDummy, drawGabriel, drawRaphael, drawWatcher, drawZealot, type ArcherPose, type CherubPose, type DominionPose, type GabrielPose, type RaphaelPose, type WatcherPose, type ZealotPose } from './sprites/placeholders';
 import type { DoorKind } from '../sim/rooms/run';
-import type { WallKind } from '../sim/config';
+import type { BiomeDef } from '../sim/config';
+import { ColorMatrixFilter, type Renderer } from 'pixi.js';
+import { RoomArt } from './biome/roomArt';
+import { Lighting } from './biome/lighting';
+import { Parallax } from './biome/parallax';
+import { Ambient } from './biome/ambient';
+import { Grade } from './biome/grade';
+import { hex } from './biome/geom';
 import { maxHp, maxPips, maxPosture, playerRadius } from '../sim/stats';
 import { enemyAttack } from '../sim/actors/enemy';
 import { shieldUp } from '../sim/combat/damage';
@@ -24,8 +31,6 @@ interface Sprite {
   key: string;
 }
 
-const WALL_H: Record<WallKind, number> = { pillar: 30, hedge: 10, fountain: 7 };
-const LIP_H = 8;
 const DOOR_H = 26;
 const DOOR_HALF = 11;
 
@@ -38,46 +43,9 @@ interface DoorSprite {
   tan: Vec2;
 }
 
-/** Projects a ground-space polygon to a flat screen point list. */
-function proj(points: ReadonlyArray<Vec2 | readonly [number, number]>, lift = 0): number[] {
-  const out: number[] = [];
-  for (const p of points) {
-    const gx = Array.isArray(p) ? (p as readonly number[])[0]! : (p as Vec2).x;
-    const gy = Array.isArray(p) ? (p as readonly number[])[1]! : (p as Vec2).y;
-    const s = groundToScreen(gx, gy);
-    out.push(s.x, s.y - lift);
-  }
-  return out;
-}
-
-function groundCircle(c: Vec2, r: number, n = 18): Vec2[] {
-  const pts: Vec2[] = [];
-  for (let i = 0; i < n; i++) pts.push({ x: c.x + Math.cos((i / n) * Math.PI * 2) * r, y: c.y + Math.sin((i / n) * Math.PI * 2) * r });
-  return pts;
-}
-
-/** Ground-space ring sector for slash arcs / telegraphs. */
-function arcPoly(origin: Vec2, dir: Vec2, box: ArcHitbox, from: number, to: number, inner = 0.35): Vec2[] {
-  const o = { x: origin.x + dir.x * box.offset, y: origin.y + dir.y * box.offset };
-  const a0 = angleOf(dir) - (box.angleDeg / 2) * DEG;
-  const span = box.angleDeg * DEG;
-  const pts: Vec2[] = [];
-  const n = 12;
-  for (let i = 0; i <= n; i++) {
-    const a = a0 + span * lerp(from, to, i / n);
-    pts.push({ x: o.x + Math.cos(a) * box.radius, y: o.y + Math.sin(a) * box.radius });
-  }
-  for (let i = n; i >= 0; i--) {
-    const a = a0 + span * lerp(from, to, i / n);
-    pts.push({ x: o.x + Math.cos(a) * box.radius * inner, y: o.y + Math.sin(a) * box.radius * inner });
-  }
-  return pts;
-}
-
 export class Scene {
   readonly root = new Container();
   private worldLayer = new Container();
-  private floor = new Graphics();
   private shadows = new Graphics();
   private telegraphs = new Graphics();
   private entities = new Container();
@@ -104,18 +72,38 @@ export class Scene {
     this.roarRings.push({ pos: { ...pos }, age: 0 });
   }
 
+  /** Debug layer toggles (F8). Gameplay layers can't be switched off. */
+  layers = { decoration: true, lighting: true, parallax: true, ambient: true, hazards: false, readability: false, hud: true };
+  /** Real seconds since the last render (ambient life). */
+  frameDt = 1 / 60;
+  /** Combat rooms already cleared in this level (the descent darkens the light). */
+  depth = 0;
+  readonly art: RoomArt;
+  readonly lighting: Lighting;
+  readonly parallax: Parallax;
+  readonly ambient: Ambient;
+  private grade = new Grade();
+  private greyFilter = new ColorMatrixFilter();
+  private shadeKey = '';
+
   constructor(
     world: World,
     private satan: Atlas,
     private anim: AnimConfig,
+    readonly biome: BiomeDef,
+    renderer: Renderer,
   ) {
     this.entities.sortableChildren = true;
-    this.worldLayer.addChild(this.clouds, this.floor, this.fontG, this.shadows, this.telegraphs, this.entities, this.fx, this.particles.g, this.sparks.g, this.debugG);
+    this.art = new RoomArt(world, biome, this.entities);
+    this.lighting = new Lighting(renderer);
+    this.parallax = new Parallax(biome);
+    this.ambient = new Ambient(biome);
+    this.greyFilter.desaturate();
+    this.worldLayer.addChild(this.clouds, this.art.floor, this.art.shafts, this.lighting.dark, this.lighting.glow, this.fontG, this.shadows, this.telegraphs, this.entities, this.art.dyn, this.fx, this.ambient.g, this.particles.g, this.sparks.g, this.debugG);
     this.screenFlash.rect(0, 0, VIEW_W, VIEW_H).fill(0xffffff);
     this.screenFlash.alpha = 0;
-    this.root.addChild(this.worldLayer, this.screenFlash, this.hud, this.cursorG);
-    this.drawClouds(world);
-    this.drawRoom(world);
+    this.root.addChild(this.parallax.root, this.worldLayer, this.screenFlash, this.grade.root, this.hud, this.cursorG);
+    if (!biome.indoor) this.drawClouds(world);
     this.makeDoors(world);
     this.player = new PixiSprite();
     this.player.anchor.set(satan.pivot.x / satan.frameW, satan.pivot.y / satan.frameH);
@@ -129,95 +117,6 @@ export class Scene {
     root.addChild(body);
     this.entities.addChild(root);
     return { root, body, key: '' };
-  }
-
-  private drawRoom(world: World): void {
-    const room = world.room;
-    const g = this.floor;
-    // Gold lip: extrude every bounds edge downward; the floor covers the hidden ones.
-    const b = room.bounds;
-    for (let i = 0; i < b.length; i++) {
-      const p = b[i]!;
-      const q = b[(i + 1) % b.length]!;
-      const sp = groundToScreen(p[0], p[1]);
-      const sq = groundToScreen(q[0], q[1]);
-      g.poly([sp.x, sp.y, sq.x, sq.y, sq.x, sq.y + LIP_H, sp.x, sp.y + LIP_H]).fill(HEAVEN.gold3);
-      g.poly([sp.x, sp.y + LIP_H - 2, sq.x, sq.y + LIP_H - 2, sq.x, sq.y + LIP_H, sp.x, sp.y + LIP_H]).fill(HEAVEN.goldDark);
-    }
-    // Checker tiles (16×16 ground → 32×16 diamonds).
-    const xs = b.map((p) => p[0]);
-    const ys = b.map((p) => p[1]);
-    const T = GROUND_TILE;
-    for (let gy = Math.min(...ys); gy < Math.max(...ys); gy += T) {
-      for (let gx = Math.min(...xs); gx < Math.max(...xs); gx += T) {
-        if (!pointInPolygon(gx + T / 2, gy + T / 2, b)) continue;
-        const i = Math.round(gx / T);
-        const j = Math.round(gy / T);
-        const col = (i + j) % 2 === 0 ? HEAVEN.ivory2 : HEAVEN.marble;
-        g.poly(proj([[gx, gy], [gx + T, gy], [gx + T, gy + T], [gx, gy + T]])).fill(col);
-      }
-    }
-    // Gold inlay border one tile in.
-    const inset = b.map(([x, y]) => [x + (x === Math.min(...xs) ? T : -T), y + (y === Math.min(...ys) ? T : -T)] as const);
-    g.poly(proj(inset)).stroke({ width: 1, color: HEAVEN.gold2, alpha: 0.9 });
-    // Gold rim along the top edge of the platform.
-    g.poly(proj(b)).stroke({ width: 1, color: HEAVEN.gold2 });
-
-    // Walls: extruded prisms (pillars tall, hedges low, the fountain a basin), depth-sorted with entities.
-    room.walls.forEach((wall, wi) => {
-      const kind: WallKind = room.wallKinds?.[wi] ?? 'pillar';
-      const H = WALL_H[kind];
-      const pc = new Graphics();
-      const cx = wall.reduce((s, p) => s + p[0], 0) / wall.length;
-      const cy = wall.reduce((s, p) => s + p[1], 0) / wall.length;
-      for (let i = 0; i < wall.length; i++) {
-        const p = wall[i]!;
-        const q = wall[(i + 1) % wall.length]!;
-        // Outward ground normal; only faces pointing toward the camera (+gx+gy) are visible.
-        let nx = q[1] - p[1];
-        let ny = -(q[0] - p[0]);
-        const mx = (p[0] + q[0]) / 2 - cx;
-        const my = (p[1] + q[1]) / 2 - cy;
-        if (nx * mx + ny * my < 0) {
-          nx = -nx;
-          ny = -ny;
-        }
-        if (nx + ny <= 0) continue;
-        const sp = groundToScreen(p[0], p[1]);
-        const sq = groundToScreen(q[0], q[1]);
-        // East-facing faces catch the light; south-facing ones sit in shade.
-        const lit = nx > ny;
-        const shade = kind === 'hedge' ? (lit ? GARDEN.hedge : GARDEN.hedgeDark) : lit ? HEAVEN.marble : HEAVEN.stone;
-        pc.poly([sp.x, sp.y, sq.x, sq.y, sq.x, sq.y - H, sp.x, sp.y - H]).fill(shade);
-        if (kind !== 'hedge') pc.moveTo(sp.x, sp.y - 3).lineTo(sq.x, sq.y - 3).stroke({ width: 1, color: HEAVEN.gold3 });
-      }
-      if (kind === 'hedge') {
-        pc.poly(proj(wall, H)).fill(GARDEN.hedgeTop).stroke({ width: 1, color: GARDEN.hedgeDark });
-        // White blossoms scattered on top (deterministic per wall).
-        const xs = wall.map((p) => p[0]);
-        const ys = wall.map((p) => p[1]);
-        let seed = wi * 97 + 13;
-        for (let gx = Math.min(...xs) + 4; gx < Math.max(...xs) - 2; gx += 7) {
-          for (let gy = Math.min(...ys) + 3; gy < Math.max(...ys) - 2; gy += 6) {
-            seed = (seed * 1103515245 + 12345) & 0x7fffffff;
-            if (seed % 3 !== 0) continue;
-            const b = groundToScreen(gx + (seed % 4), gy);
-            pc.rect(Math.round(b.x), Math.round(b.y - H), 1, 1).fill(GARDEN.blossom);
-          }
-        }
-      } else if (kind === 'fountain') {
-        pc.poly(proj(wall, H)).fill(HEAVEN.ivory2).stroke({ width: 1, color: HEAVEN.gold3 });
-        const inner = wall.map(([x, y]) => [x + (x < cx ? 3 : -3), y + (y < cy ? 3 : -3)] as const);
-        pc.poly(proj(inner, H)).fill(GARDEN.water);
-        const c = groundToScreen(cx, cy);
-        pc.rect(Math.round(c.x) - 1, Math.round(c.y - H - 10), 3, 10).fill(HEAVEN.marble);
-        pc.rect(Math.round(c.x) - 3, Math.round(c.y - H - 12), 7, 2).fill(HEAVEN.gold2);
-      } else {
-        pc.poly(proj(wall, H)).fill(HEAVEN.gold2).stroke({ width: 1, color: HEAVEN.gold3 });
-      }
-      pc.zIndex = cx + cy;
-      this.entities.addChild(pc);
-    });
   }
 
   /** Clouds drifting below and around the floating platform. */
@@ -311,6 +210,26 @@ export class Scene {
       const c = groundToScreen(q.at.x, q.at.y);
       const cx = Math.round(c.x);
       const cy = Math.round(c.y);
+      if (q.kind === 'secret') {
+        // A cracked stretch of wall with a cold draught drifting out of it (the hint),
+        // and once broken, a dark doorway with an eye above it.
+        const wy = cy - 18;
+        if (!q.open) {
+          const lines: [number, number, number, number][] = [[-5, -6, 0, 0], [0, 0, 4, -8], [0, 0, -2, 8], [-6, 4, -1, 2], [3, 2, 7, 6]];
+          for (let i = 0; i < 2 + q.hits * 2 && i < lines.length; i++) {
+            const [a, b, d, e] = lines[i]!;
+            g.moveTo(cx + a, wy + b).lineTo(cx + d, wy + e).stroke({ width: 1, color: HEAVEN.stoneDark });
+          }
+          for (let k = 0; k < 3; k++) {
+            const t = ((world.tick * 0.6 + k * 20) % 60) / 60;
+            g.rect(Math.round(cx + 2 + t * 22), Math.round(wy + (k - 1) * 4 + t * 6), 2, 1).fill({ color: ANGEL.pearl, alpha: 0.5 * (1 - t) });
+          }
+        } else {
+          g.poly([cx - 7, cy, cx + 7, cy, cx + 7, cy - 18, cx, cy - 25, cx - 7, cy - 18]).fill(ANGEL.void).stroke({ width: 1, color: HEAVEN.gold3 });
+          if (world.roomRun.cleared) doorIcon(g, 'secret', cx, cy - 38, true);
+        }
+        continue;
+      }
       if (q.kind === 'crack') {
         if (!q.open) {
           // Cracked marble on the rim; more cracks per hit.
@@ -377,6 +296,60 @@ export class Scene {
     }
   }
 
+  /** A brief light where something happened (hits, parries, the roar). Ground position. */
+  lightFlash(pos: Vec2, color: number, strong = false): void {
+    const L = this.biome.lighting.flash;
+    const s = groundToScreen(pos.x, pos.y);
+    this.lighting.flash(s.x, s.y - 8, color, L.radius * (strong ? 1.4 : 1), L.alpha * (strong ? 1.3 : 1), L.frames);
+  }
+
+  /** Budget readouts for the debug overlay. */
+  get budgets() {
+    return { lights: this.lighting.count, ambient: this.ambient.count, particles: this.particles.count };
+  }
+
+  /** Lighting, parallax, ambient life and the grade for this frame. */
+  private renderAtmosphere(world: World, camX: number, camY: number): void {
+    const B = this.biome.lighting;
+    const preset = world.script.lighting ? B.presets?.[world.script.lighting] : undefined;
+    const darkness = hex(preset?.darkness ?? B.darkness);
+    const descend = Math.min(0.25, this.depth * B.descendDarken);
+    const darkAlpha = Math.min(0.9, (preset?.darknessAlpha ?? B.darknessAlpha) + (B.darknessAlpha > 0 ? descend : 0));
+    const shaftsOff = !!preset?.shaftsOff;
+    const grade = preset?.grade ?? B.grade;
+
+    this.parallax.update(camX, camY);
+    this.parallax.root.visible = this.layers.parallax;
+    const zt = this.biome.hazards?.zones;
+    const warn = !!zt && !world.zones.silenced && world.zones.timer <= zt.warnFrames;
+    this.art.update(world, world.tick, { shaftsOff, zones: true, warn, hazards: this.layers.hazards });
+    this.hud.visible = this.layers.hud;
+
+    // Walls and props share the room's shade (gameplay bodies stay full-bright).
+    const key = `${darkness}${darkAlpha.toFixed(2)}${this.layers.lighting}`;
+    if (key !== this.shadeKey) {
+      this.shadeKey = key;
+      this.art.setShade(darkness, this.layers.lighting ? darkAlpha * 0.55 : 0);
+    }
+
+    const p = world.player;
+    const ps = groundToScreen(p.pos.x, p.pos.y);
+    const satanLight = { x: ps.x, y: ps.y - 4, radius: B.satanLight.radius, color: 0xffe9c8, alpha: B.satanLight.alpha + (darkAlpha > 0.5 ? 0.25 : 0) };
+    this.lighting.render([satanLight, ...this.art.lights(world, { shaftsOff })], this.worldLayer.position, darkness, darkAlpha, this.layers.lighting);
+
+    const view = { x: -this.worldLayer.position.x, y: -this.worldLayer.position.y, w: VIEW_W, h: VIEW_H };
+    this.ambient.update(Math.min(this.frameDt, 0.05), view, this.art.emitPoints(world), this.layers.ambient);
+    this.grade.set(hex(grade.color), grade.alpha + descend * 0.3, B.vignette + descend, this.layers.lighting);
+
+    // Decoration toggles and the readability (greyscale decoration) view.
+    const deco = this.layers.decoration;
+    this.art.floor.visible = deco;
+    this.art.dyn.visible = deco;
+    this.clouds.visible = deco;
+    const grey = this.layers.readability ? [this.greyFilter] : [];
+    for (const d of [this.art.floor, this.art.shafts, this.art.dyn, this.parallax.root, this.ambient.g, this.clouds]) d.filters = grey;
+  }
+
   private drawCursor(): void {
     const g = this.cursorG;
     g.rect(-3, 0, 2, 1).rect(2, 0, 2, 1).rect(0, -3, 1, 2).rect(0, 2, 1, 2).fill(SATAN.cloak);
@@ -388,6 +361,7 @@ export class Scene {
     const cx = lerp(cam.prevPos.x, cam.pos.x, alpha) + cam.shakeOffset.x;
     const cy = lerp(cam.prevPos.y, cam.pos.y, alpha) + cam.shakeOffset.y;
     this.worldLayer.position.set(Math.round(VIEW_W / 2 - cx), Math.round(VIEW_H / 2 - cy));
+    this.renderAtmosphere(world, cx, cy);
     this.cursorG.position.set(Math.round(cursor.x), Math.round(cursor.y));
     this.screenFlash.alpha = this.sparks.flash > 0 ? 0.35 : 0;
 
@@ -515,7 +489,15 @@ export class Scene {
         const sp = groundToScreen(ep.x, ep.y);
         this.telegraphs.rect(Math.round(sp.x) - 3, Math.round(sp.y) - 90, 7, 90).fill({ color: HEAVEN.gold1, alpha: 0.35 * arriving });
       }
-      if (e.type === 'zealot') {
+      if (e.type === 'raphael') {
+        const pose = raphaelPose(e);
+        const rally = e.phase === 'rally' && Math.floor(e.phaseFrame / 4) % 2 === 0;
+        this.redraw(s, `${pose}${flash || rally}${Math.floor(world.tick / 4)}`, () => drawRaphael(s!.body, pose, flash || rally, world.tick));
+        if (e.phase === 'rally') {
+          const sp = groundToScreen(ep.x, ep.y);
+          this.telegraphs.rect(Math.round(sp.x) - 6, Math.round(sp.y) - 120, 13, 120).fill({ color: JUDGEMENT, alpha: 0.35 });
+        }
+      } else if (e.type === 'zealot') {
         const pose = zealotPose(e);
         const sway = Math.floor(world.tick / 4);
         this.redraw(s, `${pose}${flash}${sway}`, () => drawZealot(s!.body, pose, flash, sway * 4));
@@ -525,7 +507,7 @@ export class Scene {
         const flap = Math.round(3 * Math.sin(world.tick * 0.12 + e.id));
         const iris = parseInt((cfg.enemies.watcher?.telegraphColor ?? '#ff4a3d').replace('#', ''), 16);
         this.redraw(s, `${pose}${flash}${lift}${flap}${iris}`, () => drawWatcher(s!.body, pose, flash, lift, flap, iris));
-      } else if (e.type === 'gabriel') {
+      } else if (e.type.startsWith('gabriel')) {
         const pose = gabrielPose(e);
         // Leap: lifted on an arc above his (moving) shadow; a ring marks where he'll land.
         const L = atk?.leap;
@@ -641,6 +623,18 @@ export class Scene {
     if (atk.leap) return;
     // Movement-only moves (sidestep, wing-dash) aren't attacks: no telegraph.
     if (atk.noHit) return;
+    if (atk.selfHeal) {
+      // Mending Rite: a ring of rising healing light around him — strike him to cut it short.
+      const k = e.phaseFrame / Math.max(1, e.windupLen);
+      this.telegraphs.poly(proj(groundCircle(e.pos, 18 + 10 * k, 20))).stroke({ width: 1, color: ANGEL.glassTeal, alpha: 0.8 });
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2 + e.phaseFrame * 0.05;
+        const gp = groundToScreen(e.pos.x + Math.cos(a) * 20, e.pos.y + Math.sin(a) * 20);
+        const h = (e.phaseFrame * 1.5 + i * 9) % 40;
+        this.telegraphs.rect(Math.round(gp.x), Math.round(gp.y - h), 1, 3).fill({ color: 0xffffff, alpha: 0.8 });
+      }
+      return;
+    }
     if (atk.summon) {
       // Horn Call: rings spilling from the trumpet; strike him to cut it short.
       const sp = groundToScreen(ep.x, ep.y);
@@ -855,6 +849,30 @@ function doorIcon(g: Graphics, kind: DoorKind, x: number, y: number, open: boole
       px(-4, 2, 3, 1);
       px(2, 2, 3, 1);
       break;
+    case 'elite':
+      // Wings: an elite waits beyond.
+      for (let i = 0; i < 4; i++) {
+        px(-5 + i, -3 + i, 1, 1);
+        px(5 - i, -3 + i, 1, 1);
+      }
+      px(-1, -1, 3, 4); // body
+      px(-5, -3, 2, 1);
+      px(4, -3, 2, 1);
+      break;
+    case 'setpiece':
+      // A bell: something is waiting.
+      px(-1, -5, 3, 1);
+      px(-2, -4, 5, 4);
+      px(-3, 0, 7, 2);
+      px(0, 3, 1, 2);
+      break;
+    case 'secret':
+      // An eye.
+      px(-4, 0, 9, 1);
+      px(-3, -1, 7, 1);
+      px(-3, 1, 7, 1);
+      g.rect(x - 1, y - 1, 3, 3).fill(ANGEL.void);
+      break;
     case 'rest':
       px(-4, -4, 9, 1); // rim
       px(-3, -3, 7, 2);
@@ -904,6 +922,19 @@ function watcherPose(e: Enemy): WatcherPose {
   if (e.phase === 'recoil') return 'jammed';
   if (e.attack === 'chomp') return e.phase === 'windup' ? 'biteWindup' : e.phase === 'active' ? 'bite' : 'idle';
   if (e.attack === 'laser') return e.phase === 'windup' ? 'charge' : e.phase === 'active' ? 'fire' : 'idle';
+  return 'idle';
+}
+
+function raphaelPose(e: Enemy): RaphaelPose {
+  if (e.phase === 'broken') return 'broken';
+  if (e.phase === 'rally') return 'rally';
+  if (e.phase === 'recoil') return 'recoil';
+  const k = e.attack ?? '';
+  if (k === 'rite') return e.phase === 'windup' ? 'rite' : 'idle';
+  if (k === 'summon') return 'call';
+  if (k === 'serpent') return e.phase === 'windup' ? 'sweepWind' : 'serpent';
+  if (k === 'cleave') return e.phase === 'windup' ? 'cleaveWind' : e.phase === 'active' || e.phaseFrame < 10 ? 'cleave' : 'idle';
+  if (k.startsWith('sweep')) return e.phase === 'windup' ? 'sweepWind' : e.phase === 'active' || e.phaseFrame < 8 ? 'sweep' : 'idle';
   return 'idle';
 }
 

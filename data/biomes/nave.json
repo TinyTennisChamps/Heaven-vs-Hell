@@ -1,0 +1,131 @@
+{
+  "id": "nave",
+  "name": "The Gilded Nave",
+  "indoor": true,
+  "palette": {
+    "sky": "#16141f",
+    "floorA": "#e2d9c3",
+    "floorB": "#cdbf9f",
+    "wallLit": "#ddd2b8",
+    "wallShade": "#ab9d7e",
+    "backWall": "#cbbf9f",
+    "backWallShade": "#a49576",
+    "pewTop": "#b6a682",
+    "pewSide": "#8c7f63",
+    "basin": "#e2d9c3",
+    "water": "#a9c4da",
+    "altar": "#d8ccb0",
+    "apse": "#c2b493"
+  },
+  "accents": {
+    "inlay": "#e8c872",
+    "rim": "#e8c872",
+    "lip": "#b8923e",
+    "lipDark": "#6a5226",
+    "wallTop": "#d9c27e",
+    "wallTrim": "#b8923e",
+    "glassBlue": "#86aee0",
+    "glassTeal": "#8fd3c9",
+    "glassLilac": "#bba8e0",
+    "glassGold": "#f1da94",
+    "flame": "#dff0ff",
+    "flameCore": "#ffffff",
+    "eye": "#f3f0ea",
+    "pupil": "#2a2840"
+  },
+  "lighting": {
+    "darkness": "#14122a",
+    "darknessAlpha": 0.42,
+    "satanLight": {
+      "radius": 64,
+      "alpha": 0.5
+    },
+    "flash": {
+      "radius": 60,
+      "alpha": 0.55,
+      "frames": 8
+    },
+    "grade": {
+      "color": "#6b6585",
+      "alpha": 0.06
+    },
+    "vignette": 0.35,
+    "descendDarken": 0.035,
+    "presets": {
+      "dark": {
+        "darknessAlpha": 0.78,
+        "shaftsOff": true
+      },
+      "shattered": {
+        "darkness": "#0e2238",
+        "darknessAlpha": 0.48,
+        "grade": {
+          "color": "#7fb8c8",
+          "alpha": 0.14
+        },
+        "shaftsOff": true
+      },
+      "herald": {
+        "darknessAlpha": 0.6
+      }
+    }
+  },
+  "parallax": [
+    {
+      "kind": "vault",
+      "factor": 0.25,
+      "alpha": 0.55
+    },
+    {
+      "kind": "arches",
+      "factor": 0.55,
+      "alpha": 0.45
+    }
+  ],
+  "ambient": [
+    {
+      "kind": "mote",
+      "perSec": 7,
+      "max": 60,
+      "colors": [
+        "#fff0b8",
+        "#ffffff",
+        "#e8dcc0"
+      ]
+    },
+    {
+      "kind": "smoke",
+      "perSec": 1.2,
+      "max": 12,
+      "colors": [
+        "#9ea4b4",
+        "#c8c8d4"
+      ]
+    },
+    {
+      "kind": "silhouette",
+      "perSec": 0.04,
+      "max": 1,
+      "colors": [
+        "#2a2840"
+      ]
+    }
+  ],
+  "hazards": {
+    "zones": {
+      "regenMul": 1.8,
+      "periodFrames": 720,
+      "warnFrames": 120,
+      "shiftFrames": 90
+    }
+  },
+  "audio": {
+    "explore": "nave_explore",
+    "combat": "nave_combat",
+    "boss": "raphael_theme",
+    "bpm": 72,
+    "ambience": "hall_bells",
+    "footsteps": "marble",
+    "reverb": "cathedral"
+  }
+}

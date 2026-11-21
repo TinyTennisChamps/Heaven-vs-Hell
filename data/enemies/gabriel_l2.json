@@ -1,0 +1,706 @@
+{
+  "boss": true,
+  "title": "GABRIEL, THE HERALD RETURNS",
+  "segments": 1,
+  "rallyFrames": 100,
+  "health": 560,
+  "radius": 11,
+  "speed": 58,
+  "turnRateDeg": 9,
+  "attackRange": 46,
+  "cooldownMin": 20,
+  "cooldownMax": 44,
+  "respawnFrames": 99999,
+  "brokenFrames": 140,
+  "shieldArcDeg": 0,
+  "shieldPostureMul": 0,
+  "posture": {
+    "max": 440,
+    "regenDelay": 55,
+    "regenPerSec": 24,
+    "lowHealthMul": 0.5
+  },
+  "hornEveryFrames": [
+    1200,
+    720
+  ],
+  "attacks": {
+    "thrust1": {
+      "range": 46,
+      "windup": 22,
+      "trackUntil": 14,
+      "active": 3,
+      "recovery": 18,
+      "healthDamage": 18,
+      "postureDamage": 26,
+      "knockback": 180,
+      "hitstop": 4,
+      "shake": 2,
+      "hitbox": {
+        "radius": 46,
+        "angleDeg": 30,
+        "offset": 4
+      },
+      "chain": {
+        "next": "thrust2",
+        "chance": 1
+      }
+    },
+    "thrust2": {
+      "range": 46,
+      "windup": 16,
+      "trackUntil": 10,
+      "active": 3,
+      "recovery": 18,
+      "healthDamage": 18,
+      "postureDamage": 26,
+      "knockback": 180,
+      "hitstop": 4,
+      "shake": 2,
+      "hitbox": {
+        "radius": 46,
+        "angleDeg": 30,
+        "offset": 4
+      },
+      "chain": {
+        "next": "thrust3",
+        "chance": 1
+      }
+    },
+    "thrust3": {
+      "range": 46,
+      "windup": 14,
+      "trackUntil": 8,
+      "active": 3,
+      "recovery": 30,
+      "healthDamage": 23,
+      "postureDamage": 36,
+      "knockback": 240,
+      "hitstop": 5,
+      "shake": 2.6,
+      "hitbox": {
+        "radius": 48,
+        "angleDeg": 30,
+        "offset": 4
+      },
+      "windupJitter": 22
+    },
+    "trumpet": {
+      "range": 62,
+      "windup": 34,
+      "trackUntil": 22,
+      "active": 4,
+      "recovery": 34,
+      "healthDamage": 16,
+      "postureDamage": 55,
+      "knockback": 320,
+      "hitstop": 5,
+      "shake": 3,
+      "hitbox": {
+        "radius": 64,
+        "angleDeg": 70,
+        "offset": 0
+      }
+    },
+    "horn": {
+      "range": 999,
+      "windup": 70,
+      "trackUntil": 0,
+      "active": 1,
+      "recovery": 40,
+      "healthDamage": 0,
+      "postureDamage": 0,
+      "knockback": 0,
+      "hitstop": 0,
+      "shake": 0,
+      "hitbox": {
+        "radius": 1,
+        "angleDeg": 1,
+        "offset": 0
+      },
+      "interruptible": true,
+      "summon": {
+        "type": "cherub",
+        "count": 4,
+        "spread": 34,
+        "maxAlive": 6
+      }
+    },
+    "charge": {
+      "range": 130,
+      "windup": 36,
+      "trackUntil": 28,
+      "active": 10,
+      "recovery": 44,
+      "healthDamage": 34,
+      "postureDamage": 36,
+      "knockback": 340,
+      "hitstop": 6,
+      "shake": 4,
+      "hitbox": {
+        "radius": 24,
+        "angleDeg": 80,
+        "offset": 6
+      },
+      "judgement": true,
+      "deflectable": true,
+      "lunge": {
+        "px": 110,
+        "overFrames": 10
+      }
+    },
+    "p2thrust1": {
+      "range": 46,
+      "windup": 18,
+      "trackUntil": 12,
+      "active": 3,
+      "recovery": 15,
+      "healthDamage": 20,
+      "postureDamage": 26,
+      "knockback": 180,
+      "hitstop": 4,
+      "shake": 2,
+      "hitbox": {
+        "radius": 46,
+        "angleDeg": 30,
+        "offset": 4
+      },
+      "chain": {
+        "next": "p2thrust2",
+        "chance": 1
+      }
+    },
+    "p2thrust2": {
+      "range": 46,
+      "windup": 14,
+      "trackUntil": 9,
+      "active": 3,
+      "recovery": 15,
+      "healthDamage": 20,
+      "postureDamage": 26,
+      "knockback": 180,
+      "hitstop": 4,
+      "shake": 2,
+      "hitbox": {
+        "radius": 46,
+        "angleDeg": 30,
+        "offset": 4
+      },
+      "chain": {
+        "next": "p2thrust3",
+        "chance": 1
+      }
+    },
+    "p2thrust3": {
+      "range": 46,
+      "windup": 12,
+      "trackUntil": 8,
+      "active": 3,
+      "recovery": 15,
+      "healthDamage": 20,
+      "postureDamage": 26,
+      "knockback": 180,
+      "hitstop": 4,
+      "shake": 2,
+      "hitbox": {
+        "radius": 46,
+        "angleDeg": 30,
+        "offset": 4
+      },
+      "chain": {
+        "next": "p2thrust4",
+        "chance": 1
+      }
+    },
+    "p2thrust4": {
+      "range": 46,
+      "windup": 12,
+      "trackUntil": 6,
+      "active": 3,
+      "recovery": 15,
+      "healthDamage": 21,
+      "postureDamage": 29,
+      "knockback": 180,
+      "hitstop": 4,
+      "shake": 2,
+      "hitbox": {
+        "radius": 46,
+        "angleDeg": 30,
+        "offset": 4
+      },
+      "windupJitter": 20,
+      "chain": {
+        "next": "p2thrust5",
+        "chance": 1
+      }
+    },
+    "p2thrust5": {
+      "range": 48,
+      "windup": 16,
+      "trackUntil": 10,
+      "active": 4,
+      "recovery": 34,
+      "healthDamage": 26,
+      "postureDamage": 41,
+      "knockback": 260,
+      "hitstop": 6,
+      "shake": 3,
+      "hitbox": {
+        "radius": 50,
+        "angleDeg": 34,
+        "offset": 4
+      }
+    },
+    "p2horn": {
+      "range": 999,
+      "windup": 62,
+      "trackUntil": 0,
+      "active": 1,
+      "recovery": 36,
+      "healthDamage": 0,
+      "postureDamage": 0,
+      "knockback": 0,
+      "hitstop": 0,
+      "shake": 0,
+      "hitbox": {
+        "radius": 1,
+        "angleDeg": 1,
+        "offset": 0
+      },
+      "interruptible": true,
+      "summon": {
+        "type": "cherub",
+        "count": 5,
+        "spread": 36,
+        "maxAlive": 7
+      }
+    },
+    "annunciation": {
+      "range": 70,
+      "windup": 46,
+      "trackUntil": 0,
+      "active": 6,
+      "recovery": 40,
+      "healthDamage": 36,
+      "postureDamage": 0,
+      "knockback": 300,
+      "hitstop": 6,
+      "shake": 4,
+      "hitbox": {
+        "radius": 62,
+        "angleDeg": 360,
+        "offset": 0
+      },
+      "judgement": true
+    },
+    "leap": {
+      "range": 150,
+      "windup": 24,
+      "trackUntil": 20,
+      "active": 34,
+      "recovery": 32,
+      "healthDamage": 22,
+      "postureDamage": 40,
+      "knockback": 300,
+      "hitstop": 6,
+      "shake": 4,
+      "hitbox": {
+        "radius": 22,
+        "angleDeg": 360,
+        "offset": 0
+      },
+      "leap": {
+        "frames": 30,
+        "maxDist": 150,
+        "homeFrac": 0.33,
+        "height": 46
+      }
+    },
+    "beam1": {
+      "range": 170,
+      "windup": 28,
+      "trackUntil": 24,
+      "active": 1,
+      "recovery": 10,
+      "healthDamage": 12,
+      "postureDamage": 16,
+      "knockback": 150,
+      "hitstop": 3,
+      "shake": 1.5,
+      "hitbox": {
+        "radius": 1,
+        "angleDeg": 1,
+        "offset": 0
+      },
+      "projectile": {
+        "speed": 330,
+        "radius": 3,
+        "lifeFrames": 70
+      },
+      "projectileKind": "laser",
+      "chain": {
+        "next": "beam2",
+        "chance": 1
+      }
+    },
+    "beam2": {
+      "range": 170,
+      "windup": 14,
+      "trackUntil": 10,
+      "active": 1,
+      "recovery": 10,
+      "healthDamage": 12,
+      "postureDamage": 16,
+      "knockback": 150,
+      "hitstop": 3,
+      "shake": 1.5,
+      "hitbox": {
+        "radius": 1,
+        "angleDeg": 1,
+        "offset": 0
+      },
+      "projectile": {
+        "speed": 330,
+        "radius": 3,
+        "lifeFrames": 70
+      },
+      "projectileKind": "laser",
+      "chain": {
+        "next": "beam3",
+        "chance": 1
+      }
+    },
+    "beam3": {
+      "range": 170,
+      "windup": 14,
+      "trackUntil": 10,
+      "active": 1,
+      "recovery": 26,
+      "healthDamage": 14,
+      "postureDamage": 18,
+      "knockback": 180,
+      "hitstop": 4,
+      "shake": 2,
+      "hitbox": {
+        "radius": 1,
+        "angleDeg": 1,
+        "offset": 0
+      },
+      "projectile": {
+        "speed": 330,
+        "radius": 3,
+        "lifeFrames": 70
+      },
+      "projectileKind": "laser"
+    },
+    "blade1": {
+      "range": 46,
+      "windup": 20,
+      "trackUntil": 8,
+      "active": 3,
+      "recovery": 9,
+      "healthDamage": 10,
+      "postureDamage": 16,
+      "knockback": 120,
+      "hitstop": 3,
+      "shake": 1.4,
+      "hitbox": {
+        "radius": 42,
+        "angleDeg": 140,
+        "offset": 4
+      },
+      "relentless": true,
+      "lunge": {
+        "px": 12,
+        "overFrames": 3
+      },
+      "chain": {
+        "next": "blade2",
+        "chance": 1
+      }
+    },
+    "blade2": {
+      "range": 46,
+      "windup": 14,
+      "trackUntil": 8,
+      "active": 3,
+      "recovery": 9,
+      "healthDamage": 10,
+      "postureDamage": 16,
+      "knockback": 120,
+      "hitstop": 3,
+      "shake": 1.4,
+      "hitbox": {
+        "radius": 42,
+        "angleDeg": 140,
+        "offset": 4
+      },
+      "relentless": true,
+      "lunge": {
+        "px": 12,
+        "overFrames": 3
+      },
+      "chain": {
+        "next": "blade3",
+        "chance": 1
+      }
+    },
+    "blade3": {
+      "range": 46,
+      "windup": 12,
+      "trackUntil": 8,
+      "active": 3,
+      "recovery": 9,
+      "healthDamage": 10,
+      "postureDamage": 16,
+      "knockback": 120,
+      "hitstop": 3,
+      "shake": 1.4,
+      "hitbox": {
+        "radius": 42,
+        "angleDeg": 140,
+        "offset": 4
+      },
+      "relentless": true,
+      "lunge": {
+        "px": 12,
+        "overFrames": 3
+      },
+      "chain": {
+        "next": "blade4",
+        "chance": 1
+      }
+    },
+    "blade4": {
+      "range": 46,
+      "windup": 14,
+      "trackUntil": 8,
+      "active": 3,
+      "recovery": 9,
+      "healthDamage": 10,
+      "postureDamage": 16,
+      "knockback": 120,
+      "hitstop": 3,
+      "shake": 1.4,
+      "hitbox": {
+        "radius": 42,
+        "angleDeg": 140,
+        "offset": 4
+      },
+      "relentless": true,
+      "lunge": {
+        "px": 12,
+        "overFrames": 3
+      },
+      "chain": {
+        "next": "blade5",
+        "chance": 1
+      }
+    },
+    "blade5": {
+      "range": 46,
+      "windup": 12,
+      "trackUntil": 8,
+      "active": 3,
+      "recovery": 26,
+      "healthDamage": 14,
+      "postureDamage": 24,
+      "knockback": 200,
+      "hitstop": 5,
+      "shake": 2.4,
+      "hitbox": {
+        "radius": 42,
+        "angleDeg": 140,
+        "offset": 4
+      },
+      "relentless": true,
+      "lunge": {
+        "px": 12,
+        "overFrames": 3
+      }
+    },
+    "p2blade1": {
+      "range": 46,
+      "windup": 20,
+      "trackUntil": 8,
+      "active": 3,
+      "recovery": 9,
+      "healthDamage": 10,
+      "postureDamage": 16,
+      "knockback": 120,
+      "hitstop": 3,
+      "shake": 1.4,
+      "hitbox": {
+        "radius": 42,
+        "angleDeg": 140,
+        "offset": 4
+      },
+      "relentless": true,
+      "lunge": {
+        "px": 12,
+        "overFrames": 3
+      },
+      "chain": {
+        "next": "p2blade2",
+        "chance": 1
+      }
+    },
+    "p2blade2": {
+      "range": 46,
+      "windup": 14,
+      "trackUntil": 8,
+      "active": 3,
+      "recovery": 9,
+      "healthDamage": 10,
+      "postureDamage": 16,
+      "knockback": 120,
+      "hitstop": 3,
+      "shake": 1.4,
+      "hitbox": {
+        "radius": 42,
+        "angleDeg": 140,
+        "offset": 4
+      },
+      "relentless": true,
+      "lunge": {
+        "px": 12,
+        "overFrames": 3
+      },
+      "chain": {
+        "next": "p2blade3",
+        "chance": 1
+      }
+    },
+    "p2blade3": {
+      "range": 46,
+      "windup": 12,
+      "trackUntil": 8,
+      "active": 3,
+      "recovery": 9,
+      "healthDamage": 10,
+      "postureDamage": 16,
+      "knockback": 120,
+      "hitstop": 3,
+      "shake": 1.4,
+      "hitbox": {
+        "radius": 42,
+        "angleDeg": 140,
+        "offset": 4
+      },
+      "relentless": true,
+      "lunge": {
+        "px": 12,
+        "overFrames": 3
+      },
+      "chain": {
+        "next": "p2blade4",
+        "chance": 1
+      }
+    },
+    "p2blade4": {
+      "range": 46,
+      "windup": 14,
+      "trackUntil": 8,
+      "active": 3,
+      "recovery": 9,
+      "healthDamage": 10,
+      "postureDamage": 16,
+      "knockback": 120,
+      "hitstop": 3,
+      "shake": 1.4,
+      "hitbox": {
+        "radius": 42,
+        "angleDeg": 140,
+        "offset": 4
+      },
+      "relentless": true,
+      "lunge": {
+        "px": 12,
+        "overFrames": 3
+      },
+      "chain": {
+        "next": "p2blade5",
+        "chance": 1
+      }
+    },
+    "p2blade5": {
+      "range": 46,
+      "windup": 12,
+      "trackUntil": 8,
+      "active": 3,
+      "recovery": 9,
+      "healthDamage": 10,
+      "postureDamage": 16,
+      "knockback": 120,
+      "hitstop": 3,
+      "shake": 1.4,
+      "hitbox": {
+        "radius": 42,
+        "angleDeg": 140,
+        "offset": 4
+      },
+      "relentless": true,
+      "lunge": {
+        "px": 12,
+        "overFrames": 3
+      },
+      "chain": {
+        "next": "p2blade6",
+        "chance": 1
+      }
+    },
+    "p2blade6": {
+      "range": 46,
+      "windup": 14,
+      "trackUntil": 8,
+      "active": 3,
+      "recovery": 9,
+      "healthDamage": 10,
+      "postureDamage": 16,
+      "knockback": 120,
+      "hitstop": 3,
+      "shake": 1.4,
+      "hitbox": {
+        "radius": 42,
+        "angleDeg": 140,
+        "offset": 4
+      },
+      "relentless": true,
+      "lunge": {
+        "px": 12,
+        "overFrames": 3
+      },
+      "chain": {
+        "next": "p2blade7",
+        "chance": 1
+      }
+    },
+    "p2blade7": {
+      "range": 46,
+      "windup": 12,
+      "trackUntil": 8,
+      "active": 3,
+      "recovery": 26,
+      "healthDamage": 14,
+      "postureDamage": 24,
+      "knockback": 200,
+      "hitstop": 5,
+      "shake": 2.4,
+      "hitbox": {
+        "radius": 42,
+        "angleDeg": 140,
+        "offset": 4
+      },
+      "relentless": true,
+      "lunge": {
+        "px": 12,
+        "overFrames": 3
+      }
+    }
+  },
+  "specialDelay": 180,
+  "subtitle": "He has not forgiven the fall",
+  "ai": {
+    "forcePhase2": 1
+  }
+}

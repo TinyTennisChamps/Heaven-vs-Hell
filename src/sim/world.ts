@@ -2,9 +2,11 @@ import { createRng, nextRange, type RngState } from '../core/rng';
 import { groundToScreen } from '../core/iso';
 import { v2, type Vec2 } from '../core/math';
 import { InputBuffer } from '../input/buffer';
-import type { RoomDef, SimConfig } from './config';
+import { TALL_WALLS, type RoomDef, type SimConfig } from './config';
 import { depenetrate, pointInPolygon, segmentsFromPolygon, type Seg } from './physics/collide';
 import { modsFromVials, type Mods } from './stats';
+import { makeZones, type Zones } from './rooms/zones';
+import { makeNav, type Nav } from './nav';
 
 export interface AttackState {
   /** Key into the attack data ("slash1".."slash3", "deathblow"). */
@@ -110,7 +112,7 @@ export interface PlayerState {
 /** A vial in the room: behind a cracked rim spot, or in a cage that opens on clear. */
 export interface Pickup {
   vialId: string;
-  kind: 'crack' | 'cage' | 'drop';
+  kind: 'crack' | 'cage' | 'drop' | 'secret';
   /** The crack / cage position. */
   at: Vec2;
   /** Where the vial sits once revealed (a crack's vial rolls inward). */
@@ -226,7 +228,13 @@ export type SimEvent =
   | { type: 'leapLand'; pos: Vec2 }
   | { type: 'blockFail'; pos: Vec2 }
   | { type: 'flinch'; pos: Vec2 }
-  | { type: 'stagger'; pos: Vec2 };
+  | { type: 'stagger'; pos: Vec2 }
+  | { type: 'bellWarn'; pos: Vec2 }
+  | { type: 'bellToll'; pos: Vec2 }
+  | { type: 'script'; pos: Vec2; name: string }
+  | { type: 'secretOpen'; pos: Vec2 }
+  | { type: 'edgeFall'; pos: Vec2 }
+  | { type: 'mend'; pos: Vec2 };
 
 /** Level/room difficulty applied to enemies as they spawn (bosses use their own data). */
 export interface EnemyScale {
@@ -247,6 +255,8 @@ export interface RoomRun {
   /** Exit door Satan walked into, or null. */
   exit: number | null;
   fontUsed: boolean;
+  /** The hidden door to the secret room has been broken open. */
+  secretOpen: boolean;
   /** Ticks since Satan fell. */
   deadTicks: number;
 }
@@ -300,12 +310,19 @@ export interface World {
   vials: string[];
   pickups: Pickup[];
   enemyScale: EnemyScale;
+  /** Biome id (decides hazards like sanctified light). */
+  biomeId: string;
+  zones: Zones;
+  /** Walkers' flow field toward Satan (built lazily for rooms with interior walls). */
+  nav: Nav | null;
+  /** Set-piece script progress and the lighting preset it has switched to. */
+  script: { t: number; fired: boolean[]; lighting: string | null; silenced: boolean };
   stats: { hitsLanded: number; hitsTaken: number; kills: number; deflects: number; perfects: number; deathblows: number };
 }
 
-export function createWorld(room: RoomDef, cfg: SimConfig, seed = 1, carry?: Carry, pickups: Pickup[] = [], scale: EnemyScale = { health: 1, posture: 1, damage: 1 }): World {
+export function createWorld(room: RoomDef, cfg: SimConfig, seed = 1, carry?: Carry, pickups: Pickup[] = [], scale: EnemyScale = { health: 1, posture: 1, damage: 1 }, biomeId = 'gardens'): World {
   const segs = [...segmentsFromPolygon(room.bounds), ...room.walls.flatMap((w) => segmentsFromPolygon(w))];
-  const tallSegs = [...segmentsFromPolygon(room.bounds), ...room.walls.filter((_, i) => (room.wallKinds?.[i] ?? 'pillar') === 'pillar').flatMap((w) => segmentsFromPolygon(w))];
+  const tallSegs = [...segmentsFromPolygon(room.bounds), ...room.walls.filter((_, i) => TALL_WALLS.includes(room.wallKinds?.[i] ?? 'pillar')).flatMap((w) => segmentsFromPolygon(w))];
   const pts = room.bounds.map(([x, y]) => groundToScreen(x, y));
   const screenBox = {
     minX: Math.min(...pts.map((p) => p.x)),
@@ -372,9 +389,14 @@ export function createWorld(room: RoomDef, cfg: SimConfig, seed = 1, carry?: Car
     vials: [...(carry?.vials ?? [])],
     pickups: pickups.map((q) => ({ ...q, at: { ...q.at }, vialAt: { ...q.vialAt } })),
     enemyScale: { ...scale },
-    roomRun: { wave: 0, timer: cfg.rooms.firstWaveDelayFrames, cleared: false, exitCount: room.exits?.length ?? 0, exit: null, fontUsed: false, deadTicks: 0 },
+    biomeId,
+    zones: makeZones(room.zones, cfg.biomes?.[biomeId]),
+    nav: null,
+    script: { t: 0, fired: [], lighting: room.lighting ?? null, silenced: false },
+    roomRun: { wave: 0, timer: cfg.rooms.firstWaveDelayFrames, cleared: false, exitCount: room.exits?.length ?? 0, exit: null, fontUsed: false, secretOpen: false, deadTicks: 0 },
     stats: { hitsLanded: 0, hitsTaken: 0, kills: 0, deflects: 0, perfects: 0, deathblows: 0 },
   };
+  if (room.walls.length) world.nav = makeNav(world);
   for (const s of room.spawns) spawnEnemy(world, cfg, s.type, v2(s.at[0], s.at[1]));
   return world;
 }

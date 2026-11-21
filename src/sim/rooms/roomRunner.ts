@@ -3,6 +3,11 @@ import type { SimConfig, WaveSpawn } from '../config';
 import { killEnemy } from '../combat/damage';
 import { maxHp, maxPips, modsFromVials } from '../stats';
 import { emit, isValidSpot, spawnEnemy, type World } from '../world';
+import { runScript } from './script';
+import { updateZones } from './zones';
+
+/** roomRun.exit value for the hidden door to a secret room. */
+export const SECRET_EXIT = 99;
 
 /**
  * Per-room flow, run inside step():
@@ -17,12 +22,14 @@ export function updateRoom(world: World, cfg: SimConfig): void {
   const rr = world.roomRun;
   const p = world.player;
   const T = cfg.rooms;
+  updateZones(world, cfg);
   if (p.dead) {
     rr.deadTicks++;
     return;
   }
-  // A fallen boss takes its summoned choir with it.
-  if (world.room.tier === 'boss' && world.enemies.some((e) => cfg.enemies[e.type]?.boss && e.phase === 'down')) {
+  runScript(world, cfg);
+  // A fallen boss takes its summoned choir with it (boss arenas and set-pieces).
+  if ((world.room.tier === 'boss' || world.room.tier === 'setpiece') && world.enemies.some((e) => cfg.enemies[e.type]?.boss && e.phase === 'down')) {
     for (const e of world.enemies) if (e.phase !== 'down' && !cfg.enemies[e.type]?.boss) killEnemy(world, e, cfg);
   }
   const waves = world.room.waves ?? [];
@@ -38,10 +45,16 @@ export function updateRoom(world: World, cfg: SimConfig): void {
       }
     } else if (world.room.exits?.length || world.room.font) {
       rr.cleared = true;
+      // The room-clear moment: a beat of half-speed.
+      world.slowmo = Math.max(world.slowmo, T.clearSlowmoFrames ?? 0);
+      world.slowScale = 0.5;
       emit(world, { type: 'roomCleared', pos: { ...p.pos } });
     }
   }
 
+  // The hidden door, once its cracked wall is broken (usable after the room is clear).
+  const sec = world.room.secret;
+  if (sec && rr.secretOpen && rr.cleared && rr.exit === null && Math.hypot(p.pos.x - sec.door[0], p.pos.y - sec.door[1]) <= T.doorRadius) rr.exit = SECRET_EXIT;
   if (rr.cleared && rr.exit === null) {
     const exits = world.room.exits ?? [];
     for (let i = 0; i < Math.min(rr.exitCount, exits.length); i++) {
@@ -84,7 +97,7 @@ export function updateRoom(world: World, cfg: SimConfig): void {
   }
 }
 
-function spawnGroup(world: World, cfg: SimConfig, s: WaveSpawn): void {
+export function spawnGroup(world: World, cfg: SimConfig, s: WaveSpawn): void {
   const def = cfg.enemies[s.type];
   if (!def) throw new Error(`room ${world.room.id}: unknown enemy ${s.type}`);
   const n = s.count ?? 1;

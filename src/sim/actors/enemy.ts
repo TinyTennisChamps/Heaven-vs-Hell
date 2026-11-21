@@ -5,6 +5,8 @@ import type { EnemyAttackDef, EnemyDef, SimConfig } from '../config';
 import { arcHitsCircle } from '../combat/hitbox';
 import { inFrontCone, resolveOnPlayer, scaledAttack } from '../combat/damage';
 import { findSpot } from '../rooms/roomRunner';
+import { zoneRegenMul } from '../rooms/zones';
+import { flowDir, lineClear } from '../nav';
 import { regenPosture } from '../combat/posture';
 import { moveAndSlide } from '../physics/collide';
 import { enemyArrowInFlight, spawnProjectile } from '../projectiles';
@@ -86,7 +88,9 @@ export function updateEnemy(world: World, e: Enemy, cfg: SimConfig, think: Think
 
   if (e.phase !== 'broken') {
     e.sinceHit++;
-    e.posture = regenPosture(e.posture, e.sinceHit, e.hp, e.maxHp, def.posture);
+    // Sanctified light: standing in a pool speeds posture recovery.
+    const zm = zoneRegenMul(world, cfg, e.pos);
+    e.posture = regenPosture(e.posture, e.sinceHit, e.hp, e.maxHp, zm === 1 ? def.posture : { ...def.posture, regenPerSec: def.posture.regenPerSec * zm });
   }
 
   const toP = normalize({ x: p.pos.x - e.pos.x, y: p.pos.y - e.pos.y });
@@ -209,7 +213,16 @@ export function updateEnemy(world: World, e: Enemy, cfg: SimConfig, think: Think
         if (e.phaseFrame >= atk.active) setPhase(e, 'recover');
         return; // flight is scripted; no normal movement this tick
       }
-      if (atk.summon) {
+      if (atk.selfHeal) {
+        if (!e.swingHit) {
+          // The rite completes: posture mends, and in later phases health too.
+          e.swingHit = true;
+          const late = e.segments < (def.segments ?? 1);
+          e.posture = Math.max(0, e.posture - e.postureMax * atk.selfHeal.posture);
+          e.hp = Math.min(e.maxHp, e.hp + Math.round(e.maxHp * (late ? atk.selfHeal.hpPhase2 ?? atk.selfHeal.hp : atk.selfHeal.hp)));
+          emit(world, { type: 'mend', pos: { ...e.pos } });
+        }
+      } else if (atk.summon) {
         if (!e.swingHit) {
           e.swingHit = true;
           summon(world, e, atk.summon, cfg);
@@ -324,7 +337,22 @@ function noAttackInFlight(world: World, e: Enemy, key: string, cfg: SimConfig): 
   return true;
 }
 
+/** Walkers heading for Satan with a wall in the way follow the flow field around it. */
+function routeAround(world: World, e: Enemy, vel: Vec2, cfg: SimConfig): Vec2 {
+  const sp = Math.hypot(vel.x, vel.y);
+  if (sp < 1 || cfg.enemies[e.type]!.flying || !world.nav) return vel;
+  const p = world.player.pos;
+  const to = { x: p.x - e.pos.x, y: p.y - e.pos.y };
+  const d = Math.hypot(to.x, to.y) || 1;
+  // Only when moving toward Satan (not kiting away or circling).
+  if ((vel.x * to.x + vel.y * to.y) / (sp * d) < 0.3) return vel;
+  if (lineClear(world.segs, e.pos, p)) return vel;
+  const f = flowDir(world, e.pos);
+  return f ? { x: f.x * sp, y: f.y * sp } : vel;
+}
+
 function moveBody(world: World, e: Enemy, vel: Vec2, cfg: SimConfig, extra: Vec2 = { x: 0, y: 0 }): void {
+  if (e.phase === 'idle') vel = routeAround(world, e, vel, cfg);
   // Unstick: walking into a wall head-on gets nowhere (no slide), so after a
   // few blocked ticks steer sideways around it — one way, then the other.
   if (e.stuck > 6 && (vel.x !== 0 || vel.y !== 0)) {

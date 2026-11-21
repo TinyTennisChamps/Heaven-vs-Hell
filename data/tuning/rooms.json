@@ -8,5 +8,6 @@
   "deathFrames": 90,
   "roomHealFrac": 0.15,
   "crackHits": 3,
-  "pickupRadius": 12
+  "pickupRadius": 12,
+  "clearSlowmoFrames": 24
 }

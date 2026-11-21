@@ -360,7 +360,7 @@ export function updatePlayer(world: World, inp: PlayerInput, aim: Vec2 | null, c
           // Cracked rim spots hiding a vial: each swing that reaches one counts once.
           world.pickups.forEach((q, i) => {
             const tag = -10 - i;
-            if (q.kind !== 'crack' || q.open || a.hitIds.includes(tag)) return;
+            if ((q.kind !== 'crack' && q.kind !== 'secret') || q.open || a.hitIds.includes(tag)) return;
             if (!arcHitsCircle(p.pos, a.dir, def.hitbox, q.at, 6)) return;
             a.hitIds.push(tag);
             q.hits++;
@@ -369,6 +369,12 @@ export function updatePlayer(world: World, inp: PlayerInput, aim: Vec2 | null, c
             if (q.hits >= cfg.rooms.crackHits) {
               q.open = true;
               emit(world, { type: 'crackBroken', pos: { ...q.at } });
+              if (q.kind === 'secret') {
+                // A draught of cold air: the hidden door is open.
+                world.roomRun.secretOpen = true;
+                q.taken = true;
+                emit(world, { type: 'secretOpen', pos: { ...q.at } });
+              }
             }
           });
         }

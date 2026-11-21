@@ -409,3 +409,86 @@ export function drawZealot(g: Graphics, pose: ZealotPose, flash: boolean, t: num
     g.rect(gx - 3, gy, 7, 1).rect(gx, gy - 3, 1, 7).fill(0xffffff);
   }
 }
+
+export type RaphaelPose = 'idle' | 'sweepWind' | 'sweep' | 'cleaveWind' | 'cleave' | 'rite' | 'serpent' | 'call' | 'recoil' | 'broken' | 'rally';
+
+/**
+ * Raphael, the Healer-Knight: a tall armoured healer in pale teal and silver
+ * with gold trim, broad wings and a halo, carrying a long staff with a coiled
+ * serpent (pale teal — never red). Kneels to channel the Mending Rite.
+ * Asset slots: idle, sweep_windup, sweep, cleave_windup, cleave, rite, serpent,
+ * call, stagger, broken, rally, death.
+ */
+export function drawRaphael(g: Graphics, pose: RaphaelPose, flash: boolean, t: number): void {
+  const c = (col: number) => (flash ? 0xffffff : col);
+  const line = flash ? 0xffffff : ANGEL.angelLine;
+  const st = { width: 1, color: line, alignment: 1 } as const;
+  g.clear();
+  const kneel = pose === 'rite' ? 10 : pose === 'broken' ? 8 : 0;
+  const lean = pose === 'sweep' || pose === 'serpent' ? 4 : pose === 'cleave' ? 3 : pose === 'recoil' ? -4 : pose === 'sweepWind' ? -2 : 0;
+  const y = (v: number) => v + kneel;
+  const wingUp = pose === 'rally' || pose === 'call' ? -10 : pose === 'rite' ? -4 : 0;
+  // Wings.
+  g.poly([-3 + lean, y(-38), -24 + lean, y(-54) + wingUp, -28 + lean, y(-30) + wingUp, -16 + lean, y(-16), -6 + lean, y(-22)]).fill(c(ANGEL.white)).stroke(st);
+  g.poly([3 + lean, y(-38), 22 + lean, y(-56) + wingUp, 26 + lean, y(-32) + wingUp, 14 + lean, y(-18), 6 + lean, y(-24)]).fill(c(ANGEL.pearl)).stroke(st);
+  // Armoured robe in pale teal and silver.
+  g.poly([-10, 0, 10, 0, 6 + lean, y(-32), -6 + lean, y(-32)]).fill(c(ANGEL.glassTeal)).stroke(st);
+  g.poly([-6 + lean, y(-14), 6 + lean, y(-14), 5 + lean, y(-32), -5 + lean, y(-32)]).fill(c(ANGEL.silver));
+  g.rect(-10, -2, 20, 2).fill(c(HEAVEN.gold2));
+  g.rect(-6 + lean, y(-20), 12, 2).fill(c(HEAVEN.gold2));
+  // Helm with a gold circlet; halo.
+  const hx = lean;
+  const hy = y(-42);
+  g.circle(hx, hy - 3, pose === 'rally' || pose === 'rite' ? 10 : 8).stroke({ width: 2, color: flash ? 0xffffff : HEAVEN.gold1 });
+  g.rect(hx - 4, hy - 3, 8, 9).fill(c(ANGEL.silver)).stroke(st);
+  g.rect(hx - 4, hy - 1, 8, 1).fill(c(HEAVEN.gold2));
+  if (!flash) g.rect(hx - 2, hy + 2, 4, 1).fill(ANGEL.void);
+  if (pose === 'broken') {
+    g.moveTo(-16, -2).lineTo(18, -6).stroke({ width: 2, color: c(HEAVEN.gold3) });
+    return;
+  }
+  // The serpent staff.
+  let sx0 = hx + 8;
+  let sy0 = y(-8);
+  let sx1 = hx + 8;
+  let sy1 = y(-58);
+  switch (pose) {
+    case 'sweepWind':
+      [sx0, sy0, sx1, sy1] = [hx - 4, y(-30), hx - 26, y(-18)];
+      break;
+    case 'sweep':
+      [sx0, sy0, sx1, sy1] = [hx + 4, y(-24), hx + 32, y(-14)];
+      break;
+    case 'cleaveWind':
+      [sx0, sy0, sx1, sy1] = [hx + 2, y(-40), hx - 10, y(-70)];
+      break;
+    case 'cleave':
+      [sx0, sy0, sx1, sy1] = [hx + 4, y(-30), hx + 28, y(-2)];
+      break;
+    case 'serpent':
+      [sx0, sy0, sx1, sy1] = [hx - 6, y(-22), hx + 34, y(-24)];
+      break;
+    case 'rite':
+      [sx0, sy0, sx1, sy1] = [hx + 10, 0, hx + 10, y(-62)];
+      break;
+  }
+  g.moveTo(sx0, sy0).lineTo(sx1, sy1).stroke({ width: 2, color: c(HEAVEN.gold3) });
+  // The coiled serpent: a teal zigzag along the top of the staff.
+  const n = 5;
+  for (let i = 0; i < n; i++) {
+    const a = i / n;
+    const b = (i + 1) / n;
+    const w = i % 2 === 0 ? 2 : -2;
+    const px0 = sx1 + (sx0 - sx1) * a * 0.5;
+    const py0 = sy1 + (sy0 - sy1) * a * 0.5;
+    const px1 = sx1 + (sx0 - sx1) * b * 0.5;
+    const py1 = sy1 + (sy0 - sy1) * b * 0.5;
+    g.moveTo(px0 + w, py0).lineTo(px1 - w, py1).stroke({ width: 1, color: c(ANGEL.glassTeal) });
+  }
+  g.circle(sx1, sy1, 2).fill(c(ANGEL.glassTeal));
+  if (pose === 'rite' && !flash) {
+    // Healing light gathering at the staff's head.
+    const k = (Math.sin(t * 0.3) + 1) / 2;
+    g.circle(sx1, sy1, 3 + k * 2).fill({ color: 0xffffff, alpha: 0.6 });
+  }
+}

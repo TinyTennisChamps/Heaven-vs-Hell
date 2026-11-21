@@ -3,12 +3,13 @@
  * room HUD label, the tutorial prompt line and the room-to-room fade.
  * Plain DOM keeps the text crisp at any scale; the art behind is Pixi.
  */
-export type ScreenAction = 'begin' | 'training' | 'title' | 'tutorial';
+export type ScreenAction = 'begin' | 'training' | 'title' | 'tutorial' | 'gallery';
 
 export class Screens {
   readonly hud: HTMLDivElement;
   readonly prompt: HTMLDivElement;
-  onAction: (a: ScreenAction) => void = () => {};
+  onAction: (a: ScreenAction, arg?: string) => void = () => {};
+  private card: HTMLDivElement;
   private title: HTMLDivElement;
   private fallen: HTMLDivElement;
   private cleared: HTMLDivElement;
@@ -28,6 +29,8 @@ export class Screens {
     this.hud = this.panel(root, 'room-hud');
     this.prompt = this.panel(root, 'tutorial-prompt');
     this.fader = this.panel(root, 'fader');
+    this.card = this.panel(root, 'title-card');
+    this.card.hidden = true;
     this.toastEl = this.panel(root, 'toast');
     this.toastEl.hidden = true;
     // Boss bar: name, health (with segment pips), centre-fill posture.
@@ -98,7 +101,27 @@ export class Screens {
     this.toastTimer = window.setTimeout(() => (this.toastEl.hidden = true), 3200);
   }
 
-  showTitle(info: { runs: number; deaths: number; tutorialDone: boolean; rageCarried: number; rageMax: number }): void {
+  /** Room title card: layer and level name on entering a new level, the room name every time. */
+  titleCard(layer: string, level: string, room: string, newLevel: boolean): void {
+    const c = this.card;
+    c.innerHTML = '';
+    c.className = `title-card${newLevel ? '' : ' small'}`;
+    const a = document.createElement('div');
+    a.className = 'layer';
+    a.textContent = layer.toUpperCase();
+    const b = document.createElement('div');
+    b.className = 'level';
+    b.textContent = level;
+    const r = document.createElement('div');
+    r.className = 'room';
+    r.textContent = room;
+    c.append(a, b, r);
+    c.hidden = false;
+    // Restart the CSS animation.
+    void c.offsetWidth;
+  }
+
+  showTitle(info: { runs: number; deaths: number; tutorialDone: boolean; rageCarried: number; rageMax: number; gallery?: string[] }): void {
     this.hideAll();
     const t = this.title;
     t.innerHTML = '';
@@ -116,6 +139,18 @@ export class Screens {
     stats.className = 'meta';
     stats.textContent = info.runs > 0 ? `Runs ${info.runs} · Falls ${info.deaths}` : 'Enter to begin';
     t.append(h, sub, menu, stats);
+    if (info.gallery?.length) {
+      // Dev: room gallery — jump into any room.
+      const g = document.createElement('div');
+      g.className = 'gallery';
+      for (const id of info.gallery) {
+        const b = document.createElement('button');
+        b.textContent = id;
+        b.addEventListener('click', () => this.onAction('gallery', id));
+        g.appendChild(b);
+      }
+      t.appendChild(g);
+    }
     if (info.rageCarried > 0) {
       // PDF title mock: "Rage carried over" panel.
       const r = document.createElement('div');

@@ -1,0 +1,40 @@
+{
+  "id": "l2",
+  "name": "The Gilded Nave",
+  "layer": "Layer II",
+  "biome": "nave",
+  "pool": [
+    "l2/narthex",
+    "l2/aisle",
+    "l2/transept",
+    "l2/choir",
+    "l2/ambulatory",
+    "l2/clerestory",
+    "l2/rose"
+  ],
+  "openers": [
+    "l2/narthex",
+    "l2/aisle"
+  ],
+  "combatRooms": 4,
+  "restFrom": 2,
+  "rest": "l2/chantry",
+  "boss": "l2/sanctum",
+  "fixed": [
+    {
+      "afterCombat": 4,
+      "room": "l2/herald_return"
+    }
+  ],
+  "secretHosts": [
+    "l2/transept",
+    "l2/clerestory"
+  ],
+  "secret": "l2/ossuary",
+  "scaling": {
+    "health": 1.4,
+    "posture": 1.3,
+    "damage": 1.3
+  },
+  "rampPerRoom": 0.06
+}

@@ -4,7 +4,43 @@ import type { ButtonAction } from '../src/input/actions';
 import type { RoomDef, SimConfig } from '../src/sim/config';
 import { inFrontCone, shieldUp } from '../src/sim/combat/damage';
 import { step } from '../src/sim/step';
-import { createWorld, type EnemyScale, type World } from '../src/sim/world';
+import { createWorld, isValidSpot, type EnemyScale, type World } from '../src/sim/world';
+import { lineClear } from '../src/sim/nav';
+
+/** A tiny BFS route for the bot (8 px grid) from Satan to a target. */
+function routeTo(w: World, target: Vec2): Vec2 | null {
+  const b = w.room.bounds;
+  const x0 = Math.min(...b.map((q) => q[0]));
+  const y0 = Math.min(...b.map((q) => q[1]));
+  const C = 8;
+  const nx = Math.ceil((Math.max(...b.map((q) => q[0])) - x0) / C) + 1;
+  const ny = Math.ceil((Math.max(...b.map((q) => q[1])) - y0) / C) + 1;
+  const idx = (p: Vec2) => Math.max(0, Math.min(ny - 1, Math.round((p.y - y0) / C))) * nx + Math.max(0, Math.min(nx - 1, Math.round((p.x - x0) / C)));
+  const ok = (k: number) => isValidSpot(w, x0 + (k % nx) * C, y0 + Math.floor(k / nx) * C, 7);
+  const goal = idx(target);
+  const start = idx(w.player.pos);
+  const prev = new Int32Array(nx * ny).fill(-2);
+  const q = [goal];
+  prev[goal] = -1;
+  while (q.length) {
+    const c = q.shift()!;
+    if (c === start) break;
+    const i = c % nx;
+    const j = Math.floor(c / nx);
+    for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+      const a = i + di;
+      const bb = j + dj;
+      if (a < 0 || bb < 0 || a >= nx || bb >= ny) continue;
+      const k = bb * nx + a;
+      if (prev[k] !== -2 || !ok(k)) continue;
+      prev[k] = c;
+      q.push(k);
+    }
+  }
+  const nxt = prev[start];
+  if (nxt === undefined || nxt < 0) return null;
+  return normalize({ x: x0 + (nxt % nx) * C - w.player.pos.x, y: y0 + Math.floor(nxt / nx) * C - w.player.pos.y });
+}
 import { input } from './helpers';
 
 /**
@@ -44,7 +80,11 @@ export function decentBot(w: World, cfg: SimConfig, tick: number): { press: Butt
   const to = { x: t.pos.x - p.pos.x, y: t.pos.y - p.pos.y };
   const dist = Math.hypot(to.x, to.y);
   let dirG = normalize(to);
-  // Like a human, walk around cover instead of into it.
+  // Like a human, walk around walls: follow the route toward the target if the line is blocked.
+  if (!lineClear(w.segs, p.pos, t.pos)) {
+    const f = routeTo(w, t.pos);
+    if (f) dirG = f;
+  }
   const st = stuckOf(w);
   if (st.n > 6) dirG = { x: -dirG.y, y: dirG.x };
   const move = dist > 18 ? screenMove(dirG) : { x: 0, y: 0 };
@@ -67,8 +107,8 @@ function stuckOf(w: World) {
   return s;
 }
 
-export function playRoom(room: RoomDef, cfg: SimConfig, seed: number, scale?: EnemyScale) {
-  const w = createWorld(room, cfg, seed, undefined, [], scale);
+export function playRoom(room: RoomDef, cfg: SimConfig, seed: number, scale?: EnemyScale, biome = room.id.startsWith('l2/') ? 'nave' : 'gardens') {
+  const w = createWorld(room, cfg, seed, undefined, [], scale, biome);
   w.flags.respawn = false;
   w.flags.immortal = true; // measure damage, don't stop at death
   let dmg = 0;

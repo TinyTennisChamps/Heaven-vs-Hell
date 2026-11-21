@@ -185,6 +185,8 @@ export interface EnemyAttackDef {
   rangedPool?: boolean;
   /** Visual kind of the projectile (default 'arrow'). */
   projectileKind?: 'arrow' | 'laser';
+  /** On the first active tick, mend the caller: posture down by `posture`×max, health up by `hp` (or `hpPhase2` in a boss's later segments). */
+  selfHeal?: { posture: number; hp: number; hpPhase2?: number };
   /** On the first active tick, call in reinforcements instead of striking. */
   summon?: { type: string; count: number; spread: number; maxAlive: number };
   /** If set, the first active frame fires this projectile instead of a melee arc. */
@@ -238,6 +240,8 @@ export interface EnemyDef {
   boss?: boolean;
   /** Display name for the boss bar. */
   title?: string;
+  /** Line under the boss's name when the fight begins. */
+  subtitle?: string;
   segments?: number;
   /** Bosses: ticks the rally between segments lasts. */
   rallyFrames?: number;
@@ -264,9 +268,73 @@ export interface SimConfig {
   rooms: RoomTuning;
   rage: RageTuning;
   vials: VialsData;
+  /** Biomes by id (lighting/audio are render-side; the sim reads hazards). */
+  biomes?: Record<string, BiomeDef>;
 }
 
-export type WallKind = 'pillar' | 'hedge' | 'fountain';
+export type WallKind = 'pillar' | 'hedge' | 'fountain' | 'column' | 'pew' | 'altar' | 'apse';
+
+/** Tall walls block flyers (and are drawn tall); low ones (hedge, fountain, pew, altar) are flown over. */
+export const TALL_WALLS: readonly WallKind[] = ['pillar', 'column', 'apse'];
+
+/** Decoration and light sources placed in a room (render-only unless noted). */
+export interface PropDef {
+  kind: 'brazier' | 'candelabra' | 'window' | 'statue' | 'urn' | 'eyes' | 'banner';
+  at: [number, number];
+  /** Windows: which back wall ('n' = gy 0 edge, 'w' = gx 0 edge). */
+  wall?: 'n' | 'w';
+  /** Stained-glass colour key from the biome palette (glassBlue, glassTeal, glassLilac, glassGold). */
+  glass?: string;
+}
+
+/**
+ * Sanctified light: a pool of stained-glass light. Enemies inside it recover
+ * posture faster. On each bell toll it slides to its next anchor (cycling).
+ */
+export interface ZoneDef {
+  anchors: [number, number][];
+  radius: number;
+  glass?: string;
+}
+
+export interface BiomeDef {
+  id: string;
+  name: string;
+  /** Indoor biomes have back walls with windows and no clouds below. */
+  indoor: boolean;
+  /** Large-area colours as "#rrggbb": floors, walls, backdrop. Must stay low-saturation (contrast test). */
+  palette: Record<string, string>;
+  /** Thin accents (trim, inlay, glass, flame). May be saturated, but never red. */
+  accents: Record<string, string>;
+  lighting: {
+    darkness: string;
+    darknessAlpha: number;
+    satanLight: { radius: number; alpha: number };
+    flash: { radius: number; alpha: number; frames: number };
+    grade: { color: string; alpha: number };
+    vignette: number;
+    /** Extra darkness per combat room cleared in the level (the descent arc). */
+    descendDarken: number;
+    /** Named lighting presets set-pieces can switch to. */
+    presets?: Record<string, { darknessAlpha?: number; darkness?: string; grade?: { color: string; alpha: number }; shaftsOff?: boolean }>;
+  };
+  parallax: { kind: string; factor: number; alpha: number }[];
+  ambient: { kind: 'petal' | 'feather' | 'mote' | 'smoke' | 'silhouette'; perSec: number; max: number; colors: string[] }[];
+  hazards?: { zones?: { regenMul: number; periodFrames: number; warnFrames: number; shiftFrames: number } };
+  audio: { explore: string; combat: string; boss: string; bpm: number; ambience: string; footsteps: string; reverb: string };
+}
+
+/** A scripted moment in a set-piece room: when the trigger fires (once), run the actions. */
+export interface ScriptStep {
+  on: { enter?: true; wave?: number; timer?: number; bossHpBelow?: number };
+  do: {
+    lighting?: string;
+    reseedZones?: ZoneDef[];
+    spawn?: WaveSpawn[];
+    silence?: boolean;
+    event?: string;
+  }[];
+}
 
 /** A group of enemies in a wave. `count` > 1 scatters them in a ring of `spread` px around `at`. */
 export interface WaveSpawn {
@@ -284,8 +352,8 @@ export interface DoorDef {
 export interface RoomDef {
   id: string;
   name: string;
-  /** 'combat' | 'hard' | 'rest' | 'boss' | 'training' — shown on door icons. */
-  tier?: 'combat' | 'hard' | 'rest' | 'boss' | 'training';
+  /** Shown on door icons; set-pieces are fixed slots, secrets are reached through hidden doors. */
+  tier?: 'combat' | 'hard' | 'rest' | 'boss' | 'training' | 'setpiece' | 'secret';
   bounds: [number, number][];
   walls: [number, number][][];
   /** Visual kind per wall (parallel to `walls`), default 'pillar'. */
@@ -304,6 +372,17 @@ export interface RoomDef {
   crack?: [number, number];
   /** Hard rooms: where the locked vial cage stands (opens on clear). */
   cage?: [number, number];
+  /** Elite rooms show a winged door icon. */
+  elite?: boolean;
+  props?: PropDef[];
+  zones?: ZoneDef[];
+  script?: ScriptStep[];
+  /** A cracked wall that, once broken, opens a hidden door to a secret room. */
+  secret?: { crack: [number, number]; door: [number, number] };
+  /** Secret rooms: the vial waiting inside. */
+  vial?: { id: string; at: [number, number] };
+  /** Lighting preset the room starts in. */
+  lighting?: string;
 }
 
 export type VialStat = 'maxPosture' | 'rageGain' | 'slashPosture' | 'deflectFrames' | 'maxHealth' | 'pips' | 'postureRegen';
@@ -311,7 +390,7 @@ export type VialStat = 'maxPosture' | 'rageGain' | 'slashPosture' | 'deflectFram
 export interface VialDef {
   id: string;
   level: string;
-  source: 'hidden' | 'locked' | 'boss';
+  source: 'hidden' | 'locked' | 'boss' | 'secret';
   name: string;
   stat: VialStat;
   /** Fraction (0.05 = +5%) for multiplier stats; whole units for deflectFrames / pips. */
@@ -363,6 +442,8 @@ export interface RoomTuning {
   crackHits: number;
   /** Distance at which Satan picks up a revealed vial. */
   pickupRadius: number;
+  /** Half-speed ticks when a room is cleared. */
+  clearSlowmoFrames?: number;
 }
 
 /** A level: a pool of combat rooms, how many a run visits, the rest room and the end. */
@@ -382,4 +463,16 @@ export interface LevelDef {
   scaling: { health: number; posture: number; damage: number };
   /** Each combat room already cleared this run makes enemies this much tougher (all three stats). */
   rampPerRoom: number;
+  /** The biome (data/biomes/<id>.json) that dresses and lights every room in the level. */
+  biome: string;
+  /** Fixed rooms: after `afterCombat` combat rooms, the only door leads here. */
+  fixed?: { afterCombat: number; room: string }[];
+  /** Combat rooms that may host the secret-room crack (one is picked per run). */
+  secretHosts?: string[];
+  /** Secret room reached from the host. */
+  secret?: string;
+  /** Level after this one (the run continues), if any. */
+  next?: string;
+  /** Title card subtitle, e.g. "Layer II". */
+  layer?: string;
 }

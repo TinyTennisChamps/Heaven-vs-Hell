@@ -22,7 +22,7 @@
     "rangeMin": 110,
     "rangeMax": 160,
     "retreatRange": 70,
-    "retreatSpeed": 110,
+    "retreatSpeed": 85,
     "laserMinRange": 90,
     "biteRange": 48,
     "biteCloseTicks": 20,

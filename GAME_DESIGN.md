@@ -438,6 +438,113 @@ Decisions:
 - A deflect no longer knocks back a super-armoured attacker, so the next hit stays in reach.
 - Flinch happens only while idle or recovering.
 
+## Level 2 (The Gilded Nave) and the immersion systems: stop 1 of 2 (plan approved 2026-11-21)
+Decisions:
+- Build order: systems, then L2, then the L1 upgrade.
+- **L2 roster:** Grigori, the Principality, the Dominion, the Archer and cherubs, all at L2 scaling (health ×1.4, posture ×1.3, damage ×1.3, plus the 6%-per-room ramp).
+- **Gabriel returns** as a set-piece ambush, and **Raphael** is the boss.
+- Two review stops.
+
+**Identity: what's unique and what's shared**
+
+| | L1 The Outer Gardens | L2 The Gilded Nave |
+|---|---|---|
+| Feel | Open floating platforms over clouds, high-key light | Enclosed cathedral, dim, coloured shafts, watched |
+| Signature | (stop 2) platform edges, wind, turning statues | **Sanctified light** (×1.8 enemy posture regen) that shifts on **bells** |
+| Cover | Hedges, fountains, pillars | **Columns** (tall: block flyers and line of sight; they fade when someone stands behind them), **pews** (low: flyers pass over), altars, the apse |
+| Ambient | Petals, feathers, parallax clouds | Dust motes in the light, brazier smoke, a distant winged silhouette, vault and arch parallax |
+| Edges | A gold lip over the clouds | Back walls with stained glass (blue, teal, lilac, gold; never red), pilasters, frieze eyes that track Satan, banners; front edges get a marble balustrade |
+
+**Shared engine:**
+- Biomes (`data/biomes/*.json`).
+- `RoomArt`: floors, edges, walls by kind, props.
+- `Lighting`: darkness over the floor and walls only, so gameplay is never darkened; stepped light holes; at most 16 lights; flashes on hits, parries, the roar, deathblows and room clears.
+- `Parallax` (at most 4 layers), `Ambient` (at most 120 particles), `Grade` (tint and a stepped vignette, no filters).
+- Title cards, the room-clear moment (24f at half speed, a flare and stings), door icons (combat, hard, **elite**, rest, **set-piece** bell, **secret** eye, boss, end).
+- The music director (explore, combat and boss layers on the beat; ambience, reverb, footsteps, stings; all silent hooks).
+- The descent arc: rooms get darker with each combat room cleared in a level.
+
+**Rooms:**
+
+| Room | Shape | Encounter | Notes |
+|---|---|---|---|
+| The Narthex | Opener | Cherubs → Archer and cherubs | — |
+| The Long Aisle | Opener | Dominion → 2 Archers and cherubs | Colonnades |
+| The Transept | Cross-shaped floor | Grigori ×2 → cherubs | Secret host |
+| The Choir Stalls | Elite; pew lanes | Principality and Archer → Archer and cherubs | Cage |
+| The Ambulatory | Elite; a ring around the apse | Dominion and cherubs → Principality and Grigori | Cage; rotating pools |
+| The Clerestory | Two halls joined by an arcade | 2 Archers and a Dominion → cherubs | Secret host |
+| The Shattered Rose | Elite set-piece | Grigori and cherubs → Principality and cherubs | When wave 2 arrives the window shatters: glass rains, the light turns cold blue, the shafts go out and the pools re-seed |
+| The Herald's Return | Fixed set-piece after the 4th combat room | Gabriel | The bells fall silent and the hall darkens. Gabriel descends in phase two (one 560-HP bar, 440 posture); his choir joins at 75% (cherubs), 50% (Grigori) and 25% (Principality, room goes dark). His fall dismisses the choir. |
+| The Quiet Chantry | Rest | — | — |
+| The Ossuary | Secret, behind a cracked wall with a cold draught in the host room | — | Holds the Vial of Ash |
+| The Sanctum of Raphael | Boss | Raphael | — |
+
+**Run:** L1 → (after Gabriel) **L2 opener → 3 combat rooms → The Herald's Return → rest → Raphael** → victory. Health, vials and Rage carry over, and the title card announces each new layer.
+
+**Raphael, the Healer-Knight** (`data/enemies/raphael.json`): two segments of 520 HP, 380 posture.
+
+| Move | Details |
+|---|---|
+| Sweep | 180° |
+| Cleave | Heavy; 40 posture, which a deflect turns on him |
+| Mending Rite | A 90f kneeling channel with a teal ring. If it completes, posture −40% (and +10% HP in phase 2). A hit cancels it. |
+| Serpent Staff | A Judgement lunge: dash it |
+| Phase 2 | A double sweep, and **two Grigori summoned once** |
+
+He drifts to sanctified pools between exchanges.
+
+**Navigation (new, shared):** a flow field toward Satan (8 px grid, BFS every 10 ticks). Walkers whose straight line to Satan is blocked follow it round walls. Without it, enemies (and the test bot) could pin themselves against long walls.
+
+**Benchmarks** (decent-player bot, average HP lost):
+
+| | Level 1 | Level 2 |
+|---|---|---|
+| Combat rooms | 11–26 | 23–67 |
+| Hard / elite rooms | 34–70 | 41–72 |
+| Boss | Gabriel: 123 | Raphael: about 90–117 (varies with build) |
+
+Every L2 room steps in under 1 ms per tick.
+
+**Readability rules (tested):**
+- Large-area biome colours keep their chroma below 0.3 (Satan's crimson is about 0.75).
+- No red anywhere in a biome.
+- Gameplay layers are never darkened or tinted by lighting.
+- The **F8** panel toggles decoration, lighting, parallax, ambient life, hazards (pool routes), a **readability** view (decoration greyscale) and the HUD.
+- In dev builds the title screen has a **room gallery**.
+
+### How to author a biome
+Create `data/biomes/<id>.json` with these fields:
+- `palette`: large areas, low chroma.
+- `accents`: trim, glass and flame; never red.
+- `lighting`: darkness, Satan's light, flashes, grade, vignette, the descent darkening, and named `presets` for set-pieces.
+- `parallax` kinds, plus `ambient` emitters with their own caps.
+- `hazards.zones`: optional.
+- `audio` ids.
+
+Then point a level's `biome` at it. No engine code is needed unless you add a new parallax, ambient or prop *kind*.
+
+### How to author a room
+Create `data/rooms/<level>/<id>.json`:
+
+| Field | What it is |
+|---|---|
+| `bounds` | Any polygon. Back edges get walls indoors; front edges get a lip or balustrade. |
+| `walls` + `wallKinds` | pillar, column or apse (tall); hedge, fountain, pew or altar (low) |
+| `playerSpawn`, `entry`, `exits` | Up to 2 exits, on edges |
+| `waves` | Lists of `{type, at, count, spread}` |
+| `props` | window (`wall` 'n' or 'w', `glass`), brazier, candelabra, eyes, banner |
+| `zones` | `{anchors, radius, glass}` |
+| `tier` | combat, hard, rest, boss, setpiece or secret |
+| Optional | `elite`, `crack`, `cage`, `secret`, `vial`, `lighting`, `script` |
+
+`script` steps fire once on `enter`, a `wave` index, a `timer` or `bossHpBelow`. They can switch `lighting`, `reseedZones`, `spawn`, `silence` the bells, or emit an `event` (used for render and audio).
+
+`tests/l2.test.ts` checks every room automatically:
+- spawns, doors, font, cages, cracks and the secret door are reachable by flood-fill;
+- no pool sits on a spawn or doorway;
+- props stay within budget.
+
 ## Rage Vials (original plan: 7, flat additive, every stat ≤ +20%)
 | L1 | L2 |
 |---|---|
@@ -474,5 +581,5 @@ Cherub (swarmer, L1/L2), Choir Archer (ranged, deflectable arrows, L1/L2), Domin
 - M5: Level 1 flow: cherub, rooms, doors, rest, tutorial, title and death. Done.
 - M6: Rage (transform, claws, roar, hyper armour, carry-over) and vials (hidden cracks, hard-room cages, budget). Done.
 - M7: Gabriel (two segments, Horn Call, Triple Thrust, Trumpet, Charge, Annunciation) and difficulty scaling (per level plus a per-room ramp). Done.
-- M8: Level 2, Ophan, Virtue and Raphael.
+- M8: Level 2 (the Gilded Nave), done as the immersion pass, stop 1: biome system, lighting, parallax, ambient life, sanctified light, 11 rooms, the Gabriel set-piece and Raphael. The Ophan and Virtue were dropped by the user.
 - M9: polish, then an independent bug-hunt agent.

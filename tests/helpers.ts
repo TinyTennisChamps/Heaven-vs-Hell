@@ -18,10 +18,11 @@ export function testConfig(): SimConfig {
     combat: loadData('tuning/combat'),
     camera: loadData('tuning/camera'),
     attacks: loadData('attacks/satan'),
-    enemies: { dummy: loadData('enemies/dummy'), dominion: loadData('enemies/dominion'), archer: loadData('enemies/archer'), cherub: loadData('enemies/cherub'), gabriel: loadData('enemies/gabriel'), watcher: loadData('enemies/watcher'), zealot: loadData('enemies/zealot') },
+    enemies: Object.fromEntries(fs.readdirSync(path.resolve(__dirname, '../data/enemies')).filter((f) => f.endsWith('.json')).map((f) => [f.replace('.json', ''), loadData(`enemies/${f.replace('.json', '')}`)])),
     rooms: loadData('tuning/rooms'),
     rage: loadData('tuning/rage'),
     vials: loadData('vials'),
+    biomes: { gardens: loadData('biomes/gardens'), nave: loadData('biomes/nave') },
   };
 }
 

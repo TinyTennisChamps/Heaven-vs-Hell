@@ -18,7 +18,8 @@ import type { Think } from './enemy';
  */
 export const thinkGabriel: Think = (world, e, def) => {
   if (!world.flags.dummyAttacks) return { move: { x: 0, y: 0 }, attack: null };
-  const phase2 = e.segments < (def.segments ?? 1);
+  // Phase two after the first segment falls — or from the start (the L2 return).
+  const phase2 = e.segments < (def.segments ?? 1) || !!def.ai?.forcePhase2;
   const p = world.player.pos;
   const to = { x: p.x - e.pos.x, y: p.y - e.pos.y };
   const dist = Math.hypot(to.x, to.y);

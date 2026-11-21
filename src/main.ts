@@ -13,7 +13,9 @@ import { sfx } from './audio/sfx';
 import { loadAtlas } from './render/atlas';
 import type { AnimConfig } from './render/animSync';
 import { attackDef, attackPhase } from './sim/actors/player';
-import type { LevelDef, RoomDef, SimConfig } from './sim/config';
+import type { BiomeDef, EnemyDef, LevelDef, RoomDef, SimConfig } from './sim/config';
+import { LayersPanel } from './debug/layersPanel';
+import { MusicDirector } from './audio/music';
 import { carryThroughGate, rageCarryOver, roomPickups, roomScale, startRun, takeExit, type RunState } from './sim/rooms/run';
 import { maxHp } from './sim/stats';
 import { step } from './sim/step';
@@ -27,11 +29,19 @@ const cfg: SimConfig = {
   combat: getData('tuning/combat'),
   camera: getData('tuning/camera'),
   attacks: getData('attacks/satan'),
-  enemies: { dummy: getData('enemies/dummy'), dominion: getData('enemies/dominion'), archer: getData('enemies/archer'), cherub: getData('enemies/cherub'), gabriel: getData('enemies/gabriel'), watcher: getData('enemies/watcher'), zealot: getData('enemies/zealot') },
+  enemies: byPrefix<EnemyDef>('enemies/'),
   rooms: getData('tuning/rooms'),
   rage: getData('tuning/rage'),
   vials: getData('vials'),
+  biomes: byPrefix<BiomeDef>('biomes/'),
 };
+
+/** All data files under a folder, keyed by file name (e.g. enemies/zealot -> "zealot"). */
+function byPrefix<T>(prefix: string): Record<string, T> {
+  const out: Record<string, T> = {};
+  for (const k of dataKeys()) if (k.startsWith(prefix) && !k.slice(prefix.length).includes('/')) out[k.slice(prefix.length)] = getData<T>(k);
+  return out;
+}
 
 /** Every room under data/rooms/, keyed by its id (e.g. "l1/cloister"). */
 function loadRooms(): Record<string, RoomDef> {
@@ -78,7 +88,12 @@ async function boot() {
   const tutorial = new Tutorial(screens.prompt);
 
   const rooms = loadRooms();
-  const level = getData<LevelDef>('levels/l1');
+  const levels = byPrefix<LevelDef>('levels/');
+  const firstLevel = levels['l1']!;
+  const levelOf = (r: RunState | null) => (r ? levels[r.level]! : firstLevel);
+  const biomeOf = (l: LevelDef) => cfg.biomes![l.biome]!;
+  const layersPanel = new LayersPanel(root);
+  const music = new MusicDirector();
   const satanAtlas = await loadAtlas(`${import.meta.env.BASE_URL}sprites/satan.json`);
   const anim = getData<AnimConfig>('anim/satan');
   const titleScene = new TitleScene(satanAtlas);
@@ -170,29 +185,34 @@ async function boot() {
     spawnPanel.hidden = true;
     screens.hud.hidden = true;
     tutorial.hide();
-    screens.showTitle({ runs: meta.get('runs'), deaths: meta.get('deaths'), tutorialDone: tutorial.finished, rageCarried: meta.get('rageCarry'), rageMax: cfg.rage.max });
+    screens.showTitle({ runs: meta.get('runs'), deaths: meta.get('deaths'), tutorialDone: tutorial.finished, rageCarried: meta.get('rageCarry'), rageMax: cfg.rage.max, gallery: import.meta.env.DEV ? Object.keys(rooms).filter((k) => k !== 'training').sort() : [] });
     updateLegend();
   };
 
   const enterRoom = () => {
     if (!run) return;
+    const level = levelOf(run);
     const room = rooms[run.current]!;
-    world = createWorld(room, cfg, run.roomSeed, run.carry, roomPickups(run, room, cfg), roomScale(run, level, room));
+    world = createWorld(room, cfg, run.roomSeed, run.carry, roomPickups(run, room, cfg), roomScale(run, level, room), level.biome);
     world.flags.respawn = false;
     world.roomRun.exitCount = run.options.length;
     if (healedOnEntry) world.events.push({ type: 'restHeal', pos: { ...world.player.pos } });
     healedOnEntry = false;
-    const s = new Scene(world, satanAtlas, anim);
+    const s = new Scene(world, satanAtlas, anim, biomeOf(level), app.renderer);
     s.doorKinds = run.options.map((o) => o.kind);
+    s.depth = run.combatDone;
+    s.layers = layersPanel.flags;
     setScene(s);
+    music.enterRoom(biomeOf(level), world, !!room.script?.some((st) => st.do.some((d) => d.silence)));
     endShown = false;
     frozen = false;
-    const total = level.combatRooms + 2; // + rest + boss
-    if (room.tier === 'boss') {
-      const boss = room.waves?.flat().map((s) => cfg.enemies[s.type]).find((d) => d?.boss);
-      if (boss?.title) screens.toast(boss.title, 'The Herald of the Host bars the way down');
-    }
-    screens.setHud(level.name, room.name, run.visited.length, total);
+    // Room number within this level, and the title card.
+    const n = run.visited.filter((id) => id.startsWith(`${level.id}/`)).length;
+    const total = level.combatRooms + (level.fixed?.length ?? 0) + 2; // + rest + boss
+    screens.titleCard(level.layer ?? '', level.name, room.name, n === 1);
+    const boss = room.waves?.flat().map((w) => cfg.enemies[w.type]).find((d) => d?.boss);
+    if (boss?.title && room.tier === 'boss') screens.toast(boss.title, boss.subtitle ?? '');
+    screens.setHud(level.name, room.name, n, total);
   };
 
   const beginRun = () => {
@@ -203,7 +223,7 @@ async function boot() {
     spawnPanel.hidden = true;
     const seed = (Date.now() ^ Math.floor(Math.random() * 1e9)) >>> 0;
     // Vials are per run; a little Rage carries over from recent falls (never enough to transform).
-    run = startRun(level, rooms, seed, { hp: cfg.player.maxHealth, pips: cfg.player.throw.maxPips, rage: meta.get('rageCarry'), vials: [] });
+    run = startRun(firstLevel, rooms, seed, { hp: cfg.player.maxHealth, pips: cfg.player.throw.maxPips, rage: meta.get('rageCarry'), vials: [] });
     tutorial.enabled = true;
     screens.fade(() => enterRoom());
     updateLegend();
@@ -219,7 +239,9 @@ async function boot() {
     const flags = world.flags;
     world = createWorld(rooms['training']!, cfg, 1);
     world.flags = { ...flags, respawn: false, immortal: true };
-    setScene(new Scene(world, satanAtlas, anim));
+    const ts = new Scene(world, satanAtlas, anim, biomeOf(firstLevel), app.renderer);
+    ts.layers = layersPanel.flags;
+    setScene(ts);
     frozen = false;
     updateLegend();
   };
@@ -231,12 +253,15 @@ async function boot() {
     if (world.roomRun.exit !== null) {
       frozen = true;
       endShown = true;
-      const opt = takeExit(run, world.roomRun.exit, level, rooms, carryThroughGate(world, cfg));
+      const level = levelOf(run);
+      const opt = takeExit(run, world.roomRun.exit, level, rooms, carryThroughGate(world, cfg), levels);
       healedOnEntry = run.carry.hp > p.hp;
-      if (run.finished || opt.kind === 'end') {
+      if (opt.kind === 'end') {
         // A cleared level resets the fall streak and the carried Rage.
         meta.set('fallStreak', 0);
         meta.set('rageCarry', 0);
+      }
+      if (run.finished) {
         screens.showCleared(level.name, { rooms: run.visited.length, hp: p.hp, max: maxHp(world, cfg) });
       } else {
         screens.fade(() => enterRoom());
@@ -253,8 +278,25 @@ async function boot() {
     }
   };
 
-  screens.onAction = (a) => {
-    if (a === 'begin') beginRun();
+  /** Room gallery (dev): start a run standing in any room, to check layouts and dressing. */
+  const beginGallery = (id: string) => {
+    const lvl = Object.values(levels).find((l) => id.startsWith(`${l.id}/`)) ?? firstLevel;
+    mode = 'run';
+    screens.hideAll();
+    screens.hud.hidden = false;
+    spawnPanel.hidden = true;
+    run = startRun(lvl, rooms, 7, { hp: cfg.player.maxHealth, pips: cfg.player.throw.maxPips, rage: 0, vials: [] });
+    run.current = id;
+    run.visited = [id];
+    if (rooms[id]?.secret) run.secretHost = id;
+    tutorial.enabled = false;
+    enterRoom();
+    updateLegend();
+  };
+
+  screens.onAction = (a, arg) => {
+    if (a === 'gallery' && arg) beginGallery(arg);
+    else if (a === 'begin') beginRun();
     else if (a === 'training') beginTraining();
     else if (a === 'title') showTitle();
     else if (a === 'tutorial') {
@@ -276,6 +318,8 @@ async function boot() {
         return run;
       },
       begin: beginRun,
+      /** Jump straight into any room (room gallery). */
+      gallery: (id: string) => beginGallery(id),
       /** Rebuild the current run room (e.g. after editing run.hiddenRoom in a script). */
       reenter: () => enterRoom(),
       training: beginTraining,
@@ -303,6 +347,9 @@ async function boot() {
     } else if (e.code === 'F2') {
       e.preventDefault();
       capIdx = (capIdx + 1) % renderCaps.length;
+    } else if (e.code === 'F8') {
+      e.preventDefault();
+      layersPanel.toggle();
     } else if (e.code === 'F5') {
       e.preventDefault();
       timeCtl.paused = !timeCtl.paused;
@@ -395,7 +442,42 @@ async function boot() {
         const v = cfg.vials.vials.find((x) => x.id === ev.vialId);
         if (v) screens.toast(`${v.name}`, v.text);
       }
+      // Attacks and parries briefly light the room.
+      switch (ev.type) {
+        case 'hit':
+          scene.lightFlash(ev.pos, SATAN.ember, ev.strong);
+          break;
+        case 'deflect':
+          scene.lightFlash(ev.pos, HEAVEN.gold1, ev.perfect);
+          break;
+        case 'deathblow':
+        case 'roar':
+        case 'rageStart':
+          scene.lightFlash(ev.pos, SATAN.hellfire, true);
+          break;
+        case 'postureBreak':
+        case 'leapLand':
+        case 'secretOpen':
+          scene.lightFlash(ev.pos, 0xffffff, true);
+          break;
+        case 'roomCleared':
+          scene.lightFlash(ev.pos, HEAVEN.gold1, true);
+          break;
+        case 'bellToll':
+          // The bells: light flares at every pool as it begins to move.
+          for (const z of world.zones.list) scene.lightFlash(z.pos, HEAVEN.gold1, false);
+          break;
+        case 'mend':
+          scene.lightFlash(ev.pos, ANGEL.glassTeal, true);
+          break;
+      }
     }
+    scene.frameDt = elapsed;
+    // F8 → hud off: hide every HUD element (does the room still read on its own?).
+    const hudOn = layersPanel.flags.hud;
+    legend.style.visibility = hudOn ? '' : 'hidden';
+    screens.hud.style.visibility = hudOn ? '' : 'hidden';
+    music.update(now, world, cfg);
     spawnEffects(world, scene);
     scene.particles.update(Math.min(elapsed, 0.05));
     scene.particles.draw();
@@ -417,6 +499,10 @@ async function boot() {
       overlay.set('steps/frame', steps);
       overlay.set('render cap (F2)', cap ? `${cap} Hz` : 'display');
       overlay.set('time (F5 pause / F6 step / F7 slow)', timeCtl.paused ? 'PAUSED' : timeCtl.slow ? '¼ speed' : 'normal');
+      overlay.set('music', music.state);
+      const bud = scene.budgets;
+      overlay.set('budgets (F8 layers)', `lights ${bud.lights}/16 · ambient ${bud.ambient}/120 · particles ${bud.particles}/600 · enemies ${world.enemies.filter((e) => e.phase !== 'down').length}`);
+      if (world.zones.list.length) overlay.set('sanctified light', `${world.zones.list.length} pools · next bell ${world.zones.timer}${world.zones.silenced ? ' (silenced)' : ''}`);
       overlay.set('hitstop', world.hitstop);
       overlay.set('player', `hp ${p.hp}  speed ${Math.hypot(p.vel.x, p.vel.y).toFixed(0)}${p.dead ? '  DEAD' : ''}`);
       overlay.set('action', act);
@@ -562,6 +648,17 @@ function spawnEffects(world: World, scene: Scene): void {
         break;
       case 'flinch':
         P.burst(s.x, s.y - 18, { count: 4, colors: [0xffffff, ANGEL.pearl], speed: 40, life: 0.2 });
+        break;
+      case 'script':
+        if (ev.name === 'roseShatter') {
+          // The rose window bursts: a rain of stained glass across the room.
+          for (let k = 0; k < 4; k++) P.burst(s.x + (k - 1.5) * 50, s.y - 90, { count: 18, colors: [0x86aee0, 0x8fd3c9, 0xbba8e0, 0xf1da94, 0xffffff], speed: 140, life: 1.1, dirX: 0, dirY: 1, spread: 1.6, drag: 0.97 });
+          scene.lightFlash(ev.pos, 0xd0e8f5, true);
+        } else if (ev.name === 'heraldDescends') {
+          P.burst(s.x, s.y - 60, { count: 30, colors: [0xffffff, HEAVEN.gold1], speed: 60, life: 1.2, dirX: 0, dirY: 1, spread: 0.6 });
+        } else if (ev.name === 'choir') {
+          scene.lightFlash(ev.pos, HEAVEN.gold1, false);
+        }
         break;
       case 'leapLand':
         P.burst(s.x, s.y - 2, { count: 26, colors: [HEAVEN.marble, HEAVEN.stone, HEAVEN.gold1, 0xffffff], speed: 120, life: 0.45 });

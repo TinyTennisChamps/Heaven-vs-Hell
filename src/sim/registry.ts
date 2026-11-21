@@ -3,6 +3,7 @@ import { thinkCherub } from './actors/cherub';
 import { thinkDominion } from './actors/dominion';
 import { thinkDummy } from './actors/dummy';
 import { thinkGabriel } from './actors/gabriel';
+import { thinkRaphael } from './actors/raphael';
 import { thinkWatcher } from './actors/watcher';
 import { thinkZealot } from './actors/zealot';
 import type { Think } from './actors/enemy';
@@ -17,6 +18,8 @@ export const ENEMY_THINK: Record<string, Think> = {
   archer: thinkArcher,
   cherub: thinkCherub,
   gabriel: thinkGabriel,
+  gabriel_l2: thinkGabriel,
+  raphael: thinkRaphael,
   watcher: thinkWatcher,
   zealot: thinkZealot,
 };

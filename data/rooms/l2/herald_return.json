@@ -1,0 +1,330 @@
+{
+  "id": "l2/herald_return",
+  "name": "The Herald's Return",
+  "tier": "setpiece",
+  "bounds": [
+    [
+      0,
+      0
+    ],
+    [
+      320,
+      0
+    ],
+    [
+      320,
+      320
+    ],
+    [
+      0,
+      320
+    ]
+  ],
+  "walls": [
+    [
+      [
+        140,
+        56
+      ],
+      [
+        180,
+        56
+      ],
+      [
+        180,
+        78
+      ],
+      [
+        140,
+        78
+      ]
+    ],
+    [
+      [
+        60,
+        110
+      ],
+      [
+        74,
+        110
+      ],
+      [
+        74,
+        124
+      ],
+      [
+        60,
+        124
+      ]
+    ],
+    [
+      [
+        246,
+        110
+      ],
+      [
+        260,
+        110
+      ],
+      [
+        260,
+        124
+      ],
+      [
+        246,
+        124
+      ]
+    ],
+    [
+      [
+        60,
+        220
+      ],
+      [
+        74,
+        220
+      ],
+      [
+        74,
+        234
+      ],
+      [
+        60,
+        234
+      ]
+    ],
+    [
+      [
+        246,
+        220
+      ],
+      [
+        260,
+        220
+      ],
+      [
+        260,
+        234
+      ],
+      [
+        246,
+        234
+      ]
+    ]
+  ],
+  "wallKinds": [
+    "altar",
+    "column",
+    "column",
+    "column",
+    "column"
+  ],
+  "playerSpawn": [
+    112,
+    26
+  ],
+  "spawns": [],
+  "entry": {
+    "at": [
+      112,
+      0
+    ]
+  },
+  "exits": [
+    {
+      "at": [
+        320,
+        198
+      ]
+    }
+  ],
+  "props": [
+    {
+      "kind": "window",
+      "at": [
+        80,
+        0
+      ],
+      "wall": "n",
+      "glass": "glassGold"
+    },
+    {
+      "kind": "window",
+      "at": [
+        160,
+        0
+      ],
+      "wall": "n",
+      "glass": "glassBlue"
+    },
+    {
+      "kind": "window",
+      "at": [
+        240,
+        0
+      ],
+      "wall": "n",
+      "glass": "glassGold"
+    },
+    {
+      "kind": "window",
+      "at": [
+        0,
+        160
+      ],
+      "wall": "w",
+      "glass": "glassLilac"
+    },
+    {
+      "kind": "candelabra",
+      "at": [
+        120,
+        60
+      ]
+    },
+    {
+      "kind": "candelabra",
+      "at": [
+        200,
+        60
+      ]
+    },
+    {
+      "kind": "eyes",
+      "at": [
+        40,
+        0
+      ]
+    },
+    {
+      "kind": "eyes",
+      "at": [
+        110,
+        0
+      ]
+    },
+    {
+      "kind": "eyes",
+      "at": [
+        210,
+        0
+      ]
+    },
+    {
+      "kind": "eyes",
+      "at": [
+        280,
+        0
+      ]
+    },
+    {
+      "kind": "eyes",
+      "at": [
+        0,
+        60
+      ]
+    },
+    {
+      "kind": "eyes",
+      "at": [
+        0,
+        260
+      ]
+    }
+  ],
+  "waves": [
+    [
+      {
+        "type": "gabriel_l2",
+        "at": [
+          160,
+          170
+        ]
+      }
+    ]
+  ],
+  "lighting": "herald",
+  "script": [
+    {
+      "on": {
+        "enter": true
+      },
+      "do": [
+        {
+          "silence": true
+        },
+        {
+          "event": "heraldDescends"
+        }
+      ]
+    },
+    {
+      "on": {
+        "bossHpBelow": 0.75
+      },
+      "do": [
+        {
+          "spawn": [
+            {
+              "type": "cherub",
+              "at": [
+                160,
+                250
+              ],
+              "count": 4,
+              "spread": 26
+            }
+          ]
+        },
+        {
+          "event": "choir"
+        }
+      ]
+    },
+    {
+      "on": {
+        "bossHpBelow": 0.5
+      },
+      "do": [
+        {
+          "spawn": [
+            {
+              "type": "watcher",
+              "at": [
+                270,
+                270
+              ]
+            }
+          ]
+        },
+        {
+          "event": "choir"
+        }
+      ]
+    },
+    {
+      "on": {
+        "bossHpBelow": 0.25
+      },
+      "do": [
+        {
+          "spawn": [
+            {
+              "type": "zealot",
+              "at": [
+                50,
+                270
+              ]
+            }
+          ]
+        },
+        {
+          "lighting": "dark"
+        },
+        {
+          "event": "choir"
+        }
+      ]
+    }
+  ]
+}

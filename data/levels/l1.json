@@ -22,5 +22,8 @@
     "posture": 1,
     "damage": 1
   },
-  "rampPerRoom": 0.06
+  "rampPerRoom": 0.06,
+  "biome": "gardens",
+  "layer": "Layer I",
+  "next": "l2"
 }

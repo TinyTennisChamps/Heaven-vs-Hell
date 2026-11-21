@@ -20,6 +20,10 @@ export class Particles {
   readonly g = new Graphics();
   private list: Particle[] = [];
 
+  get count(): number {
+    return this.list.length;
+  }
+
   burst(x: number, y: number, opts: { count: number; colors: number[]; speed: number; life: number; dirX?: number; dirY?: number; spread?: number; size?: number; drag?: number }): void {
     const base = opts.dirX !== undefined ? Math.atan2(opts.dirY ?? 0, opts.dirX) : 0;
     const spread = opts.spread ?? Math.PI * 2;

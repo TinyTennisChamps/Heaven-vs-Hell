@@ -1,0 +1,93 @@
+{
+  "id": "gardens",
+  "name": "The Outer Gardens",
+  "indoor": false,
+  "palette": {
+    "sky": "#d0e8f5",
+    "floorA": "#f4eedf",
+    "floorB": "#e3d9c2",
+    "wallLit": "#e3d9c2",
+    "wallShade": "#c9b99a",
+    "hedgeTop": "#c4d8b4",
+    "hedge": "#a3bf95",
+    "hedgeDark": "#7f9c76",
+    "cloud": "#ffffff",
+    "cloudShade": "#e4eef5",
+    "basin": "#f4eedf",
+    "water": "#a9c4da"
+  },
+  "accents": {
+    "inlay": "#e8c872",
+    "rim": "#e8c872",
+    "lip": "#b8923e",
+    "lipDark": "#7a5e2a",
+    "wallTop": "#e8c872",
+    "wallTrim": "#b8923e",
+    "blossom": "#ffffff",
+    "flame": "#dff0ff",
+    "flameCore": "#ffffff",
+    "eye": "#f3f0ea",
+    "pupil": "#2a2840"
+  },
+  "lighting": {
+    "darkness": "#2a2840",
+    "darknessAlpha": 0,
+    "satanLight": {
+      "radius": 56,
+      "alpha": 0.18
+    },
+    "flash": {
+      "radius": 50,
+      "alpha": 0.3,
+      "frames": 8
+    },
+    "grade": {
+      "color": "#fff0b8",
+      "alpha": 0.04
+    },
+    "vignette": 0.12,
+    "descendDarken": 0.025
+  },
+  "parallax": [
+    {
+      "kind": "skyClouds",
+      "factor": 0.15,
+      "alpha": 0.7
+    },
+    {
+      "kind": "farClouds",
+      "factor": 0.45,
+      "alpha": 0.85
+    }
+  ],
+  "ambient": [
+    {
+      "kind": "petal",
+      "perSec": 3,
+      "max": 40,
+      "colors": [
+        "#ffffff",
+        "#f3f0ea",
+        "#d9e4cf"
+      ]
+    },
+    {
+      "kind": "feather",
+      "perSec": 0.5,
+      "max": 6,
+      "colors": [
+        "#ffffff",
+        "#f3f0ea"
+      ]
+    }
+  ],
+  "audio": {
+    "explore": "gardens_explore",
+    "combat": "gardens_combat",
+    "boss": "herald_theme",
+    "bpm": 84,
+    "ambience": "wind_choir",
+    "footsteps": "marble",
+    "reverb": "open"
+  }
+}
